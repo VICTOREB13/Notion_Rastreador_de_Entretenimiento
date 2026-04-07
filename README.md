@@ -4,6 +4,14 @@
 
 ---
 
+## 👀 Vista Previa (Live Demo)
+
+Puedes ver cómo quedan mis bases de datos personales utilizando esta herramienta:
+- 🎮 [**Rastreador de Videojuegos**](https://wave-sheep-2ac.notion.site/Rastreador-de-Videojuegos-29094bde8dc780989bcde4c10d572e1b?source=copy_link)
+- 🎬 [**Rastreador de Películas**](https://wave-sheep-2ac.notion.site/Rastreador-de-Peliculas-2c794bde8dc780dd941fce278b0b399f?source=copy_link)
+
+---
+
 ## ✨ Características Principales
 
 ### 🎮 Módulo de Videojuegos (`games.py`)
@@ -68,10 +76,16 @@ El sistema utiliza **GitHub Actions** para ejecutarse de forma periódica:
 
 ---
 
+## 🙏 Créditos
+
+Este proyecto se basa en la excelente estructura de este [Template Original de Notion](https://www.notion.com/templates/video-games-tracker).
+
+---
+
 ## 📄 Licencia
 
 Este proyecto está bajo la licencia **MIT**. Siéntete libre de usarlo, modificarlo y compartirlo.
 
 ---
 
-Creado con ❤️ para organizar el ocio de forma inteligente.
+Creado por [Victor Esparragoza](https://github.com/VICTOREB13) con ❤️ para organizar el ocio de forma inteligente.
