@@ -24,5 +24,6 @@ jobs:
       - name: Correr Script de Pelis
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          DB_ID_MOVIES: ${{ secrets.DB_ID_MOVIES }}
           TMDB_KEY: ${{ secrets.TMDB_KEY }}
         run: python movies.py

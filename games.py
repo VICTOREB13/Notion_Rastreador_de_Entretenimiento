@@ -13,8 +13,8 @@ RAWG_KEY = os.environ.get("RAWG_KEY", "").strip()
 STEAM_KEY = os.environ.get("STEAM_KEY", "").strip()
 STEAM_USER_ID = os.environ.get("STEAM_USER_ID", "").strip()
 
-# ID DE TU BASE DE DATOS
-DB_ID = "29094bde8dc781519c47cd00ce3e7e46"
+# ID DE TU BASE DE DATOS (Ahora desde variables de entorno)
+DB_ID = os.environ.get("DB_ID_GAMES", "").strip()
 
 HEADERS_NOTION = {
     "Authorization": f"Bearer {NOTION_TOKEN}",

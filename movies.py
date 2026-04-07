@@ -13,8 +13,8 @@ except:
     NOTION_TOKEN = ""
     TMDB_KEY = ""
 
-# IDs (Los que ya confirmamos que funcionan)
-DB_ID = "2c794bde-8dc7-8165-830e-fe4a2703c68b"
+# ID DE TU BASE DE DATOS (Ahora desde variables de entorno)
+DB_ID = os.environ.get("DB_ID_MOVIES", "").strip()
 
 # =================================================
 
