@@ -1,0 +1,28 @@
+name: Actualizador de Películas
+
+on:
+  schedule:
+    - cron: '30 0 * * *' # Se ejecuta cada 24 horas (a las 00:30)
+  workflow_dispatch:      # Botón manual
+
+jobs:
+  update-movies:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Descargar código
+        uses: actions/checkout@v3
+
+      - name: Instalar Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Instalar dependencias
+        run: pip install requests
+
+      - name: Correr Script de Pelis
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          TMDB_KEY: ${{ secrets.TMDB_KEY }}
+        run: python movies.py
