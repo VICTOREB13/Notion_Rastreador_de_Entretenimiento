@@ -23,10 +23,9 @@ HEADERS_NOTION = {
     "Content-Type": "application/json"
 }
 
-# Estados FINALES: si el juego ya tiene uno de estos, NO se auto-culmina.
-# Es decir, estos son los estados donde el jugador ya terminó o abandonó el juego.
-# Los estados activos (Por Jugar, Jugando, Jugado) SÍ pueden pasar a "Culminado".
-ESTADOS_FINALES = ["Culminado", "Completado", "Abandonado"]
+# Estados FINALES: si el juego ya tiene uno de estos, NO se cambia automáticamente.
+# Solo "Jugado" es el estado final. Los activos (Por Jugar, Jugando) SÍ se auto-completan.
+ESTADOS_FINALES = ["Jugado"]
 # =======================================================
 
 # --- UTILIDADES ---
@@ -152,8 +151,8 @@ def actualizar_juego_notion(page, horas_nuevas, steam_id=None):
     if (hltb_principal and hltb_principal > 0
             and horas_nuevas >= hltb_principal
             and estado_actual not in ESTADOS_FINALES):
-        payload_props["Estado"] = {"status": {"name": "Culminado"}}
-        cambios.append(f"estado → Culminado ({round(horas_nuevas, 1)}h >= {hltb_principal}h HLTB)")
+        payload_props["Estado"] = {"status": {"name": "Jugado"}}
+        cambios.append(f"estado → Jugado ({round(horas_nuevas, 1)}h >= {hltb_principal}h HLTB)")
         # También registrar fecha de culminación si no existe
         if not tiene_fecha_culm:
             payload_props["Fecha de Culminación (primera campaña)"] = {
@@ -356,7 +355,7 @@ def rellenar_metadata(juegos_notion):
                     estado_actual = props["Estado"]["status"].get("name", "")
                 
                 if horas_jugadas >= main_h and estado_actual not in ESTADOS_FINALES:
-                    payload["properties"]["Estado"] = {"status": {"name": "Culminado"}}
+                    payload["properties"]["Estado"] = {"status": {"name": "Jugado"}}
                     tiene_fecha_culm = props.get("Fecha de Culminación (primera campaña)", {}).get("date") is not None
                     if not tiene_fecha_culm:
                         payload["properties"]["Fecha de Culminación (primera campaña)"] = {
