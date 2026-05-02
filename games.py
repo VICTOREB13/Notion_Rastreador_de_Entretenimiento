@@ -3,6 +3,7 @@ import time
 import requests
 import os
 import urllib.parse
+from datetime import date
 from difflib import SequenceMatcher
 from howlongtobeatpy import HowLongToBeat
 
@@ -21,6 +22,9 @@ HEADERS_NOTION = {
     "Notion-Version": "2022-06-28",
     "Content-Type": "application/json"
 }
+
+# Estados que se consideran "finalizados" y no deben sobreescribirse
+ESTADOS_FINALES = ["Por Jugar", "Jugando", "Jugado"]
 # =======================================================
 
 # --- UTILIDADES ---
@@ -36,6 +40,14 @@ def limpiar_nombre(n):
 def similar(a, b):
     """Calcula qué tan parecidos son dos nombres (0 a 1)"""
     return SequenceMatcher(None, limpiar_nombre(a), limpiar_nombre(b)).ratio()
+
+def obtener_nombre_pagina(props):
+    """Extrae el nombre del juego desde las propiedades de una página de Notion"""
+    if "Título" in props and props["Título"]["title"]:
+        return props["Título"]["title"][0]["text"]["content"]
+    elif "Name" in props and props["Name"]["title"]:
+        return props["Name"]["title"][0]["text"]["content"]
+    return ""
 
 # --- 1. NOTION: LECTURA Y ESCRITURA ---
 def obtener_todos_juegos_notion():
@@ -56,13 +68,7 @@ def obtener_todos_juegos_notion():
             
             for page in results:
                 props = page["properties"]
-                # Intentamos sacar el nombre desde 'Título' o 'Name'
-                nombre = ""
-                if "Título" in props and props["Título"]["title"]:
-                    nombre = props["Título"]["title"][0]["text"]["content"]
-                elif "Name" in props and props["Name"]["title"]:
-                    nombre = props["Name"]["title"][0]["text"]["content"]
-                
+                nombre = obtener_nombre_pagina(props)
                 if nombre:
                     juegos[nombre] = page
             
@@ -77,27 +83,97 @@ def obtener_todos_juegos_notion():
 def crear_juego_notion(nombre, steam_appid, horas):
     url = "https://api.notion.com/v1/pages"
     
+    properties = {
+        "Título": {"title": [{"text": {"content": nombre}}]},
+        "Steam ID": {"number": steam_appid},
+        "Horas Jugadas": {"number": round(horas, 1)},
+        "Plataforma": {"select": {"name": "PC"}},
+        "Estado": {"status": {"name": "Jugado" if horas > 1 else "Por Jugar"}}
+    }
+    
+    # Si ya tiene horas jugadas, registramos la fecha de inicio como hoy
+    if horas > 0:
+        properties["Fecha de Inicio"] = {"date": {"start": date.today().isoformat()}}
+    
     payload = {
         "parent": {"database_id": DB_ID},
-        "properties": {
-            "Título": {"title": [{"text": {"content": nombre}}]},
-            "Steam ID": {"number": steam_appid},
-            "Horas Jugadas": {"number": round(horas, 1)},
-            "Plataforma": {"select": {"name": "PC"}},
-            "Estado": {"status": {"name": "Jugado" if horas > 1 else "Por Jugar"}}
-        }
+        "properties": properties
     }
-    requests.post(url, headers=HEADERS_NOTION, json=payload)
-    print(f"✨ CREADO en Notion: {nombre}")
+    
+    r = requests.post(url, headers=HEADERS_NOTION, json=payload)
+    if r.status_code == 200:
+        print(f"✨ CREADO en Notion: {nombre}")
+    else:
+        print(f"❌ Error creando {nombre}: {r.status_code} - {r.text}")
 
-def actualizar_horas_notion(page_id, horas, steam_id=None):
-    props = {}
-    props["Horas Jugadas"] = {"number": round(horas, 1)}
-    if steam_id:
-        props["Steam ID"] = {"number": steam_id}
-        
-    requests.patch(f"https://api.notion.com/v1/pages/{page_id}", headers=HEADERS_NOTION, json={"properties": props})
-    print(f"⏳ Horas actualizadas: {round(horas, 1)}h")
+def actualizar_juego_notion(page, horas_nuevas, steam_id=None):
+    """Actualiza un juego existente SOLO si algo realmente cambió.
+    Incluye lógica de Fecha de Inicio y auto-culminación por HLTB."""
+    props = page["properties"]
+    page_id = page["id"]
+    nombre = obtener_nombre_pagina(props)
+    
+    # --- Leer estado actual del juego en Notion ---
+    horas_actuales = props.get("Horas Jugadas", {}).get("number") or 0
+    tiene_fecha_inicio = props.get("Fecha de Inicio", {}).get("date") is not None
+    tiene_fecha_culm = props.get("Fecha de Culminación (primera campaña)", {}).get("date") is not None
+    hltb_principal = props.get("HLTB Principal", {}).get("number")
+    steam_id_actual = props.get("Steam ID", {}).get("number")
+    
+    estado_actual = ""
+    if "Estado" in props and props["Estado"].get("status"):
+        estado_actual = props["Estado"]["status"].get("name", "")
+    
+    # --- Construir payload solo con lo que necesita cambiar ---
+    payload_props = {}
+    needs_update = False
+    cambios = []  # Para el log
+    
+    # 1. Horas: solo actualizar si el valor cambió
+    if round(horas_nuevas, 1) != round(horas_actuales, 1):
+        payload_props["Horas Jugadas"] = {"number": round(horas_nuevas, 1)}
+        cambios.append(f"horas {round(horas_actuales, 1)} → {round(horas_nuevas, 1)}")
+        needs_update = True
+    
+    # 2. Steam ID: solo si falta o es diferente
+    if steam_id and steam_id_actual != steam_id:
+        payload_props["Steam ID"] = {"number": steam_id}
+        needs_update = True
+    
+    # 3. Fecha de Inicio: si tiene horas pero no tiene fecha, la ponemos hoy
+    if horas_nuevas > 0 and not tiene_fecha_inicio:
+        payload_props["Fecha de Inicio"] = {"date": {"start": date.today().isoformat()}}
+        cambios.append("+ fecha inicio")
+        needs_update = True
+    
+    # 4. Auto-Culminación: si las horas superan el HLTB principal y no está finalizado
+    if (hltb_principal and hltb_principal > 0
+            and horas_nuevas >= hltb_principal
+            and estado_actual not in ESTADOS_FINALES):
+        payload_props["Estado"] = {"status": {"name": "Culminado"}}
+        cambios.append(f"estado → Culminado ({round(horas_nuevas, 1)}h >= {hltb_principal}h HLTB)")
+        # También registrar fecha de culminación si no existe
+        if not tiene_fecha_culm:
+            payload_props["Fecha de Culminación (primera campaña)"] = {
+                "date": {"start": date.today().isoformat()}
+            }
+            cambios.append("+ fecha culminación")
+        needs_update = True
+    
+    # --- Solo enviamos el PATCH si hay algo que actualizar ---
+    if not needs_update:
+        return
+    
+    r = requests.patch(
+        f"https://api.notion.com/v1/pages/{page_id}",
+        headers=HEADERS_NOTION,
+        json={"properties": payload_props}
+    )
+    
+    if r.status_code == 200:
+        print(f"   ✅ {nombre}: {', '.join(cambios)}")
+    else:
+        print(f"   ❌ Error actualizando {nombre}: {r.status_code} - {r.text}")
 
 # --- 2. STEAM ---
 def sincronizar_steam(juegos_notion):
@@ -118,6 +194,10 @@ def sincronizar_steam(juegos_notion):
         # Diccionario auxiliar con nombres limpios de Notion para búsqueda rápida
         juegos_notion_limpios = {limpiar_nombre(n): p for n, p in juegos_notion.items()}
 
+        actualizados = 0
+        creados = 0
+        sin_cambios = 0
+
         for g in games:
             nombre_steam = g["name"]
             appid = g["appid"]
@@ -128,25 +208,32 @@ def sincronizar_steam(juegos_notion):
                 continue
 
             # Buscamos si ya existe en Notion
-            encontrado = False
+            page = None
             nombre_steam_limpio = limpiar_nombre(nombre_steam)
 
             # Intento 1: Búsqueda exacta (limpia)
             if nombre_steam_limpio in juegos_notion_limpios:
                 page = juegos_notion_limpios[nombre_steam_limpio]
-                actualizar_horas_notion(page["id"], horas, appid)
-                encontrado = True
             else:
                 # Intento 2: Búsqueda por similitud (Fuzzy matching)
-                for nombre_notion_limpio, page in juegos_notion_limpios.items():
+                for nombre_notion_limpio, p in juegos_notion_limpios.items():
                     if SequenceMatcher(None, nombre_steam_limpio, nombre_notion_limpio).ratio() > 0.9:
-                        actualizar_horas_notion(page["id"], horas, appid)
-                        encontrado = True
+                        page = p
                         break
             
-            # Si no existe -> LO CREAMOS
-            if not encontrado:
+            if page:
+                # Juego existe → actualizar solo si cambió algo
+                actualizar_juego_notion(page, horas, appid)
+                actualizados += 1
+            else:
+                # Juego nuevo → crear
                 crear_juego_notion(nombre_steam, appid, horas)
+                creados += 1
+            
+            # Respetar rate-limit de Notion (máx 3 req/s)
+            time.sleep(0.4)
+        
+        print(f"\n   📊 Resumen Steam: {actualizados} revisados, {creados} nuevos creados.")
                 
     except Exception as e:
         print(f"❌ Error Steam: {e}")
@@ -206,6 +293,22 @@ def rellenar_metadata(juegos_notion):
             if comp_h:
                 payload["properties"]["HLTB Completista"] = {"number": comp_h}
                 needs_update = True
+            
+            # Tras obtener HLTB, verificar auto-culminación inmediata
+            if main_h:
+                horas_jugadas = props.get("Horas Jugadas", {}).get("number") or 0
+                estado_actual = ""
+                if "Estado" in props and props["Estado"].get("status"):
+                    estado_actual = props["Estado"]["status"].get("name", "")
+                
+                if horas_jugadas >= main_h and estado_actual not in ESTADOS_FINALES:
+                    payload["properties"]["Estado"] = {"status": {"name": "Culminado"}}
+                    tiene_fecha_culm = props.get("Fecha de Culminación (primera campaña)", {}).get("date") is not None
+                    if not tiene_fecha_culm:
+                        payload["properties"]["Fecha de Culminación (primera campaña)"] = {
+                            "date": {"start": date.today().isoformat()}
+                        }
+                    print(f"   🏆 Auto-culminado por HLTB: {nombre} ({horas_jugadas}h >= {main_h}h)")
 
         # 2. RAWG (Foto/Género)
         falta_foto = not (props.get("Portada", {}).get("files"))
@@ -234,8 +337,11 @@ def rellenar_metadata(juegos_notion):
                 needs_update = True
 
         if needs_update:
-            requests.patch(f"https://api.notion.com/v1/pages/{page['id']}", headers=HEADERS_NOTION, json=payload)
-            print(f"   ✅ Datos actualizados: {nombre}")
+            r = requests.patch(f"https://api.notion.com/v1/pages/{page['id']}", headers=HEADERS_NOTION, json=payload)
+            if r.status_code == 200:
+                print(f"   ✅ Datos actualizados: {nombre}")
+            else:
+                print(f"   ❌ Error actualizando metadatos de {nombre}: {r.status_code} - {r.text}")
             time.sleep(0.5)
 
 # --- MAIN ---
