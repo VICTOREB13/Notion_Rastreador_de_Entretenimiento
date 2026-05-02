@@ -23,8 +23,10 @@ HEADERS_NOTION = {
     "Content-Type": "application/json"
 }
 
-# Estados que se consideran "finalizados" y no deben sobreescribirse
-ESTADOS_FINALES = ["Por Jugar", "Jugando", "Jugado"]
+# Estados FINALES: si el juego ya tiene uno de estos, NO se auto-culmina.
+# Es decir, estos son los estados donde el jugador ya terminó o abandonó el juego.
+# Los estados activos (Por Jugar, Jugando, Jugado) SÍ pueden pasar a "Culminado".
+ESTADOS_FINALES = ["Culminado", "Completado", "Abandonado"]
 # =======================================================
 
 # --- UTILIDADES ---
@@ -176,46 +178,98 @@ def actualizar_juego_notion(page, horas_nuevas, steam_id=None):
         print(f"   ❌ Error actualizando {nombre}: {r.status_code} - {r.text}")
 
 # --- 2. STEAM ---
+def obtener_juegos_steam():
+    """Obtiene juegos de Steam combinando dos fuentes:
+    - GetOwnedGames: juegos comprados por el usuario
+    - GetRecentlyPlayedGames: juegos recientes (incluye Family Sharing)
+    Retorna un dict {appid: {name, appid, playtime_forever}}"""
+    
+    juegos = {}
+    
+    # 1. Juegos propios (comprados)
+    try:
+        url = (f"http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/"
+               f"?key={STEAM_KEY}&steamid={STEAM_USER_ID}&format=json"
+               f"&include_appinfo=true&include_played_free_games=true")
+        r = requests.get(url)
+        data = r.json()
+        for g in data["response"].get("games", []):
+            juegos[g["appid"]] = g
+        print(f"   📦 Juegos propios: {len(juegos)}")
+    except Exception as e:
+        print(f"   ⚠️ Error obteniendo juegos propios: {e}")
+    
+    # 2. Juegos recientes (incluye Family Sharing de las últimas 2 semanas)
+    try:
+        url = (f"http://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/v0001/"
+               f"?key={STEAM_KEY}&steamid={STEAM_USER_ID}&format=json")
+        r = requests.get(url)
+        data = r.json()
+        recientes = data["response"].get("games", [])
+        nuevos_compartidos = 0
+        for g in recientes:
+            aid = g["appid"]
+            if aid not in juegos:
+                # Este juego NO está en los propios → es Family Sharing u otro
+                juegos[aid] = g
+                nuevos_compartidos += 1
+            else:
+                # Ya lo tenemos, pero el playtime reciente puede ser más actual
+                # GetRecentlyPlayedGames también trae playtime_forever
+                if g.get("playtime_forever", 0) > juegos[aid].get("playtime_forever", 0):
+                    juegos[aid]["playtime_forever"] = g["playtime_forever"]
+        if nuevos_compartidos > 0:
+            print(f"   👨‍👩‍👧‍👦 Juegos de Family Sharing detectados: {nuevos_compartidos}")
+        print(f"   🎮 Total combinado: {len(juegos)} juegos")
+    except Exception as e:
+        print(f"   ⚠️ Error obteniendo juegos recientes: {e}")
+    
+    return juegos
+
 def sincronizar_steam(juegos_notion):
     if not STEAM_KEY or not STEAM_USER_ID:
         print("⚠️ Saltando Steam: Falta API Key o User ID en Secrets.")
         return
 
     print("🚀 Conectando con Steam...")
-    url = f"http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key={STEAM_KEY}&steamid={STEAM_USER_ID}&format=json&include_appinfo=true"
     
     try:
-        r = requests.get(url)
-        data = r.json()
-        games = data["response"].get("games", [])
+        # Obtener juegos de ambas fuentes (propios + Family Sharing)
+        juegos_steam = obtener_juegos_steam()
         
-        print(f"   Steam reporta {len(games)} juegos en tu cuenta.")
-        
-        # Diccionario auxiliar con nombres limpios de Notion para búsqueda rápida
+        # Diccionarios auxiliares para búsqueda rápida en Notion
         juegos_notion_limpios = {limpiar_nombre(n): p for n, p in juegos_notion.items()}
+        
+        # Índice por Steam ID para encontrar juegos que ya existen con ID conocido
+        juegos_por_steam_id = {}
+        for n, p in juegos_notion.items():
+            sid = p["properties"].get("Steam ID", {}).get("number")
+            if sid:
+                juegos_por_steam_id[int(sid)] = p
 
         actualizados = 0
         creados = 0
-        sin_cambios = 0
 
-        for g in games:
+        for appid, g in juegos_steam.items():
             nombre_steam = g["name"]
-            appid = g["appid"]
             horas = g["playtime_forever"] / 60
             
-            # FILTRO: Solo importamos juegos con más de 30 minutos
+            # FILTRO: Solo procesamos juegos con más de 30 minutos
             if horas < 0.5:
                 continue
 
-            # Buscamos si ya existe en Notion
+            # Buscamos si ya existe en Notion (3 estrategias)
             page = None
             nombre_steam_limpio = limpiar_nombre(nombre_steam)
 
-            # Intento 1: Búsqueda exacta (limpia)
-            if nombre_steam_limpio in juegos_notion_limpios:
+            # Intento 1: Búsqueda por Steam ID (la más confiable)
+            if appid in juegos_por_steam_id:
+                page = juegos_por_steam_id[appid]
+            # Intento 2: Búsqueda exacta por nombre (limpio)
+            elif nombre_steam_limpio in juegos_notion_limpios:
                 page = juegos_notion_limpios[nombre_steam_limpio]
             else:
-                # Intento 2: Búsqueda por similitud (Fuzzy matching)
+                # Intento 3: Búsqueda por similitud (Fuzzy matching)
                 for nombre_notion_limpio, p in juegos_notion_limpios.items():
                     if SequenceMatcher(None, nombre_steam_limpio, nombre_notion_limpio).ratio() > 0.9:
                         page = p
