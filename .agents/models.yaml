@@ -1,0 +1,94 @@
+# ==============================================================================
+# Single Source of Truth (SSoT): Definición de Tiers y Modelos de IA
+# ==============================================================================
+# Este archivo centraliza la asignación de modelos para el ecosistema de agentes.
+# Las instrucciones de los agentes y playbooks referencian estos Tiers semánticos
+# y alias de Antigravity ('pro', 'flash', 'flash_lite') en lugar de números de versión
+# fijos, permitiendo que la arquitectura se mantenga permanentemente future-proof.
+
+version: "1.0.0"
+updated_at: "2026-09-08"
+
+tiers:
+  pro:
+    name: "Tier Pro (High)"
+    alias: "pro"
+    description: "Máxima capacidad de razonamiento estratégico, planificación a largo plazo, resolución de dependencias complejas y cumplimiento estricto de YAGNI."
+    recommended_runtime: "Gemini Pro High (última versión disponible en IDE, ej. 3.1 Pro / 4 Pro)"
+    assigned_agents:
+      - "Project-Planner"
+    role: "Orquestador Principal / Tech Lead (Mesa de Control)"
+
+  flash:
+    name: "Tier Flash (High)"
+    alias: "flash"
+    description: "Alta velocidad de ejecución, generación precisa de código, diseño UI responsivo, automatización de pruebas y auditoría de seguridad en contextos aislados."
+    recommended_runtime: "Gemini Flash High (última versión disponible en IDE, ej. 3.8 Flash / 4 Flash)"
+    assigned_agents:
+      - "Backend-Architect"
+      - "Frontend-UI"
+      - "Systems-Auditor"
+      - "DevOps-Engineer"
+    role: "Pool de Subagentes Autónomos Especializados"
+
+  lite:
+    name: "Tier Lite"
+    alias: "flash_lite"
+    description: "Modelo ligero y ultrarrápido para micro-tareas auxiliares, formateo de datos y validaciones sintácticas."
+    recommended_runtime: "Gemini Flash Lite"
+    assigned_agents: []
+    role: "Micro-tareas auxiliares y utilidades"
+
+agents:
+  Project-Planner:
+    tier: "pro"
+    role: "Orquestador Principal / Tech Lead (Mesa de Control)"
+    skill_path: ".agents/skills/project-planner/SKILL.md"
+    autoload_skills:
+      - archify
+      - artifact-standards
+      - improve-codebase-architecture
+      - lean-ux
+
+  Backend-Architect:
+    tier: "flash"
+    role: "Subagente Autónomo Backend"
+    skill_path: ".agents/skills/backend-architect/SKILL.md"
+    autoload_skills:
+      - improve-codebase-architecture
+      - sqlite-local-first-flutter
+      - artifact-standards
+
+  Frontend-UI:
+    tier: "flash"
+    role: "Subagente Autónomo Frontend UI"
+    skill_path: ".agents/skills/frontend-ui/SKILL.md"
+    autoload_skills:
+      - ui-ux-pro-max
+      - design-taste-frontend
+      - refactoring-ui
+      - redesign-existing-projects
+      - vercel-react-best-practices
+      - flutter-production-engineering
+      - web-typography
+      - microinteractions
+      - top-design
+      - design-everyday-things
+      - artifact-standards
+
+  Systems-Auditor:
+    tier: "flash"
+    role: "Subagente Autónomo QA & Auditoría"
+    skill_path: ".agents/skills/systems-auditor/SKILL.md"
+    autoload_skills:
+      - ux-heuristics
+      - vercel-react-best-practices
+      - design-everyday-things
+      - artifact-standards
+
+  DevOps-Engineer:
+    tier: "flash"
+    role: "Subagente Autónomo DevOps & Infraestructura"
+    skill_path: ".agents/skills/devops-engineer/SKILL.md"
+    autoload_skills:
+      - artifact-standards

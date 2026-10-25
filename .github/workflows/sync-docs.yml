@@ -1,0 +1,106 @@
+name: Sincronizar Docs a Obsidian
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'artifacts/**' # Solo se ejecuta si los agentes de IA modificaron los artefactos
+  workflow_dispatch: # Permite sincronización manual desde la pestaña Actions en GitHub
+
+jobs:
+  sync-to-vault:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Clonar Repositorio del Proyecto
+        uses: actions/checkout@v4
+        with:
+          path: source-repo
+
+      - name: 📥 Clonar Bóveda de Obsidian
+        uses: actions/checkout@v4
+        with:
+          repository: VICTOREB13/obsidian-obsidian-vault # <-- ¡CAMBIA ESTO!
+          token: ${{ secrets.VAULT_PAT }}
+          path: target-vault
+          ref: main
+
+      - name: 🔄 Procesar, Renombrar y Copiar Artefactos
+        run: |
+          # 1. Define el nombre base de tu proyecto
+          PROYECTO="Notion_Tracker" # <-- Cambia esto por tu proyecto (ej: Homepage, Pasantias)
+          
+          # 2. Configura las variables de rutas y prefijos
+          PREFIJO="PRJ_${PROYECTO}_"
+          RUTA_OBSIDIAN="target-vault/01_Proyectos/PRJ_$PROYECTO"
+          
+          # 3. Crea la carpeta principal del proyecto en Obsidian
+          mkdir -p "$RUTA_OBSIDIAN"
+          
+          # 4. Encuentra, aplana y RENOMBRA cada archivo .md y .html (diagramas interactivos Archify)
+          # Excluye especificaciones JSON fuente en artifacts/architecture/src/
+          find source-repo/artifacts -type f \( -name "*.md" -o -name "*.html" \) ! -path "*/src/*" | while read -r archivo_origen; do
+            # Extrae solo el nombre del archivo original (ej: changelog_v1.md, architecture_diagram.html)
+            nombre_base=$(basename "$archivo_origen")
+            
+            # Lo copia al destino inyectando el prefijo (ej: PRJ_Homepage_changelog_v1.md, PRJ_Homepage_architecture_diagram.html)
+            cp "$archivo_origen" "$RUTA_OBSIDIAN/${PREFIJO}${nombre_base}"
+          done
+          
+          # 5. Blindaje: Reescribe enlaces internos genéricos y de plantilla al formato Obsidian con prefijo
+          find "$RUTA_OBSIDIAN" -type f -name "*.md" | while read -r archivo_destino; do
+            # 5.1. Reemplazar prefijos de plantilla residuales
+            sed -i "s/\[\[PLANTILLA_/\[\[${PREFIJO}/g" "$archivo_destino"
+
+            # 5.2. Reemplazo preferente para diagramas interactivos HTML de Archify
+            sed -i "s/\[\[architecture_diagram\.html\]\]/\[\[${PREFIJO}architecture_diagram.html|Diagrama de Arquitectura (Archify)\]\]/g" "$archivo_destino"
+            sed -i "s/\[\[architecture_diagram\.html|/\[\[${PREFIJO}architecture_diagram.html|/g" "$archivo_destino"
+            sed -i "s/\[\[architecture_diagram\]\]/\[\[${PREFIJO}architecture_diagram.html|Diagrama de Arquitectura (Archify)\]\]/g" "$archivo_destino"
+            sed -i "s/\[\[architecture_diagram|/\[\[${PREFIJO}architecture_diagram.html|/g" "$archivo_destino"
+
+            # 5.3. Reemplazo para artefactos canónicos estándar sin prefijo
+            sed -i "s/\[\[architecture\]\]/\[\[${PREFIJO}architecture|architecture\]\]/g" "$archivo_destino"
+            sed -i "s/\[\[architecture|/\[\[${PREFIJO}architecture|/g" "$archivo_destino"
+            sed -i "s/\[\[abstractions\]\]/\[\[${PREFIJO}abstractions|abstractions\]\]/g" "$archivo_destino"
+            sed -i "s/\[\[abstractions|/\[\[${PREFIJO}abstractions|/g" "$archivo_destino"
+            sed -i "s/\[\[api_spec\]\]/\[\[${PREFIJO}api_spec|api_spec\]\]/g" "$archivo_destino"
+            sed -i "s/\[\[api_spec|/\[\[${PREFIJO}api_spec|/g" "$archivo_destino"
+            sed -i "s/\[\[implementation_plan\]\]/\[\[${PREFIJO}implementation_plan|implementation_plan\]\]/g" "$archivo_destino"
+            sed -i "s/\[\[implementation_plan|/\[\[${PREFIJO}implementation_plan|/g" "$archivo_destino"
+            sed -i "s/\[\[task\]\]/\[\[${PREFIJO}task|task\]\]/g" "$archivo_destino"
+            sed -i "s/\[\[task|/\[\[${PREFIJO}task|/g" "$archivo_destino"
+            sed -i "s/\[\[project_overview\]\]/\[\[${PREFIJO}project_overview|project_overview\]\]/g" "$archivo_destino"
+            sed -i "s/\[\[project_overview|/\[\[${PREFIJO}project_overview|/g" "$archivo_destino"
+
+            # 5.4. Reescritura dinámica de enlaces para cualquier otro archivo copiado (.md y .html)
+            find source-repo/artifacts -type f \( -name "*.md" -o -name "*.html" \) ! -path "*/src/*" | while read -r item_origen; do
+              item_base=$(basename "$item_origen")
+              case "$item_base" in
+                *.md)
+                  nombre_clave="${item_base%.md}"
+                  sed -i "s/\[\[${nombre_clave}\]\]/\[\[${PREFIJO}${nombre_clave}|${nombre_clave}\]\]/g" "$archivo_destino"
+                  sed -i "s/\[\[${nombre_clave}|/\[\[${PREFIJO}${nombre_clave}|/g" "$archivo_destino"
+                  ;;
+                *.html)
+                  sed -i "s/\[\[${item_base}\]\]/\[\[${PREFIJO}${item_base}|${item_base}\]\]/g" "$archivo_destino"
+                  sed -i "s/\[\[${item_base}|/\[\[${PREFIJO}${item_base}|/g" "$archivo_destino"
+                  ;;
+              esac
+            done
+
+            # 5.5. Reglas regex para patrones versionados de changelog y reportes de auditoría
+            sed -i -E "s/\[\[(changelog_v[0-9]+)\]\]/\[\[${PREFIJO}\1|\1\]\]/g" "$archivo_destino"
+            sed -i -E "s/\[\[(changelog_v[0-9]+)\|/\[\[${PREFIJO}\1\|/g" "$archivo_destino"
+            sed -i -E "s/\[\[(audit_report[^]|]*)\]\]/\[\[${PREFIJO}\1|\1\]\]/g" "$archivo_destino"
+            sed -i -E "s/\[\[(audit_report[^]|]*)\|/\[\[${PREFIJO}\1\|/g" "$archivo_destino"
+          done
+          
+      - name: 🚀 Empujar a Obsidian Vault
+        run: |
+          cd target-vault
+          git config user.name "Victor Engineer Bot"
+          git config user.email "bot@victorengineer.fyi"
+          git add .
+          # Si no hay cambios, el comando fallará de forma segura y no hará nada
+          git commit -m "docs: 🤖 Actualización automática de artefactos para PRJ_$PROYECTO" || echo "No hay cambios nuevos en los documentos"
+          git push origin main
