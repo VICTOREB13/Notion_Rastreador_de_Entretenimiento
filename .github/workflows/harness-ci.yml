@@ -21,6 +21,12 @@ jobs:
         with:
           bun-version: latest
 
+      - name: 📦 Install Dependencies
+        run: bun install --frozen-lockfile
+
+      - name: 🛠️ Generate Prisma Client
+        run: bun run db:generate
+
       - name: 🧪 Run Harness Unit Tests
         run: bun run test
 

@@ -7,14 +7,14 @@ tags: [proyecto, design-system, ui-ux, design-tokens, living-doc]
 
 # 🎨 Especificación de Diseño: Notion Rastreador de Entretenimiento
 
-> **Artefacto Vivo (SSoT Visual):** Documento maestro de interfaz de usuario (UI), experiencia de usuario (UX), sistema de tokens visuales, tipografía, arquitectura de componentes y microinteracciones para las vistas de Notion, galerías Bento y tableros interactivos (Streamlit / Web UI) de entretenimiento.
+> **Artefacto Vivo (SSoT Visual):** Documento maestro de interfaz de usuario (UI), experiencia de usuario (UX), sistema de tokens visuales, tipografía, arquitectura de componentes y microinteracciones para las vistas de Notion, galerías Bento y el frontend interactivo de entretenimiento (Next.js 16 Showcase Web).
 
 ---
 
 ## 🏛️ 1. Filosofía de Diseño y Principios Rectores
 
 1. **Estética de Ocio & Curaduría de Entretenimiento:** Fusión equilibrada entre el minimalismo estructurado de Notion y la inmersión visual de plataformas como Steam y TMDB. Superficies oscuras profundas (*Obsidian Zinc*) con acentos dinámicos de alta energía para carátulas y posters.
-2. **Arquitectura Zero-Slop & Máximo Rendimiento:** Rechazo a componentes inflados o genéricos. Presupuesto estricto de nodos DOM (**< 800 recomendado, < 1400 límite de error**) en cualquier renderizado de frontend (Streamlit o web embebida) y paginación determinista para galerías de medios.
+2. **Arquitectura Zero-Slop & Máximo Rendimiento:** Rechazo a componentes inflados o genéricos. Presupuesto estricto de nodos DOM (**< 800 recomendado, < 1400 límite de error**) en cualquier renderizado de frontend (Next.js 16 Showcase Web) y paginación determinista para galerías de medios.
 3. **Psicología Cognitiva y Diseño Humano (`design-everyday-things`):**
    - **Signifiers:** Badges de estado inequívocos para distinguir inmediatamente títulos completados (`Jugado`), activos (`Jugando`) y pendientes (`Por Jugar`).
    - **Affordances:** Indicadores de carátula interactiva con enlace directo al juego en Steam o artículo de Wikipedia.
@@ -113,3 +113,12 @@ tags: [proyecto, design-system, ui-ux, design-tokens, living-doc]
 - [ ] **Cero AI Slop:** Sin degradados morados genéricos ni tarjetas homogéneas repetitivas.
 - [ ] **Accesibilidad (WCAG AA):** Ratios de contraste $\ge 4.5:1$ en todos los estados de texto y badges.
 - [ ] **Modularidad:** Todos los componentes aislados en archivos `< 300 LoC`.
+
+---
+
+## 📚 Especificaciones Técnicas y Contratos Relacionados
+
+- **Arquitectura del Sistema:** [[PRJ_Notion_Rastreador_de_Entretenimiento_architecture|Arquitectura del Sistema]]
+- **Abstracciones del Sistema y Código:** [[PRJ_Notion_Rastreador_de_Entretenimiento_abstractions|Abstracciones y Data Seams]]
+- **Contrato de Datos y API:** [[PRJ_Notion_Rastreador_de_Entretenimiento_api_spec|Especificación de API y Modelos SQLite]]
+

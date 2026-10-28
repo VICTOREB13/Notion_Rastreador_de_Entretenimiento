@@ -650,3 +650,12 @@ El sistema utiliza un monolito modular con persistencia embebida en **SQLite 3**
 
 ### 4. Wikipedia OpenSearch API
 - **Búsqueda de Artículos:** `GET https://es.wikipedia.org/w/api.php?action=opensearch&search={titulo}&limit=1&namespace=0&format=json`
+
+---
+
+## 📚 Especificaciones Técnicas y Contratos Relacionados
+
+- **Arquitectura del Sistema:** [[PRJ_Notion_Rastreador_de_Entretenimiento_architecture|Arquitectura del Sistema]]
+- **Abstracciones del Sistema y Código:** [[PRJ_Notion_Rastreador_de_Entretenimiento_abstractions|Abstracciones y Data Seams]]
+- **Sistema de Diseño y Tokens:** [[PRJ_Notion_Rastreador_de_Entretenimiento_design_system|Sistema de Diseño y Tokens UI/UX]]
+

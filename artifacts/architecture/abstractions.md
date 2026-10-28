@@ -270,3 +270,12 @@ export interface IAiEnrichmentRepository {
    `Steam Web API` ➔ `SteamClient` ➔ `SteamLiveMonitor` ➔ `SessionRepository` ➔ `DailyPlaytimeRepository` ➔ SSE / Hono RPC `/api/live/status`.
 3. **Pipeline de Enriquecimiento IA:**
    `Game / Movie sin Vibe` ➔ `AiSelectorService` ➔ `IAiProvider (Gemini/Groq/Ollama)` ➔ `AiEnrichmentRepository` ➔ `NotionSyncClient (Patch Vibe & Pitch)` ➔ `Next.js Showcase UI`.
+
+---
+
+## 📚 Especificaciones Técnicas y Contratos Relacionados
+
+- **Arquitectura del Sistema:** [[PRJ_Notion_Rastreador_de_Entretenimiento_architecture|Arquitectura del Sistema]]
+- **Contrato de Datos y API:** [[PRJ_Notion_Rastreador_de_Entretenimiento_api_spec|Especificación de API y Modelos SQLite]]
+- **Sistema de Diseño y Tokens:** [[PRJ_Notion_Rastreador_de_Entretenimiento_design_system|Sistema de Diseño y Tokens UI/UX]]
+
