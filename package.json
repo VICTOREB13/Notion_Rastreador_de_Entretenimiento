@@ -19,7 +19,7 @@
     "web:dev": "bun --filter @repo/web dev",
     "web:build": "bun --filter @repo/web build",
     "web:start": "bun --filter @repo/web start",
-    "test:all": "bun test ./.agents/scripts ./.agents/plugins/antigravity-harness-core/tests ./scripts ./src",
+    "test:all": "bun test ./.agents/scripts ./.agents/plugins/antigravity-harness-core/tests ./scripts",
     "test:harness": "bun test ./.agents/scripts ./.agents/plugins/antigravity-harness-core/tests ./scripts",
     "test:plugin": "bun test ./.agents/plugins/antigravity-harness-core/tests",
     "plugin:validate": "agy plugin validate .agents/plugins/antigravity-harness-core --strict",

@@ -7,6 +7,7 @@ import {
 } from "@repo/database";
 import { notionSyncService } from "../services/notion-sync.service";
 import { geminiEnricherService } from "../services/gemini-enricher.service";
+import { broadcastEvent } from "./events.controller";
 
 const listQuerySchema = z.object({
   status: z.string().optional(),
@@ -115,6 +116,7 @@ export const moviesController = new Hono()
 
     try {
       const result = await geminiEnricherService.enrichMovie(id, body);
+      broadcastEvent("catalog_updated", { entity: "movies", action: "enrich", movieId: result.movie.id });
       return c.json({
         success: true,
         data: {
@@ -173,6 +175,7 @@ export const moviesController = new Hono()
   .post("/sync", zValidator("json", syncBodySchema.optional()), async (c) => {
     const body = c.req.valid("json") || {};
     const stats = await notionSyncService.syncMovies(body.forceFullSync);
+    broadcastEvent("catalog_updated", { entity: "movies", action: "sync", stats });
 
     return c.json({
       success: true,
@@ -183,6 +186,7 @@ export const moviesController = new Hono()
     const body = c.req.valid("json");
     try {
       const result = await geminiEnricherService.enrichMovie(body.movieId, body);
+      broadcastEvent("catalog_updated", { entity: "movies", action: "enrich", movieId: result.movie.id });
       return c.json({
         success: true,
         data: {

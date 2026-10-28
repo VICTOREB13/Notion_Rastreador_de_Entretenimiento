@@ -10,6 +10,7 @@ import {
   cleanGameTitle,
 } from "@repo/database";
 import { NotionClient, notionClient } from "../clients/notion.client";
+import { broadcastEvent } from "../controllers/events.controller";
 import { config } from "../config";
 
 export interface SyncStats {
@@ -273,6 +274,10 @@ export class NotionSyncService {
     this.lastGameSyncWatermark = now;
     const durationMs = Math.round(performance.now() - startTime);
 
+    if (updated > 0 || created > 0) {
+      broadcastEvent("catalog_updated", { entity: "games", updated, created });
+    }
+
     return {
       processed,
       updated,
@@ -397,6 +402,10 @@ export class NotionSyncService {
 
     this.lastMovieSyncWatermark = now;
     const durationMs = Math.round(performance.now() - startTime);
+
+    if (updated > 0 || created > 0) {
+      broadcastEvent("catalog_updated", { entity: "movies", updated, created });
+    }
 
     return {
       processed,

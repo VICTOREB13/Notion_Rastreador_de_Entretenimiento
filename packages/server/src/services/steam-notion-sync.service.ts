@@ -21,16 +21,11 @@ import { hltbClient } from "../clients/hltb.client";
 import { wikipediaClient } from "../clients/wikipedia.client";
 import { broadcastEvent } from "../controllers/events.controller";
 import { config } from "../config";
+import { extractNotionTitle, extractNotionNumber } from "./notion-props.helper";
 import {
-  findNotionProp,
-  findNotionPropKey,
-  extractNotionTitle,
-  extractNotionNumber,
-  extractNotionStatus,
-  hasNotionDate,
-  hasNotionCover,
-  hasNotionGenres,
-} from "./notion-props.helper";
+  buildNotionUpdatePayload,
+  buildNotionCreatePayload,
+} from "./steam-notion-payload.helper";
 
 export interface SteamSyncResult {
   scannedSteam: number;
@@ -160,165 +155,42 @@ export class SteamToNotionSyncService {
 
       if (matchedPage) {
         // --- JUEGO YA EXISTE EN NOTION ---
-        const props = matchedPage.properties as Record<string, any>;
-        const horasActuales = extractNotionNumber(props, ["Horas Jugadas", "Horas jugadas", "Hours Played"]) ?? 0;
-        const tieneFechaInicio = hasNotionDate(props, ["Fecha de Inicio", "Fecha de inicio", "Start Date", "StartDate"]);
-        const tieneFechaCulm = hasNotionDate(props, [
-          "Fecha de Culminación (primera campaña)",
-          "Fecha de Finalización",
-          "Fecha de Finalizacion",
-          "Fecha de Culminacion",
-          "Fecha de Fin",
-        ]);
-        let hltbPrincipal = extractNotionNumber(props, ["HLTB Principal", "HLTB Main"]);
-        const currentSteamId = extractNotionNumber(props, ["Steam ID", "SteamID", "AppId"]);
-        const estadoActual = extractNotionStatus(props, ["Estado", "Status"]) || "";
-
-        // Resolución dinámica de nombres de columna para compatibilidad total con Notion
-        const horasPropKey = findNotionPropKey(props, ["Horas Jugadas", "Horas jugadas", "Hours Played"]) || "Horas Jugadas";
-        const steamIdPropKey = findNotionPropKey(props, ["Steam ID", "SteamID", "Steam Id", "AppId"]) || "Steam ID";
-        const fechaInicioPropKey = findNotionPropKey(props, ["Fecha de Inicio", "Fecha de inicio", "Start Date", "StartDate"]) || "Fecha de Inicio";
-        const hltbPrincipalPropKey = findNotionPropKey(props, ["HLTB Principal", "HLTB Main"]) || "HLTB Principal";
-        const hltbCompletistaPropKey = findNotionPropKey(props, ["HLTB Completista", "HLTB 100%"]) || "HLTB Completista";
-        const estadoPropKey = findNotionPropKey(props, ["Estado", "Status"]) || "Estado";
-        const fechaCulmPropKey = findNotionPropKey(props, [
-          "Fecha de Culminación (primera campaña)",
-          "Fecha de Finalización",
-          "Fecha de Finalizacion",
-          "Fecha de Culminacion",
-          "Fecha de Fin",
-        ]) || "Fecha de Culminación (primera campaña)";
-        const portadaPropKey = findNotionPropKey(props, ["Portada", "Cover", "Imagen", "Poster", "Póster"]) || "Portada";
-        const generosPropKey = findNotionPropKey(props, ["Géneros", "Género", "Generos", "Genero", "Genres", "Genre"]) || "Géneros";
-        const linkPropKey = findNotionPropKey(props, ["Link", "URL", "Wikipedia", "Enlace"]) || "Link";
-
-        let needsUpdate = false;
-        const payloadProps: Record<string, any> = {};
-        let coverPayload: any = undefined;
-        let iconPayload: any = undefined;
-
-        // Regla 1: Horas Jugadas (solo si cambió el valor redondeado)
-        const roundedNewHours = Math.round(hours * 10) / 10;
-        const roundedOldHours = Math.round(horasActuales * 10) / 10;
-        if (roundedNewHours !== roundedOldHours) {
-          payloadProps[horasPropKey] = { number: roundedNewHours };
-          needsUpdate = true;
-        }
-
-        // Regla 2: Steam ID (solo si falta o es diferente)
-        if (!currentSteamId || currentSteamId !== g.appId) {
-          payloadProps[steamIdPropKey] = { number: g.appId };
-          needsUpdate = true;
-        }
-
-        // Regla 3: Fecha de Inicio (si tiene horas y no tiene fecha previa)
-        if (hours > 0 && !tieneFechaInicio) {
-          payloadProps[fechaInicioPropKey] = { date: { start: formatLocalDate() } };
-          needsUpdate = true;
-        }
-
-        // Regla 4: Consulta HLTB solo si falta en Notion
-        if (hltbPrincipal === null) {
-          const hltbEst = await this.hltb.searchDuration(g.name);
-          if (hltbEst.mainHours) {
-            payloadProps[hltbPrincipalPropKey] = { number: hltbEst.mainHours };
-            hltbPrincipal = hltbEst.mainHours;
-            needsUpdate = true;
-          }
-          if (hltbEst.completionistHours) {
-            payloadProps[hltbCompletistaPropKey] = { number: hltbEst.completionistHours };
-            needsUpdate = true;
-          }
-        }
-
-        // Regla 5: Auto-Culminación HLTB (si horas >= HLTB Principal y no estaba jugado)
-        if (
-          hltbPrincipal &&
-          hltbPrincipal > 0 &&
-          hours >= hltbPrincipal &&
-          estadoActual.trim().toLowerCase() !== "jugado"
-        ) {
-          payloadProps[estadoPropKey] = { status: { name: "Jugado" } };
-          if (!tieneFechaCulm) {
-            payloadProps[fechaCulmPropKey] = {
-              date: { start: formatLocalDate() },
-            };
-          }
-          needsUpdate = true;
-        }
-
-        // Regla 6: Preservación absoluta de cuota RAWG (ahorro total de cuota)
-        // Si la página de Notion ya tiene Portada o cover definida, NUNCA consultar RAWG de nuevo
-        const pageHasCover = hasNotionCover(matchedPage);
-        const pageHasGenres = hasNotionGenres(props);
-
-        if (!pageHasCover) {
-          const rawgData = await this.rawg.searchGame(g.name);
-          if (rawgData) {
-            if (rawgData.backgroundImage) {
-              payloadProps[portadaPropKey] = {
-                files: [
-                  {
-                    type: "external",
-                    name: "Cover",
-                    external: { url: rawgData.backgroundImage },
-                  },
-                ],
-              };
-              coverPayload = { type: "external", external: { url: rawgData.backgroundImage } };
-              iconPayload = { type: "external", external: { url: rawgData.backgroundImage } };
-              needsUpdate = true;
-            }
-            if (!pageHasGenres && rawgData.genres.length > 0) {
-              const genreProp = findNotionProp(props, ["Géneros", "Género", "Generos", "Genero", "Genres", "Genre"]);
-              if (genreProp && "select" in genreProp) {
-                payloadProps[generosPropKey] = { select: { name: rawgData.genres[0] } };
-              } else {
-                payloadProps[generosPropKey] = {
-                  multi_select: rawgData.genres.map((name) => ({ name })),
-                };
-              }
-              needsUpdate = true;
-            }
-          }
-        }
-
-        // Regla 7: Wikipedia (solo si falta link)
-        const currentLink = findNotionProp(props, ["Link", "URL", "Wikipedia", "Enlace"])?.url;
-        if (!currentLink) {
-          const wikiUrl = this.wiki.searchGameWikiUrl
-            ? await this.wiki.searchGameWikiUrl(g.name)
-            : await this.wiki.searchArticleUrl(g.name);
-          if (wikiUrl) {
-            payloadProps[linkPropKey] = { url: wikiUrl };
-            needsUpdate = true;
-          }
-        }
+        const updatePayload = await buildNotionUpdatePayload({
+          matchedPage,
+          game: g,
+          hours,
+          fetchHltb: (name) => this.hltb.searchDuration(name),
+          fetchRawg: (name) => this.rawg.searchGame(name),
+          fetchWikiUrl: (name) =>
+            this.wiki.searchGameWikiUrl
+              ? this.wiki.searchGameWikiUrl(name)
+              : this.wiki.searchArticleUrl(name),
+        });
 
         // Si nada cambió, NO enviar petición a Notion (cero tráfico inútil)
-        if (needsUpdate) {
+        if (updatePayload.needsUpdate) {
           if (this.notion.updatePage) {
             await this.notion.updatePage(matchedPage.id, {
-              properties: payloadProps,
-              cover: coverPayload,
-              icon: iconPayload,
+              properties: updatePayload.payloadProps,
+              cover: updatePayload.coverPayload,
+              icon: updatePayload.iconPayload,
             });
           } else {
-            await this.notion.updatePageProperties(matchedPage.id, payloadProps);
+            await this.notion.updatePageProperties(matchedPage.id, updatePayload.payloadProps);
           }
           updatedNotion++;
 
           // Actualizar SQLite cache de forma idempotente
-          const resolvedTitle = extractNotionTitle(props) || g.name;
+          const resolvedTitle = extractNotionTitle(matchedPage.properties as Record<string, any>) || g.name;
           await this.gameRepo.upsert({
             notionPageId: matchedPage.id,
             title: resolvedTitle,
             cleanTitle: cleanGameTitle(resolvedTitle),
             steamAppId: g.appId,
-            playtimeForever: roundedNewHours,
-            playtimeNotion: roundedNewHours,
-            hltbMain: hltbPrincipal,
-            status: payloadProps["Estado"]?.status?.name || estadoActual || "Por Jugar",
+            playtimeForever: updatePayload.roundedNewHours,
+            playtimeNotion: updatePayload.roundedNewHours,
+            hltbMain: updatePayload.hltbPrincipal,
+            status: updatePayload.payloadProps["Estado"]?.status?.name || updatePayload.estadoActual || "Por Jugar",
             platform: "PC",
           });
 
@@ -326,69 +198,25 @@ export class SteamToNotionSyncService {
         }
       } else {
         // --- JUEGO NUEVO: CREAR EN NOTION ---
-        const roundedHours = Math.round(hours * 10) / 10;
         const rawgData = await this.rawg.searchGame(g.name);
         const hltbEst = await this.hltb.searchDuration(g.name);
         const wikiUrl = this.wiki.searchGameWikiUrl
           ? await this.wiki.searchGameWikiUrl(g.name)
           : await this.wiki.searchArticleUrl(g.name);
 
-        const autoCulminated = Boolean(hltbEst.mainHours && hours >= hltbEst.mainHours);
-        const initialStatus = autoCulminated || hours > 1 ? "Jugado" : "Por Jugar";
-
-        const newProps: Record<string, any> = {
-          "Título": { title: [{ text: { content: g.name } }] },
-          "Steam ID": { number: g.appId },
-          "Horas Jugadas": { number: roundedHours },
-          "Plataforma": { select: { name: "PC" } },
-          "Estado": { status: { name: initialStatus } },
-        };
-
-        if (hours > 0) {
-          newProps["Fecha de Inicio"] = { date: { start: formatLocalDate() } };
-        }
-        if (autoCulminated) {
-          newProps["Fecha de Culminación (primera campaña)"] = {
-            date: { start: formatLocalDate() },
-          };
-        }
-        if (hltbEst.mainHours) {
-          newProps["HLTB Principal"] = { number: hltbEst.mainHours };
-        }
-        if (hltbEst.completionistHours) {
-          newProps["HLTB Completista"] = { number: hltbEst.completionistHours };
-        }
-
-        let newCover: any = undefined;
-        let newIcon: any = undefined;
-
-        if (rawgData?.backgroundImage) {
-          newProps["Portada"] = {
-            files: [
-              {
-                type: "external",
-                name: "Cover",
-                external: { url: rawgData.backgroundImage },
-              },
-            ],
-          };
-          newCover = { type: "external", external: { url: rawgData.backgroundImage } };
-          newIcon = { type: "external", external: { url: rawgData.backgroundImage } };
-        }
-        if (rawgData?.genres && rawgData.genres.length > 0) {
-          newProps["Géneros"] = {
-            multi_select: rawgData.genres.map((name) => ({ name })),
-          };
-        }
-        if (wikiUrl) {
-          newProps["Link"] = { url: wikiUrl };
-        }
+        const createPayload = buildNotionCreatePayload({
+          game: g,
+          hours,
+          rawgData,
+          hltbEst,
+          wikiUrl,
+        });
 
         const newPageId = await this.notion.createPage(
           this.gamesDbId,
-          newProps,
-          newCover,
-          newIcon
+          createPayload.newProps,
+          createPayload.newCover,
+          createPayload.newIcon
         );
         createdNotion++;
 
@@ -398,15 +226,15 @@ export class SteamToNotionSyncService {
           title: g.name,
           cleanTitle: steamCleanTitle,
           steamAppId: g.appId,
-          playtimeForever: roundedHours,
-          playtimeNotion: roundedHours,
+          playtimeForever: createPayload.roundedHours,
+          playtimeNotion: createPayload.roundedHours,
           hltbMain: hltbEst.mainHours,
           hltbCompletionist: hltbEst.completionistHours,
           coverUrl: rawgData?.backgroundImage || null,
           genres: JSON.stringify(rawgData?.genres || []),
           link: wikiUrl,
           platform: "PC",
-          status: initialStatus,
+          status: createPayload.initialStatus,
           startDate: hours > 0 ? formatLocalDate() : null,
         });
 
@@ -414,8 +242,8 @@ export class SteamToNotionSyncService {
         const mockNewPage: NotionPageDelta = {
           id: newPageId,
           lastEditedTime: new Date().toISOString(),
-          properties: newProps,
-          cover: newCover,
+          properties: createPayload.newProps,
+          cover: createPayload.newCover,
         };
         notionBySteamId.set(g.appId, mockNewPage);
         notionByCleanTitle.set(steamCleanTitle, mockNewPage);

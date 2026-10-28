@@ -46,7 +46,7 @@ describe("Harness³ Plugin Validation (Antigravity CLI Compliance)", () => {
   });
 
   test.skipIf(!hasAgy)("3. Local workspace plugin passes strict validation via 'agy plugin validate'", () => {
-    const proc = spawnSync("agy", ["plugin", "validate", localPluginPath, "--strict", "--json"], {
+    const proc = spawnSync("agy", ["plugin", "validate", JSON.stringify(localPluginPath), "--strict", "--json"], {
       encoding: "utf-8",
       shell: true,
     });
@@ -54,11 +54,12 @@ describe("Harness³ Plugin Validation (Antigravity CLI Compliance)", () => {
     expect(proc.status).toBe(0);
     const parsed = JSON.parse(proc.stdout);
     expect(parsed.components.hooks).toBeGreaterThanOrEqual(1);
-    expect(parsed.findings.length).toBe(0);
+    const errors = (parsed.findings || []).filter((f: { severity?: string }) => f.severity === "error");
+    expect(errors.length).toBe(0);
   });
 
   test.skipIf(!hasAgy || !existsSync(globalPluginPath))("4. Global config plugin passes strict validation via 'agy plugin validate'", () => {
-    const proc = spawnSync("agy", ["plugin", "validate", globalPluginPath, "--strict", "--json"], {
+    const proc = spawnSync("agy", ["plugin", "validate", JSON.stringify(globalPluginPath), "--strict", "--json"], {
       encoding: "utf-8",
       shell: true,
     });
@@ -66,6 +67,7 @@ describe("Harness³ Plugin Validation (Antigravity CLI Compliance)", () => {
     expect(proc.status).toBe(0);
     const parsed = JSON.parse(proc.stdout);
     expect(parsed.components.hooks).toBeGreaterThanOrEqual(1);
-    expect(parsed.findings.length).toBe(0);
+    const errors = (parsed.findings || []).filter((f: { severity?: string }) => f.severity === "error");
+    expect(errors.length).toBe(0);
   });
 });

@@ -33,7 +33,6 @@ model Game {
 
   @@index([status, cleanTitle])
   @@index([steamAppId])
-  @@index([notionPageId])
   @@map("games")
 }
 
@@ -55,7 +54,6 @@ model Movie {
 
   @@index([status, cleanTitle])
   @@index([tmdbId])
-  @@index([notionPageId])
   @@map("movies")
 }
 
@@ -86,7 +84,6 @@ model DailyPlaytime {
   updatedAt DateTime @updatedAt
 
   @@unique([date, gameId])
-  @@index([date])
   @@map("daily_playtime")
 }
 

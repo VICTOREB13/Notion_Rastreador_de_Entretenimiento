@@ -22,7 +22,8 @@ export function useLiveStatusQuery() {
   return useQuery({
     queryKey: ["liveStatus"],
     queryFn: fetchLiveStatus,
-    refetchInterval: 15000, // Refrescar estado en vivo cada 15s
+    refetchInterval: 60000, // Reducido gracias a eventos SSE en tiempo real
+    staleTime: 30000,
   });
 }
 
@@ -30,7 +31,7 @@ export function useAnalyticsQuery(days = 30) {
   return useQuery({
     queryKey: ["analytics", days],
     queryFn: () => fetchAnalytics(days),
-    staleTime: 60000,
+    staleTime: 120000,
   });
 }
 
@@ -43,7 +44,7 @@ export function useGamesQuery(params: {
   return useQuery({
     queryKey: ["games", params],
     queryFn: () => fetchGames(params),
-    staleTime: 30000,
+    staleTime: 120000,
   });
 }
 
@@ -57,7 +58,7 @@ export function useMoviesQuery(params: {
   return useQuery({
     queryKey: ["movies", params],
     queryFn: () => fetchMovies(params),
-    staleTime: 30000,
+    staleTime: 120000,
   });
 }
 
@@ -130,7 +131,8 @@ export function useSystemSettingsQuery() {
   return useQuery({
     queryKey: ["systemSettings"],
     queryFn: fetchSystemSettings,
-    refetchInterval: 30000,
+    refetchInterval: 120000,
+    staleTime: 60000,
   });
 }
 
@@ -181,6 +183,11 @@ export function useServerEvents() {
           queryClient.invalidateQueries({ queryKey: ["analytics"] });
           queryClient.invalidateQueries({ queryKey: ["liveStatus"] });
           queryClient.invalidateQueries({ queryKey: ["systemSettings"] });
+        });
+
+        eventSource.addEventListener("live_status_updated", () => {
+          setLastEvent("live_status_updated");
+          queryClient.invalidateQueries({ queryKey: ["liveStatus"] });
         });
 
         eventSource.onerror = () => {

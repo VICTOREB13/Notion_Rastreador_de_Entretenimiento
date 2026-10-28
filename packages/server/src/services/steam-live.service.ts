@@ -10,6 +10,7 @@ import {
 } from "@repo/database";
 import { PlaytimeTrackerService, playtimeTrackerService } from "./playtime-tracker.service";
 import { SteamClient, steamClient } from "../clients/steam.client";
+import { broadcastEvent } from "../controllers/events.controller";
 import { config } from "../config";
 
 export interface LiveStatusGame {
@@ -108,6 +109,8 @@ export class SteamLiveService {
 
         // El usuario cambió de juego: cerrar la sesión anterior de inmediato
         await this.playtimeTracker.closeActiveSession(activeSession, new Date());
+        broadcastEvent("live_status_updated", { isPlaying: false, game: null });
+        broadcastEvent("catalog_updated", { source: "steam_live", action: "session_closed" });
       }
 
       // Iniciar sesión para el nuevo juego detectado
@@ -137,7 +140,10 @@ export class SteamLiveService {
       }
 
       await this.sessionRepo.startSession(game.id, summary.gameId, new Date());
-      return this.getStatus();
+      const status = await this.getStatus();
+      broadcastEvent("live_status_updated", status);
+      broadcastEvent("catalog_updated", { source: "steam_live", action: "session_started", gameId: game.id });
+      return status;
     }
 
     // 2. El jugador NO está jugando según Steam
@@ -153,6 +159,8 @@ export class SteamLiveService {
       if (this.candidateDisconnectAt === null && timeSinceLastActive > this.gracePeriodMs * 2) {
         await this.playtimeTracker.closeActiveSession(activeSession, lastActiveAt);
         this.candidateDisconnectAt = null;
+        broadcastEvent("live_status_updated", { isPlaying: false, game: null });
+        broadcastEvent("catalog_updated", { source: "steam_live", action: "session_closed" });
         return this.getStatus();
       }
 
@@ -165,6 +173,8 @@ export class SteamLiveService {
           // El periodo de gracia expiró: cerrar la sesión formalmente
           await this.playtimeTracker.closeActiveSession(activeSession, this.candidateDisconnectAt);
           this.candidateDisconnectAt = null;
+          broadcastEvent("live_status_updated", { isPlaying: false, game: null });
+          broadcastEvent("catalog_updated", { source: "steam_live", action: "session_closed" });
         }
       }
     } else {

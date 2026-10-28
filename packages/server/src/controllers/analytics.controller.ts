@@ -19,7 +19,9 @@ export const analyticsController = new Hono()
     const [
       totalGames,
       completedGames,
-      gamesList,
+      playtimeAggregate,
+      topGamesRaw,
+      gamesGenres,
       totalMovies,
       watchedMovies,
       timeSeries,
@@ -27,15 +29,21 @@ export const analyticsController = new Hono()
     ] = await Promise.all([
       prisma.game.count(),
       prisma.game.count({ where: { status: "Jugado" } }),
+      prisma.game.aggregate({
+        _sum: { playtimeForever: true },
+      }),
       prisma.game.findMany({
+        take: 5,
+        orderBy: { playtimeForever: "desc" },
         select: {
           id: true,
           title: true,
           playtimeForever: true,
           coverUrl: true,
-          genres: true,
         },
-        orderBy: { playtimeForever: "desc" },
+      }),
+      prisma.game.findMany({
+        select: { genres: true },
       }),
       prisma.movie.count(),
       prisma.movie.count({ where: { status: "Vista" } }),
@@ -45,7 +53,7 @@ export const analyticsController = new Hono()
 
     // Calcular horas totales acumuladas
     const totalPlaytimeHours = Number(
-      gamesList.reduce((acc, g) => acc + g.playtimeForever, 0).toFixed(1)
+      (playtimeAggregate._sum.playtimeForever ?? 0).toFixed(1)
     );
 
     const completionRate =
@@ -66,7 +74,7 @@ export const analyticsController = new Hono()
     }));
 
     // Top 5 juegos
-    const topGames = gamesList.slice(0, 5).map((g) => ({
+    const topGames = topGamesRaw.map((g) => ({
       id: g.id,
       title: g.title,
       hours: g.playtimeForever,
@@ -75,7 +83,7 @@ export const analyticsController = new Hono()
 
     // Distribución de géneros
     const genreMap = new Map<string, number>();
-    for (const g of gamesList) {
+    for (const g of gamesGenres) {
       try {
         const parsedGenres: string[] = JSON.parse(g.genres || "[]");
         for (const genre of parsedGenres) {

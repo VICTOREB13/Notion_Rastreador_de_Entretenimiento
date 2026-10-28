@@ -1,4 +1,4 @@
-import { configurePragmas } from "@repo/database";
+import { configurePragmas, prisma } from "@repo/database";
 import { app } from "./app";
 import { daemonScheduler } from "./daemon/scheduler";
 import { config } from "./config";
@@ -31,10 +31,11 @@ async function main() {
     fetch: app.fetch,
   });
 
-  const shutdown = () => {
+  const shutdown = async () => {
     console.log("[Server] Gracefully shutting down...");
     daemonScheduler.stop();
     server.stop();
+    await prisma.$disconnect().catch(() => {});
     process.exit(0);
   };
 

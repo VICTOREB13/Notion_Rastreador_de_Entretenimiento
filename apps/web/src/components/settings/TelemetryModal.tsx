@@ -1,26 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import {
-  Activity,
-  Cpu,
-  RefreshCw,
-  CheckCircle2,
-  AlertCircle,
-  Eye,
-  EyeOff,
-  Sparkles,
-  Server,
-  Database,
-  Gamepad2,
-  Film,
-  Sun,
-  Moon,
-  Monitor,
-} from "lucide-react";
+import { Sun, Moon, Monitor } from "lucide-react";
 import { DialogModal } from "@/components/ui/DialogModal";
-import { MorphButton } from "@/components/ui/MorphButton";
-import { CustomSelect } from "@/components/ui/CustomSelect";
 import { useTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 import {
@@ -30,6 +12,9 @@ import {
   useTestAiConnectionMutation,
   useTriggerSyncMutation,
 } from "@/lib/hooks";
+import { ServicesTelemetryGrid } from "./ServicesTelemetryGrid";
+import { KineticManualSyncCard } from "./KineticManualSyncCard";
+import { AiModelConfigForm } from "./AiModelConfigForm";
 
 export interface TelemetryModalProps {
   isOpen: boolean;
@@ -145,23 +130,6 @@ export function TelemetryModal({ isOpen, onClose }: TelemetryModalProps) {
     }
   };
 
-  const formatUptime = (seconds?: number) => {
-    if (!seconds) return "0m";
-    const mins = Math.floor(seconds / 60);
-    const hrs = Math.floor(mins / 60);
-    if (hrs > 0) return `${hrs}h ${mins % 60}m`;
-    return `${mins}m`;
-  };
-
-  const services = [
-    { label: "Daemon API", sub: "Hono Core", icon: <Activity className="w-4 h-4 text-emerald-500" />, ok: true },
-    { label: "Notion SSoT", sub: telemetry?.isNotionConnected ? "Conectado" : "Offline", icon: <Database className="w-4 h-4 text-rose-500" />, ok: telemetry?.isNotionConnected },
-    { label: "Steam Live", sub: telemetry?.isSteamConnected ? "Conectado" : "Offline", icon: <Gamepad2 className="w-4 h-4 text-sky-500" />, ok: telemetry?.isSteamConnected },
-    { label: "RAWG API", sub: telemetry?.isRawgConnected ? "Conectado" : "Cuota Preservada", icon: <Gamepad2 className="w-4 h-4 text-amber-500" />, ok: telemetry?.isRawgConnected },
-    { label: "TMDB Cine", sub: telemetry?.isTmdbConnected ? "Conectado" : "Offline", icon: <Film className="w-4 h-4 text-purple-500" />, ok: telemetry?.isTmdbConnected },
-    { label: "Gemini IA", sub: telemetry?.activeModel || "gemini-2.0-flash", icon: <Cpu className="w-4 h-4 text-rose-500" />, ok: telemetry?.isGeminiConnected },
-  ];
-
   return (
     <DialogModal
       isOpen={isOpen}
@@ -172,179 +140,33 @@ export function TelemetryModal({ isOpen, onClose }: TelemetryModalProps) {
     >
       <div className="space-y-6 text-xs">
         {/* SECTION 1: Service Telemetry Grid */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h4 className="text-[11px] font-mono uppercase tracking-wider text-zinc-500 dark:text-zinc-400 font-bold flex items-center gap-1.5">
-              <Server className="w-3.5 h-3.5 text-rose-500" /> Estado de Conexiones & Servicios
-            </h4>
-            <span className="text-[10px] font-mono text-zinc-400">
-              Uptime: {formatUptime(telemetry?.uptime)}
-            </span>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-            {services.map((svc) => (
-              <div
-                key={svc.label}
-                className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-950/80 border border-zinc-200 dark:border-zinc-800/80 flex items-center justify-between"
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  {svc.icon}
-                  <div className="truncate">
-                    <span className="block font-semibold text-zinc-800 dark:text-zinc-200 text-[11px] truncate">{svc.label}</span>
-                    <span className="text-[10px] text-zinc-500 font-mono truncate">{svc.sub}</span>
-                  </div>
-                </div>
-                <span
-                  className={cn(
-                    "w-2 h-2 rounded-full shrink-0 shadow-xs",
-                    svc.ok ? "bg-emerald-500 shadow-emerald-500/50" : "bg-zinc-400"
-                  )}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
+        <ServicesTelemetryGrid telemetry={telemetry} />
 
         {/* SECTION 2: Kinetic Manual Sync Bar */}
-        <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <span className="font-bold text-zinc-900 dark:text-zinc-100 block">Sincronización Steam ➔ Notion</span>
-            <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
-              Emparejamiento heurístico de horas, auto-culminación HLTB y preservación de cuota RAWG (0 llamadas si ya tiene portada).
-            </p>
-          </div>
-          <div className="shrink-0 flex items-center gap-2">
-            <MorphButton
-              variant="primary"
-              size="md"
-              isLoading={syncMutation.isPending}
-              isSuccess={Boolean(syncSuccessMsg)}
-              successText={syncSuccessMsg || "¡Sincronizado!"}
-              icon={<RefreshCw className="w-3.5 h-3.5" />}
-              text="Sincronizar Steam hacia Notion"
-              onClick={handleTriggerSync}
-              className="cursor-pointer"
-            />
-          </div>
-        </div>
+        <KineticManualSyncCard
+          isPending={syncMutation.isPending}
+          successMsg={syncSuccessMsg}
+          onTriggerSync={handleTriggerSync}
+        />
 
-        {/* SECTION 3: Dynamic Model Selection (Fase 5) with Canonical CustomSelect */}
-        <div className="space-y-4 pt-2 border-t border-zinc-200 dark:border-zinc-800/80">
-          <div className="flex items-center justify-between">
-            <h4 className="text-[11px] font-mono uppercase tracking-wider text-zinc-500 dark:text-zinc-400 font-bold flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-rose-500" /> Pipeline de IA & Modelos Flexibles
-            </h4>
-            <span className="text-[11px] font-mono text-rose-500 font-semibold truncate max-w-[200px]">
-              Activo: {activeModel}
-            </span>
-          </div>
-
-          <div>
-            <label className="font-semibold text-zinc-700 dark:text-zinc-300 block mb-1.5">
-              Modelo Gemini & Argon
-            </label>
-            <CustomSelect
-              value={selectedPreset}
-              onChange={(val) => setSelectedPreset(val)}
-              options={MODEL_OPTIONS}
-              placeholder="Seleccionar modelo..."
-              ariaLabel="Selector de Modelo de Inteligencia Artificial"
-            />
-          </div>
-
-          {selectedPreset === "custom" && (
-            <div className="animate-in fade-in duration-150">
-              <label className="font-semibold text-zinc-700 dark:text-zinc-300 block mb-1.5">
-                Nombre del Modelo Personalizado o Serie Argon
-              </label>
-              <input
-                type="text"
-                value={customModelName}
-                onChange={(e) => setCustomModelName(e.target.value)}
-                placeholder="ej: argon-experimental, gemini-2.0-flash-thinking-exp..."
-                className="w-full p-2.5 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 font-mono text-xs focus:outline-hidden focus:border-rose-500/60"
-              />
-              <p className="text-[10px] text-zinc-500 mt-1">
-                Ingresa cualquier identificador de modelo válido compatible con la API de Gemini o el backend.
-              </p>
-            </div>
-          )}
-
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="font-semibold text-zinc-700 dark:text-zinc-300">
-                Custom Gemini API Key
-              </label>
-              {aiSettings?.geminiConfigured && (
-                <span className="text-[11px] font-mono text-emerald-500 flex items-center gap-1">
-                  <CheckCircle2 className="w-3 h-3" /> Configurada en servidor
-                </span>
-              )}
-            </div>
-            <div className="relative">
-              <input
-                type={showApiKey ? "text" : "password"}
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder={
-                  aiSettings?.geminiConfigured
-                    ? "•••••••••••••••••••••••• (dejar en blanco para conservar)"
-                    : "AIzaSy..."
-                }
-                className="w-full pl-3 pr-10 py-2.5 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 font-mono text-xs focus:outline-hidden focus:border-rose-500/60"
-              />
-              <button
-                type="button"
-                onClick={() => setShowApiKey(!showApiKey)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 cursor-pointer"
-              >
-                {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
-            </div>
-          </div>
-
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="font-semibold text-zinc-700 dark:text-zinc-300">Temperatura Creativa</label>
-              <span className="font-mono text-rose-500 font-bold">{temperature.toFixed(2)}</span>
-            </div>
-            <input
-              type="range"
-              min="0.0"
-              max="1.0"
-              step="0.05"
-              value={temperature}
-              onChange={(e) => setTemperature(parseFloat(e.target.value))}
-              className="w-full accent-rose-500 cursor-pointer"
-            />
-          </div>
-
-          {testResult && (
-            <div
-              className={cn(
-                "p-3 rounded-xl border flex items-center gap-2",
-                testResult.success
-                  ? "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500/30 text-emerald-800 dark:text-emerald-300"
-                  : "bg-red-50 dark:bg-red-950/40 border-red-500/30 text-red-800 dark:text-red-300"
-              )}
-            >
-              {testResult.success ? (
-                <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-500" />
-              ) : (
-                <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
-              )}
-              <span className="text-[11px] leading-snug">{testResult.message}</span>
-            </div>
-          )}
-
-          {saveError && (
-            <div className="p-3 rounded-xl border bg-red-50 dark:bg-red-950/40 border-red-500/30 text-red-800 dark:text-red-300 flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
-              <span className="text-[11px] leading-snug">{saveError}</span>
-            </div>
-          )}
-        </div>
+        {/* SECTION 3: Dynamic Model Selection */}
+        <AiModelConfigForm
+          selectedPreset={selectedPreset}
+          onSelectPreset={setSelectedPreset}
+          customModelName={customModelName}
+          onChangeCustomModelName={setCustomModelName}
+          activeModel={activeModel}
+          apiKey={apiKey}
+          onChangeApiKey={setApiKey}
+          showApiKey={showApiKey}
+          onToggleShowApiKey={() => setShowApiKey(!showApiKey)}
+          isConfigured={aiSettings?.geminiConfigured}
+          temperature={temperature}
+          onChangeTemperature={setTemperature}
+          testResult={testResult}
+          saveError={saveError}
+          modelOptions={MODEL_OPTIONS}
+        />
 
         {/* SECTION 4: Apariencia & Modo (Dark, Light, System) */}
         <div className="pt-2 border-t border-zinc-200 dark:border-zinc-800/80">

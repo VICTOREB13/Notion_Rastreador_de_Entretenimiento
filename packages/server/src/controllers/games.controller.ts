@@ -7,6 +7,7 @@ import {
 } from "@repo/database";
 import { notionSyncService } from "../services/notion-sync.service";
 import { geminiEnricherService } from "../services/gemini-enricher.service";
+import { broadcastEvent } from "./events.controller";
 
 const listQuerySchema = z.object({
   status: z.string().optional(),
@@ -106,6 +107,7 @@ export const gamesController = new Hono()
 
     try {
       const result = await geminiEnricherService.enrichGame(id, body);
+      broadcastEvent("catalog_updated", { entity: "games", action: "enrich", gameId: result.game.id });
       return c.json({
         success: true,
         data: {
@@ -164,6 +166,7 @@ export const gamesController = new Hono()
   .post("/sync", zValidator("json", syncBodySchema.optional()), async (c) => {
     const body = c.req.valid("json") || {};
     const stats = await notionSyncService.syncGames(body.forceFullSync);
+    broadcastEvent("catalog_updated", { entity: "games", action: "sync", stats });
 
     return c.json({
       success: true,

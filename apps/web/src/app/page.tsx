@@ -40,10 +40,28 @@ export default function EntertainmentShowcasePage() {
 
   const daysNumber = timeRange === "7D" ? 7 : timeRange === "30D" ? 30 : 90;
 
+  const gameStatus =
+    status === "PLAYING"
+      ? "Jugando"
+      : status === "TODO"
+      ? "Por Jugar"
+      : status === "COMPLETED"
+      ? "Jugado"
+      : undefined;
+
+  const movieStatus =
+    status === "PLAYING"
+      ? "Viendo"
+      : status === "TODO"
+      ? "Por Ver"
+      : status === "COMPLETED"
+      ? "Vista"
+      : undefined;
+
   const { data: liveStatusData, isLoading: isLiveLoading } = useLiveStatusQuery();
   const { data: analytics } = useAnalyticsQuery(daysNumber);
-  const { data: gamesData } = useGamesQuery();
-  const { data: moviesData } = useMoviesQuery();
+  const { data: gamesData } = useGamesQuery({ status: gameStatus });
+  const { data: moviesData } = useMoviesQuery({ status: movieStatus });
 
   const games: GameItem[] = (gamesData?.data as unknown as GameItem[]) || [];
   const movies: MovieItem[] = (moviesData?.data as unknown as MovieItem[]) || [];
@@ -168,8 +186,8 @@ export default function EntertainmentShowcasePage() {
           onStatusChange={setStatus}
           search={search}
           onSearchChange={setSearch}
-          totalGames={games.length}
-          totalMovies={movies.length}
+          totalGames={summary?.totalGames ?? games.length}
+          totalMovies={summary?.totalMovies ?? movies.length}
         />
 
         <BentoCatalogGrid
