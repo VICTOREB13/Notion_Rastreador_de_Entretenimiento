@@ -4,11 +4,58 @@
   --font-display: var(--font-display), "Outfit", system-ui, sans-serif;
   --font-sans: var(--font-sans), "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
   --font-mono: var(--font-mono), "JetBrains Mono", ui-monospace, monospace;
+  --color-crimson-50: #fff1f2;
+  --color-crimson-100: #ffe4e6;
+  --color-crimson-200: #fecdd3;
+  --color-crimson-300: #fda4af;
+  --color-crimson-400: #fb7185;
+  --color-crimson-500: #f43f5e;
+  --color-crimson-600: #e11d48;
+  --color-crimson-700: #be123c;
+  --color-crimson-800: #9f1239;
+  --color-crimson-900: #881337;
+  --color-crimson-950: #4c0519;
 }
-
 
 @layer base {
   :root {
+    --background: #fafafa;
+    --foreground: #09090b;
+    --card: #ffffff;
+    --card-foreground: #09090b;
+    --popover: #ffffff;
+    --popover-foreground: #09090b;
+    --primary: #ef4444;
+    --primary-foreground: #ffffff;
+    --secondary: #f4f4f5;
+    --secondary-foreground: #09090b;
+    --muted: #f4f4f5;
+    --muted-foreground: #71717a;
+    --accent: #f4f4f5;
+    --accent-foreground: #09090b;
+    --destructive: #dc2626;
+    --destructive-foreground: #ffffff;
+    --border: rgba(0, 0, 0, 0.08);
+    --input: #e4e4e7;
+    --ring: #ef4444;
+    --radius: 0.75rem;
+    --radius-card: 20px;
+
+    /* Sombras canónicas */
+    --shadow-card: 0 4px 20px -2px rgba(0, 0, 0, 0.08), 0 2px 6px -1px rgba(0, 0, 0, 0.04);
+    --shadow-card-hover: 0 12px 30px -4px rgba(0, 0, 0, 0.12), 0 4px 12px -2px rgba(239, 68, 68, 0.15);
+    --shadow-floating: 0 20px 48px -8px rgba(0, 0, 0, 0.15), 0 0 1px 1px rgba(0, 0, 0, 0.05);
+
+    /* Tipografía */
+    --font-display: "Outfit", system-ui, sans-serif;
+    --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+    /* Resplandor carmesí */
+    --glow-crimson: 0 0 24px rgba(239, 68, 68, 0.25);
+  }
+
+  .dark {
     --background: #09090b;
     --foreground: #fafafa;
     --card: #111113;
@@ -28,18 +75,11 @@
     --border: rgba(255, 255, 255, 0.08);
     --input: #27272a;
     --ring: #ef4444;
-    --radius: 0.75rem;
-    --radius-card: 20px;
 
     /* Sombras canónicas */
     --shadow-card: 0 4px 20px -2px rgba(0, 0, 0, 0.5), 0 2px 6px -1px rgba(0, 0, 0, 0.35);
     --shadow-card-hover: 0 12px 30px -4px rgba(0, 0, 0, 0.7), 0 4px 12px -2px rgba(239, 68, 68, 0.15);
     --shadow-floating: 0 20px 48px -8px rgba(0, 0, 0, 0.8), 0 0 1px 1px rgba(255, 255, 255, 0.05);
-
-    /* Tipografía */
-    --font-display: "Outfit", system-ui, sans-serif;
-    --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
     /* Resplandor carmesí */
     --glow-crimson: 0 0 24px rgba(239, 68, 68, 0.35);

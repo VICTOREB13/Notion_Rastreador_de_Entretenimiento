@@ -85,13 +85,28 @@ export interface NotionPageDelta {
   lastEditedTime: string;
   properties: Record<string, unknown>;
   archived?: boolean;
+  cover?: unknown;
+  icon?: unknown;
 }
 
 export interface INotionSyncClient {
   fetchModifiedPages(databaseId: string, lastEditedAfter: Date): Promise<NotionPageDelta[]>;
   fetchAllPages(databaseId: string): Promise<NotionPageDelta[]>;
-  createPage(databaseId: string, properties: Record<string, unknown>): Promise<string>;
+  createPage(
+    databaseId: string,
+    properties: Record<string, unknown>,
+    cover?: unknown,
+    icon?: unknown
+  ): Promise<string>;
   updatePageProperties(pageId: string, properties: Record<string, unknown>): Promise<void>;
+  updatePage?(
+    pageId: string,
+    payload: {
+      properties?: Record<string, unknown>;
+      cover?: unknown;
+      icon?: unknown;
+    }
+  ): Promise<void>;
   queryDatabase(databaseId: string, filter?: Record<string, unknown>): Promise<NotionPageDelta[]>;
 }
 
@@ -121,8 +136,19 @@ export interface SteamStoreDetails {
 
 export interface ISteamClient {
   getOwnedGames(steamId: string): Promise<SteamOwnedGame[]>;
+  getRecentlyPlayedGames?(steamId: string): Promise<SteamOwnedGame[]>;
+  getCombinedGames?(steamId: string): Promise<SteamOwnedGame[]>;
   getPlayerSummary(steamId: string): Promise<SteamPlayerSummary>;
   getAppDetails(appId: number): Promise<SteamStoreDetails | null>;
+}
+
+export interface RawgGameMatch {
+  backgroundImage: string | null;
+  genres: string[];
+}
+
+export interface IRawgClient {
+  searchGame(title: string): Promise<RawgGameMatch | null>;
 }
 
 export interface TmdbMovieMatch {
@@ -142,6 +168,8 @@ export interface ITmdbClient {
 
 export interface IWikipediaClient {
   searchArticleUrl(title: string, language?: string): Promise<string | null>;
+  searchGameWikiUrl?(gameTitle: string): Promise<string | null>;
+  searchMovieWikiUrl?(movieTitle: string): Promise<string | null>;
 }
 
 export interface HltbEstimate {

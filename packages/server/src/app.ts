@@ -7,6 +7,8 @@ import { moviesController } from "./controllers/movies.controller";
 import { liveController } from "./controllers/live.controller";
 import { settingsController } from "./controllers/settings.controller";
 import { analyticsController } from "./controllers/analytics.controller";
+import { eventsController } from "./controllers/events.controller";
+import { syncController } from "./controllers/sync.controller";
 
 /**
  * Aplicación principal Hono que expone el contrato maestro AppType
@@ -28,6 +30,8 @@ export const app = new Hono()
   .route("/movies", moviesController)
   .route("/live", liveController)
   .route("/settings", settingsController)
-  .route("/analytics", analyticsController);
+  .route("/analytics", analyticsController)
+  .route("/events", eventsController)
+  .route("/sync", syncController);
 
 export type AppType = typeof app;

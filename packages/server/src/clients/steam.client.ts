@@ -102,6 +102,66 @@ export class SteamClient implements ISteamClient {
     }
   }
 
+  async getRecentlyPlayedGames(steamId: string): Promise<SteamOwnedGame[]> {
+    if (!this.apiKey || !steamId) {
+      return [];
+    }
+
+    try {
+      const url = `${this.baseUrl}/IPlayerService/GetRecentlyPlayedGames/v0001/?key=${this.apiKey}&steamid=${steamId}&format=json`;
+      const res = await fetch(url);
+      if (!res.ok) {
+        throw new Error(`Steam GetRecentlyPlayedGames returned status ${res.status}`);
+      }
+
+      const data = (await res.json()) as {
+        response?: {
+          games?: Array<{
+            appid: number;
+            name: string;
+            playtime_forever: number;
+            img_icon_url?: string;
+          }>;
+        };
+      };
+
+      const games = data.response?.games || [];
+      return games.map((g) => ({
+        appId: g.appid,
+        name: g.name,
+        playtimeMinutes: g.playtime_forever,
+        imgIconUrl: g.img_icon_url,
+      }));
+    } catch (error) {
+      console.warn(`[SteamClient] getRecentlyPlayedGames error:`, error);
+      return [];
+    }
+  }
+
+  async getCombinedGames(steamId: string): Promise<SteamOwnedGame[]> {
+    const owned = await this.getOwnedGames(steamId);
+    const recent = await this.getRecentlyPlayedGames(steamId);
+
+    const map = new Map<number, SteamOwnedGame>();
+    for (const g of owned) {
+      map.set(g.appId, { ...g });
+    }
+
+    for (const g of recent) {
+      if (!map.has(g.appId)) {
+        // Family Sharing o título compartido detectado
+        map.set(g.appId, { ...g });
+      } else {
+        const existing = map.get(g.appId)!;
+        if (g.playtimeMinutes > existing.playtimeMinutes) {
+          existing.playtimeMinutes = g.playtimeMinutes;
+        }
+      }
+    }
+
+    return Array.from(map.values());
+  }
+
   async getAppDetails(appId: number): Promise<SteamStoreDetails | null> {
     try {
       const url = `${this.storeUrl}/appdetails?appids=${appId}&l=spanish`;

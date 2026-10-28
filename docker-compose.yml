@@ -30,6 +30,8 @@ services:
       - STEAM_GRACE_PERIOD_MS=${STEAM_GRACE_PERIOD_MS:-180000}
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.5-flash}
+      - RAWG_KEY=${RAWG_KEY:-}
+      - TMDB_KEY=${TMDB_KEY:-}
     volumes:
       - ./data:/app/data
     networks:

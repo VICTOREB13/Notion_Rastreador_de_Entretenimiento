@@ -30,6 +30,8 @@ export const metadata: Metadata = {
     "Showcase personal y centro de mando para videojuegos, cine y series de tiempo con enriquecimiento contextual por Gemini IA.",
 };
 
+import { ThemeProvider } from "@/providers/ThemeProvider";
+
 export default function RootLayout({
   children,
 }: {
@@ -38,10 +40,13 @@ export default function RootLayout({
   return (
     <html
       lang="es"
+      suppressHydrationWarning
       className={`dark ${outfit.variable} ${plusJakartaSans.variable} ${jetbrainsMono.variable}`}
     >
-      <body className="bg-[#09090B] font-sans text-zinc-100 antialiased selection:bg-rose-500/20 selection:text-rose-300">
-        <QueryProvider>{children}</QueryProvider>
+      <body className="bg-zinc-50 dark:bg-[#09090B] font-sans text-zinc-900 dark:text-zinc-100 antialiased selection:bg-rose-500/20 selection:text-rose-400 min-h-screen">
+        <ThemeProvider defaultTheme="system">
+          <QueryProvider>{children}</QueryProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

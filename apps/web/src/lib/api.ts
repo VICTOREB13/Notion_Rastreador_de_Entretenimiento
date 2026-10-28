@@ -127,3 +127,17 @@ export async function enrichMovie(id: string, options: { force?: boolean; model?
   }
   return json;
 }
+
+export async function fetchSystemSettings() {
+  const res = await client.api.settings.$get();
+  if (!res.ok) throw new Error("Error fetching system telemetry settings");
+  const json = await res.json();
+  return json.data;
+}
+
+export async function triggerManualSync() {
+  const res = await client.api.sync.trigger.$post();
+  if (!res.ok) throw new Error("Error triggering manual synchronization");
+  return await res.json();
+}
+

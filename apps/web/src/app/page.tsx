@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { Settings2, Gamepad2, Clock, CheckCircle2, Film } from "lucide-react";
-import { ShinyText } from "@/components/brand/ShinyText";
+import { Gamepad2, Clock, CheckCircle2, Film } from "lucide-react";
+import { BrandHeader } from "@/components/brand/BrandHeader";
 import { ConsolidatedMetricBand } from "@/components/brand/ConsolidatedMetricBand";
 import { DarkIslandSplineCard } from "@/components/brand/DarkIslandSplineCard";
 import { SegmentedProgressCard } from "@/components/brand/SegmentedProgressCard";
@@ -12,12 +12,13 @@ import { CatalogHeader, type CategoryFilter, type StatusFilter } from "@/compone
 import { BentoCatalogGrid } from "@/components/catalog/BentoCatalogGrid";
 import { AiRecommendationHero } from "@/components/catalog/AiRecommendationHero";
 import { ItemDetailModal } from "@/components/detail/ItemDetailModal";
-import { SettingsModal } from "@/components/settings/SettingsModal";
+import { TelemetryModal } from "@/components/settings/TelemetryModal";
 import {
   useLiveStatusQuery,
   useAnalyticsQuery,
   useGamesQuery,
   useMoviesQuery,
+  useServerEvents,
 } from "@/lib/hooks";
 import type { GameItem, MovieItem, LiveSteamStatus } from "@/lib/types";
 
@@ -32,7 +33,10 @@ export default function EntertainmentShowcasePage() {
     type: "GAME" | "MOVIE";
   } | null>(null);
 
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isTelemetryOpen, setIsTelemetryOpen] = useState(false);
+
+  // Hook reactivo SSE que escucha /api/events y actualiza la caché automáticamente
+  const { isConnected: isSSEActive } = useServerEvents();
 
   const daysNumber = timeRange === "7D" ? 7 : timeRange === "30D" ? 30 : 90;
 
@@ -61,68 +65,55 @@ export default function EntertainmentShowcasePage() {
     null;
 
   return (
-    <main className="min-h-screen bg-[#09090B] text-zinc-100 pb-28 pt-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-      {/* Top Bar Header */}
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-8 border-b border-white/10">
-        <div>
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className="text-[11px] font-mono uppercase tracking-widest text-zinc-400 font-bold">
-              Victor Engineer
-            </span>
-            <span className="text-zinc-600">•</span>
-            <span className="text-[11px] font-mono text-rose-400 font-semibold">
-              Obsidian Zinc & Crimson
-            </span>
+    <main className="min-h-screen bg-zinc-50 dark:bg-[#09090B] text-zinc-900 dark:text-zinc-100 pb-28 pt-6 sm:pt-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto transition-colors duration-200">
+      {/* Brand Header with Authentic Vectors, Crimson Border & Version Badge */}
+      <BrandHeader
+        version="v2.0.0"
+        onOpenTelemetry={() => setIsTelemetryOpen(true)}
+        actions={
+          <div className="flex items-center gap-2">
+            <LiveGamingBadge status={liveStatus} isLoading={isLiveLoading} />
+            {isSSEActive && (
+              <span
+                className="hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-mono text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20"
+                title="Canal SSE /api/events activo y escuchando cambios"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Live Sync
+              </span>
+            )}
           </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold font-display tracking-tight text-white flex items-center gap-2">
-            Rastreador de Entretenimiento
-          </h1>
-          <p className="text-xs sm:text-sm text-zinc-400 mt-1">
-            Centro de mando personal para curaduría de videojuegos, cine y series de tiempo con IA.
-          </p>
-        </div>
+        }
+      />
 
-        <div className="flex items-center gap-3">
-          <LiveGamingBadge status={liveStatus} isLoading={isLiveLoading} />
-          <button
-            type="button"
-            onClick={() => setIsSettingsOpen(true)}
-            title="Configuración de Modelos IA"
-            className="p-2.5 rounded-full bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-400 hover:text-white transition-colors cursor-pointer"
-          >
-            <Settings2 className="w-4 h-4" />
-          </button>
-        </div>
-      </header>
-
-      {/* High-Level Consolidated Metrics */}
+      {/* High-Level Consolidated Metrics with Animated CountUp */}
       <section id="metricas" className="mt-8">
         <ConsolidatedMetricBand
           columns={[
             {
               id: "games",
-              icon: <Gamepad2 className="w-4 h-4 text-rose-400" />,
+              icon: <Gamepad2 className="w-4 h-4 text-rose-500" />,
               label: "Catálogo de Juegos",
               value: summary?.totalGames ?? games.length,
               caption: `${summary?.completedGames ?? 0} completados`,
             },
             {
               id: "hours",
-              icon: <Clock className="w-4 h-4 text-amber-400" />,
+              icon: <Clock className="w-4 h-4 text-amber-500" />,
               label: "Horas de Vida (Steam)",
               value: `${summary?.totalPlaytimeHours ?? 0} hrs`,
               caption: "Tiempo acumulado",
             },
             {
               id: "completion",
-              icon: <CheckCircle2 className="w-4 h-4 text-emerald-400" />,
+              icon: <CheckCircle2 className="w-4 h-4 text-emerald-500" />,
               label: "Tasa de Finalización",
               value: `${summary?.completionRate ?? 0}%`,
               caption: "Ratio de catálogo",
             },
             {
               id: "movies",
-              icon: <Film className="w-4 h-4 text-sky-400" />,
+              icon: <Film className="w-4 h-4 text-sky-500" />,
               label: "Cine & Películas",
               value: summary?.totalMovies ?? movies.length,
               caption: `${summary?.watchedMovies ?? 0} vistas`,
@@ -168,7 +159,7 @@ export default function EntertainmentShowcasePage() {
         </section>
       )}
 
-      {/* Catalog Bento Grid */}
+      {/* Catalog Bento Grid with SpringSegmentedControl */}
       <section id="catalogo" className="mt-12 space-y-6">
         <CatalogHeader
           category={category}
@@ -209,7 +200,7 @@ export default function EntertainmentShowcasePage() {
             document.getElementById("ritmo")?.scrollIntoView({ behavior: "smooth" });
           }
         }}
-        onOpenSettings={() => setIsSettingsOpen(true)}
+        onOpenSettings={() => setIsTelemetryOpen(true)}
       />
 
       {/* Detail Modal / Drawer */}
@@ -219,10 +210,10 @@ export default function EntertainmentShowcasePage() {
         onClose={() => setSelectedItem(null)}
       />
 
-      {/* AI Settings Modal */}
-      <SettingsModal
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
+      {/* System Telemetry & Dynamic AI Modal */}
+      <TelemetryModal
+        isOpen={isTelemetryOpen}
+        onClose={() => setIsTelemetryOpen(false)}
       />
     </main>
   );

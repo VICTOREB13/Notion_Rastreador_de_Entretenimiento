@@ -23,6 +23,26 @@ const testConnectionBodySchema = z
   .optional();
 
 export const settingsController = new Hono()
+  .get("/", async (c) => {
+    const settings = await aiSettingsRepository.getSettings();
+
+    return c.json({
+      success: true,
+      data: {
+        isNotionConnected: Boolean(
+          config.notionToken && (config.notionDatabaseIdGames || config.notionDatabaseIdMovies)
+        ),
+        isSteamConnected: Boolean(config.steamKey && config.steamUserId),
+        isRawgConnected: Boolean(config.rawgKey),
+        isTmdbConnected: Boolean(config.tmdbKey),
+        isGeminiConnected: Boolean(settings.geminiApiKey || config.geminiApiKey),
+        activeProvider: settings.activeProvider,
+        activeModel: settings.selectedModel,
+        daemonOnline: true,
+        uptime: process.uptime(),
+      },
+    });
+  })
   .get("/ai", async (c) => {
     const settings = await aiSettingsRepository.getSettings();
 

@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Gamepad2, Film, BarChart3, Settings2, Sparkles } from "lucide-react";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { cn } from "@/lib/utils";
 
 export interface DockItem {
@@ -18,6 +19,7 @@ export interface FloatingIslandNavDockProps {
   activeId?: string;
   onItemClick?: (id: string) => void;
   onOpenSettings?: () => void;
+  showThemeToggle?: boolean;
   className?: string;
 }
 
@@ -26,6 +28,7 @@ export function FloatingIslandNavDock({
   activeId,
   onItemClick,
   onOpenSettings,
+  showThemeToggle = true,
   className,
 }: FloatingIslandNavDockProps) {
   const defaultItems: DockItem[] = [
@@ -109,6 +112,13 @@ export function FloatingIslandNavDock({
               <Settings2 className="w-4 h-4" />
               <span className="hidden sm:inline-block">Ajustes IA</span>
             </button>
+          </>
+        )}
+
+        {showThemeToggle && (
+          <>
+            <div className="w-[1px] h-4 bg-white/10 mx-0.5" />
+            <ThemeToggle className="w-7 h-7 rounded-full bg-white/5 hover:bg-white/10 border-white/10 text-zinc-300 hover:text-white" />
           </>
         )}
       </div>

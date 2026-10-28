@@ -30,18 +30,17 @@ const nextConfig = {
         protocol: "https",
         hostname: "**.notion.so",
       },
+      {
+        protocol: "https",
+        hostname: "media.rawg.io",
+      },
+      {
+        protocol: "https",
+        hostname: "upload.wikimedia.org",
+      },
     ],
   },
   output: "standalone",
-  async rewrites() {
-    const apiTarget = process.env.INTERNAL_API_URL || "http://127.0.0.1:3001";
-    return [
-      {
-        source: "/api/:path*",
-        destination: `${apiTarget}/api/:path*`,
-      },
-    ];
-  },
 };
 
 export default nextConfig;

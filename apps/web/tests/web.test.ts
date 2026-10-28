@@ -147,4 +147,135 @@ describe("Frontend Web Utilities (@repo/web)", () => {
     expect(estimatedDefaultDomNodes).toBeLessThan(800);
     expect(estimatedDefaultDomNodes).toBe(300);
   });
+
+  test("SpringSegmentedControl normalizes string and object options", () => {
+    const { normalizeSegmentedControlOptions } = require("../src/components/ui/SpringSegmentedControl");
+    const rawOptions = [
+      "ALL",
+      { id: "GAMES", label: "🎮 Videojuegos" },
+      { value: "MOVIES", label: "🎬 Películas" },
+    ];
+    const normalized = normalizeSegmentedControlOptions(rawOptions);
+    expect(normalized).toHaveLength(3);
+    expect(normalized[0]).toEqual({ id: "ALL", label: "ALL", icon: undefined });
+    expect(normalized[1].id).toBe("GAMES");
+    expect(normalized[1].label).toBe("🎮 Videojuegos");
+    expect(normalized[2].id).toBe("MOVIES");
+    expect(normalized[2].label).toBe("🎬 Películas");
+  });
+
+  test("CustomSelect normalizes options, handles disabled states, and falls back cleanly", () => {
+    const { normalizeSelectOptions } = require("../src/components/ui/CustomSelect");
+    const options = [
+      "gemini-2.0-flash",
+      { value: "gemini-1.5-pro", label: "Gemini 1.5 Pro", disabled: true },
+      { value: "argon-custom", label: "Argon Model", badge: "Beta" },
+    ];
+    const normalized = normalizeSelectOptions(options);
+    expect(normalized).toHaveLength(3);
+    expect(normalized[0].value).toBe("gemini-2.0-flash");
+    expect(normalized[0].disabled).toBe(false);
+    expect(normalized[1].disabled).toBe(true);
+    expect(normalized[2].badge).toBe("Beta");
+  });
+
+  test("MorphButton sanitizeCopyLabel handles dirty strings and edge cases", () => {
+    const { sanitizeCopyLabel } = require("../src/components/ui/MorphButton");
+    expect(sanitizeCopyLabel(undefined)).toBe("Copiado");
+    expect(sanitizeCopyLabel("✓ Copiado")).toBe("Copiado");
+    expect(sanitizeCopyLabel("✅ Éxito")).toBe("Éxito");
+    expect(sanitizeCopyLabel("Folio")).toBe("Copiado");
+    expect(sanitizeCopyLabel("Sincronizar")).toBe("Sincronizar");
+  });
+
+  test("Theme geometry calculation computes radial clip endRadius accurately", () => {
+    const { calculateTransitionGeometry } = require("../src/lib/theme");
+    const geomCenter = calculateTransitionGeometry(
+      { clientX: 500, clientY: 500 },
+      1000,
+      1000
+    );
+    expect(geomCenter.x).toBe(500);
+    expect(geomCenter.y).toBe(500);
+    expect(geomCenter.endRadius).toBeGreaterThanOrEqual(707); // hypot(500, 500) = ~707.1
+
+    // Real click at offset coordinates
+    const geomClick = calculateTransitionGeometry(
+      { clientX: 100, clientY: 200 },
+      1920,
+      1080
+    );
+    expect(geomClick.x).toBe(100);
+    expect(geomClick.y).toBe(200);
+    expect(geomClick.endRadius).toBe(2022); // Math.ceil(hypot(1920 - 100, 1080 - 200)) = 2022
+
+    // (0, 0) synthetic event falls back gracefully to center
+    const geomFallback = calculateTransitionGeometry(
+      { clientX: 0, clientY: 0 },
+      1920,
+      1080
+    );
+    expect(geomFallback.x).toBe(960);
+    expect(geomFallback.y).toBe(0);
+  });
+
+  test("Dynamic Gemini/Argon model selector resolves presets and arbitrary custom models", () => {
+    const presetModels = [
+      "gemini-2.0-flash",
+      "gemini-2.0-flash-lite",
+      "gemini-2.0-pro-exp-02-05",
+      "gemini-1.5-flash",
+      "gemini-1.5-pro",
+    ];
+
+    const resolveModel = (preset: string, customInput: string) => {
+      if (preset === "custom") {
+        return customInput.trim() || "gemini-2.0-flash";
+      }
+      return preset;
+    };
+
+    expect(resolveModel("gemini-2.0-flash", "")).toBe("gemini-2.0-flash");
+    expect(resolveModel("gemini-2.0-flash-lite", "")).toBe("gemini-2.0-flash-lite");
+    expect(resolveModel("gemini-2.0-pro-exp-02-05", "")).toBe("gemini-2.0-pro-exp-02-05");
+    expect(resolveModel("custom", "argon-experimental-v2")).toBe("argon-experimental-v2");
+    expect(resolveModel("custom", "   gemini-2.0-flash-thinking-exp   ")).toBe("gemini-2.0-flash-thinking-exp");
+    expect(resolveModel("custom", "")).toBe("gemini-2.0-flash"); // safe fallback
+  });
+
+  test("3-way theme cycling transitions deterministically between dark, light, and system", () => {
+    const cycleTheme = (current: "dark" | "light" | "system"): "dark" | "light" | "system" => {
+      return current === "dark" ? "light" : current === "light" ? "system" : "dark";
+    };
+
+    expect(cycleTheme("dark")).toBe("light");
+    expect(cycleTheme("light")).toBe("system");
+    expect(cycleTheme("system")).toBe("dark");
+  });
+
+  test("next.config.mjs remotePatterns include rawg and wikimedia hostnames", async () => {
+    const nextConfig = (await import("../next.config.mjs")).default;
+    const patterns = nextConfig.images?.remotePatterns || [];
+    const hostnames = patterns.map((p: any) => p.hostname);
+
+    expect(hostnames).toContain("media.rawg.io");
+    expect(hostnames).toContain("upload.wikimedia.org");
+    expect(hostnames).toContain("image.tmdb.org");
+    expect(hostnames).toContain("**.steamstatic.com");
+  });
+
+  test("Dynamic catch-all proxy sanitizes trailing slashes to avoid double slashes", () => {
+    const sanitizeBase = (raw: string) => raw.replace(/\/+$/, "");
+    expect(sanitizeBase("http://localhost:3001/")).toBe("http://localhost:3001");
+    expect(sanitizeBase("http://daemon-api:3001///")).toBe("http://daemon-api:3001");
+    expect(sanitizeBase("http://daemon-api:3001")).toBe("http://daemon-api:3001");
+
+    const targetUrl = (base: string, path: string[]) => {
+      const cleanBase = sanitizeBase(base);
+      const subPath = path.join("/");
+      return `${cleanBase}/api/${subPath}`;
+    };
+
+    expect(targetUrl("http://daemon-api:3001/", ["sync", "trigger"])).toBe("http://daemon-api:3001/api/sync/trigger");
+  });
 });

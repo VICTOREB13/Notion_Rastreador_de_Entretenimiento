@@ -72,6 +72,8 @@ export class NotionClient implements INotionSyncClient {
           properties: Record<string, unknown>;
           archived?: boolean;
           in_trash?: boolean;
+          cover?: unknown;
+          icon?: unknown;
         }>;
         has_more?: boolean;
         next_cursor?: string | null;
@@ -83,6 +85,8 @@ export class NotionClient implements INotionSyncClient {
           lastEditedTime: page.last_edited_time,
           properties: page.properties,
           archived: page.archived === true || page.in_trash === true,
+          cover: page.cover,
+          icon: page.icon,
         });
       }
 
@@ -93,18 +97,27 @@ export class NotionClient implements INotionSyncClient {
     return results;
   }
 
-  async createPage(databaseId: string, properties: Record<string, unknown>): Promise<string> {
+  async createPage(
+    databaseId: string,
+    properties: Record<string, unknown>,
+    cover?: unknown,
+    icon?: unknown
+  ): Promise<string> {
     if (!this.token) {
       throw new Error("NOTION_TOKEN is required to create Notion pages");
     }
 
+    const payload: Record<string, unknown> = {
+      parent: { database_id: databaseId },
+      properties,
+    };
+    if (cover) payload.cover = cover;
+    if (icon) payload.icon = icon;
+
     const res = await fetch(`${this.baseUrl}/pages`, {
       method: "POST",
       headers: this.headers,
-      body: JSON.stringify({
-        parent: { database_id: databaseId },
-        properties,
-      }),
+      body: JSON.stringify(payload),
     });
 
     if (!res.ok) {
@@ -116,7 +129,14 @@ export class NotionClient implements INotionSyncClient {
     return data.id;
   }
 
-  async updatePageProperties(pageId: string, properties: Record<string, unknown>): Promise<void> {
+  async updatePage(
+    pageId: string,
+    payload: {
+      properties?: Record<string, unknown>;
+      cover?: unknown;
+      icon?: unknown;
+    }
+  ): Promise<void> {
     if (!this.token) {
       throw new Error("NOTION_TOKEN is required to update Notion pages");
     }
@@ -124,15 +144,17 @@ export class NotionClient implements INotionSyncClient {
     const res = await fetch(`${this.baseUrl}/pages/${pageId}`, {
       method: "PATCH",
       headers: this.headers,
-      body: JSON.stringify({
-        properties,
-      }),
+      body: JSON.stringify(payload),
     });
 
     if (!res.ok) {
       const errorText = await res.text();
       throw new Error(`Notion API updatePage error (${res.status}): ${errorText}`);
     }
+  }
+
+  async updatePageProperties(pageId: string, properties: Record<string, unknown>): Promise<void> {
+    return this.updatePage(pageId, { properties });
   }
 }
 

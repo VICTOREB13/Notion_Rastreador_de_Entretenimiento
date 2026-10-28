@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   fetchLiveStatus,
@@ -13,6 +14,8 @@ import {
   testAiConnection,
   enrichGame,
   enrichMovie,
+  fetchSystemSettings,
+  triggerManualSync,
 } from "./api";
 
 export function useLiveStatusQuery() {
@@ -122,3 +125,86 @@ export function useEnrichMovieMutation() {
     },
   });
 }
+
+export function useSystemSettingsQuery() {
+  return useQuery({
+    queryKey: ["systemSettings"],
+    queryFn: fetchSystemSettings,
+    refetchInterval: 30000,
+  });
+}
+
+export function useTriggerSyncMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: triggerManualSync,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["games"] });
+      queryClient.invalidateQueries({ queryKey: ["movies"] });
+      queryClient.invalidateQueries({ queryKey: ["analytics"] });
+      queryClient.invalidateQueries({ queryKey: ["liveStatus"] });
+      queryClient.invalidateQueries({ queryKey: ["systemSettings"] });
+    },
+  });
+}
+
+export function useServerEvents() {
+  const queryClient = useQueryClient();
+  const [isConnected, setIsConnected] = useState(false);
+  const [lastEvent, setLastEvent] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !("EventSource" in window)) {
+      return;
+    }
+
+    let eventSource: EventSource | null = null;
+    let reconnectTimer: any = null;
+
+    const connect = () => {
+      try {
+        eventSource = new EventSource("/api/events");
+
+        eventSource.addEventListener("connected", () => {
+          setIsConnected(true);
+          setLastEvent("connected");
+        });
+
+        eventSource.addEventListener("ping", () => {
+          setIsConnected(true);
+        });
+
+        eventSource.addEventListener("catalog_updated", () => {
+          setLastEvent("catalog_updated");
+          queryClient.invalidateQueries({ queryKey: ["games"] });
+          queryClient.invalidateQueries({ queryKey: ["movies"] });
+          queryClient.invalidateQueries({ queryKey: ["analytics"] });
+          queryClient.invalidateQueries({ queryKey: ["liveStatus"] });
+          queryClient.invalidateQueries({ queryKey: ["systemSettings"] });
+        });
+
+        eventSource.onerror = () => {
+          setIsConnected(false);
+          if (eventSource) {
+            eventSource.close();
+            eventSource = null;
+          }
+          reconnectTimer = setTimeout(connect, 5000);
+        };
+      } catch {
+        setIsConnected(false);
+        reconnectTimer = setTimeout(connect, 5000);
+      }
+    };
+
+    connect();
+
+    return () => {
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (eventSource) eventSource.close();
+    };
+  }, [queryClient]);
+
+  return { isConnected, lastEvent };
+}
+

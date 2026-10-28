@@ -506,7 +506,31 @@ El sistema utiliza un monolito modular con persistencia embebida en **SQLite 3**
 
 ---
 
-### 4. Selector Dinámico de IA: `/api/settings/ai`
+### 4. Telemetría y Salud del Sistema: `/api/settings`
+
+#### `GET /api/settings`
+- **Descripción:** Obtiene las banderas booleanas de salud y conectividad de proveedores (Notion, Steam, RAWG, TMDB, Gemini) y el modelo activo de IA sin exponer claves sensibles de API.
+- **Respuesta 200 OK:**
+```json
+{
+  "success": true,
+  "data": {
+    "isNotionConnected": true,
+    "isSteamConnected": true,
+    "isRawgConnected": true,
+    "isTmdbConnected": true,
+    "isGeminiConnected": true,
+    "activeProvider": "gemini",
+    "activeModel": "gemini-2.5-flash",
+    "daemonOnline": true,
+    "uptime": 120.5
+  }
+}
+```
+
+---
+
+### 5. Selector Dinámico de IA: `/api/settings/ai`
 
 #### `GET /api/settings/ai`
 - **Descripción:** Obtiene la configuración actual del selector de IA con las API Keys enmascaradas.
@@ -610,6 +634,44 @@ El sistema utiliza un monolito modular con persistencia embebida en **SQLite 3**
       { "title": "Cyberpunk 2077", "hours": 115.4, "coverUrl": "..." },
       { "title": "The Witcher 3", "hours": 98.2, "coverUrl": "..." }
     ]
+  }
+}
+```
+
+---
+
+### 6. Eventos Reactivos y Sincronización Manual: `/api/events` & `/api/sync`
+
+#### `GET /api/events`
+- **Descripción:** Canal Server-Sent Events (SSE) para emitir eventos reactivos en tiempo real (`catalog_updated`, `ping`, `connected`) hacia el cliente web.
+- **Headers:** `Content-Type: text/event-stream`, `Cache-Control: no-cache`, `Connection: keep-alive`
+- **Eventos:**
+  - `connected`: Handshake inicial con ID de cliente.
+  - `catalog_updated`: Emitido tras persistir cambios en Notion y actualizar la cache SQLite.
+  - `ping`: Keep-alive periódico.
+
+#### `POST /api/sync/trigger`
+- **Descripción:** Disparo manual de sincronización completa desde Steam hacia Notion (SSoT) y enriquecimiento de películas.
+- **Respuesta 200 OK:**
+```json
+{
+  "success": true,
+  "message": "Sincronización manual completada con éxito.",
+  "data": {
+    "games": {
+      "scannedSteam": 50,
+      "updatedNotion": 2,
+      "createdNotion": 0,
+      "skippedLowPlaytime": 10,
+      "durationMs": 1420
+    },
+    "movies": {
+      "moviesProcessed": 30,
+      "moviesEnriched": 1,
+      "moviesSkipped": 29,
+      "durationMs": 850
+    },
+    "timestamp": "2026-10-28T20:00:00.000Z"
   }
 }
 ```

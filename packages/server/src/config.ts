@@ -12,6 +12,8 @@ export interface AppConfig {
   steamGracePeriodMs: number;
   geminiApiKey: string;
   geminiDefaultModel: string;
+  rawgKey: string;
+  tmdbKey: string;
 }
 
 export function getConfig(): AppConfig {
@@ -29,6 +31,8 @@ export function getConfig(): AppConfig {
     steamGracePeriodMs: Number(process.env.STEAM_GRACE_PERIOD_MS || 180000), // 3 min debounce
     geminiApiKey: process.env.GEMINI_API_KEY?.trim() || "",
     geminiDefaultModel: process.env.GEMINI_MODEL?.trim() || "gemini-2.5-flash",
+    rawgKey: process.env.RAWG_KEY?.trim() || "",
+    tmdbKey: process.env.TMDB_KEY?.trim() || "",
   };
 }
 
