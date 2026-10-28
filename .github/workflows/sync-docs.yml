@@ -49,7 +49,7 @@ jobs:
       - name: 🔄 Procesar, Renombrar y Copiar Artefactos
         run: |
           # 1. Define el nombre base de tu proyecto
-          PROYECTO="PLANTILLA" # <-- Cambia esto por tu proyecto (ej: Homepage, Pasantias)
+          PROYECTO="Notion_Rastreador_de_Entretenimiento" # <-- Cambia esto por tu proyecto (ej: Homepage, Pasantias)
           
           # 2. Configura las variables de rutas y prefijos
           PREFIJO="PRJ_${PROYECTO}_"

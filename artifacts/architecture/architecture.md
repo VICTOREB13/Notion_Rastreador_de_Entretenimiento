@@ -2,9 +2,9 @@
 tipo: arquitectura
 proyecto: Notion_Rastreador_de_Entretenimiento
 estado: activo
-stack_principal: [TypeScript, Bun, Hono-RPC, Prisma-ORM, SQLite, Google-GenAI, Next.js-16, Notion-API, Steam-API, TMDB-API]
+stack_principal: [TypeScript, Bun, Hono-RPC, Prisma-ORM, SQLite, Google-GenAI, Next.js-16, Notion-API, Steam-API, TMDB-API, Docker, Dokploy]
 diagrama_html: PRJ_Notion_Rastreador_de_Entretenimiento_architecture_diagram.html
-tags: [proyecto, arquitectura, tech-stack, archify, modular-monolith, sqlite, living-doc]
+tags: [proyecto, arquitectura, tech-stack, archify, modular-monolith, sqlite, dokploy, living-doc]
 ---
 
 # 🏗️ Arquitectura del Sistema: Notion Rastreador de Entretenimiento
@@ -16,6 +16,7 @@ tags: [proyecto, arquitectura, tech-stack, archify, modular-monolith, sqlite, li
 - **Lenguaje & Runtimes:** TypeScript 5.8+ sobre **Bun 1.4+** (alta velocidad en ejecución y testing nativo con `bun test`).
 - **Framework Web & RPC:** **Hono v4+** con exportación de `AppType` para RPC tipado de extremo a extremo hacia el frontend.
 - **Persistencia Local-First:** **SQLite 3** embebido (`file:./data/entertainment.db`) con **Prisma ORM** (cero dependencias de PostgreSQL, transacciones ACID locales y latencia <1ms).
+- **Despliegue y Orquestación:** **Dokploy** y **Docker Compose** nativo con imágenes precompiladas de GitHub Container Registry (`ghcr.io/victoreb13/...`) y volumen persistente `./data`.
 - **Frontend Showcase Web:** **Next.js 16 (App Router)** con Tailwind CSS v4, Motion y el catálogo estético de Marca Personal (`SpotlightCard`, `DarkIslandSplineCard`, `ConsolidatedMetricBand`, etc.).
 - **Persistencia Externa & Headless CMS:** Notion Database API (`v2022-06-28`) con sondeo incremental inteligente por `last_edited_time`.
 - **Selector Dinámico de IA Multi-Proveedor:**
@@ -69,6 +70,7 @@ El diagrama visual de componentes, límites de red y dependencias se genera en f
 2. **Persistencia SQLite:** Almacena catálogo consolidado, historial de sesiones atómicas (`GameSession`) y agregados de series temporales (`DailyPlaytime`).
 3. **Pipeline de Enriquecimiento IA:** Selector polimórfico que genera análisis de Vibe, pitch personalizado y tropos narrativos en JSON determinista.
 4. **Showcase Web:** Consume la API en tiempo real con latencias sub-milisegundo para renderizar las tarjetas Bento, el badge interactivo "Jugando AHORA" y las curvas de horas de juego.
+5. **Orquestación en Dokploy:** Despliegue directo mediante `docker-compose.yml` conectando las imágenes publicadas en GHCR con volumen montado `./data:/app/data` para persistencia continua de SQLite sin necesidad de compilar en el host.
 
 ---
 
