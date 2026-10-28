@@ -17,6 +17,8 @@ jobs:
   quality_gate:
     name: Quality Gate & Automated Testing Pyramid
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: "file:./data/entertainment.db"
 
     steps:
       - name: Descargar Código Fuente
@@ -35,8 +37,11 @@ jobs:
       - name: Instalar Dependencias del Monorepo
         run: bun install --frozen-lockfile || bun install
 
-      - name: Generar Prisma Client SQLite
-        run: bun run db:generate
+      - name: Generar Prisma Client SQLite & Inicializar DB
+        run: |
+          mkdir -p packages/database/prisma/data data
+          bun run db:generate
+          bun run db:push
 
       - name: Análisis de Tipos Estricto (TypeScript Quality Gate)
         run: |
