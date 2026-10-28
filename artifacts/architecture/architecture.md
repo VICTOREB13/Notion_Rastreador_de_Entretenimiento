@@ -2,9 +2,9 @@
 tipo: arquitectura
 proyecto: Notion_Rastreador_de_Entretenimiento
 estado: activo
-stack_principal: [Python, Requests, HowLongToBeatPy, Streamlit, Notion-API, Steam-API, TMDB-API, GitHub-Actions]
+stack_principal: [TypeScript, Bun, Hono-RPC, Prisma-ORM, SQLite, Google-GenAI, Next.js-16, Notion-API, Steam-API, TMDB-API]
 diagrama_html: PRJ_Notion_Rastreador_de_Entretenimiento_architecture_diagram.html
-tags: [proyecto, arquitectura, tech-stack, archify, living-doc]
+tags: [proyecto, arquitectura, tech-stack, archify, modular-monolith, sqlite, living-doc]
 ---
 
 # 🏗️ Arquitectura del Sistema: Notion Rastreador de Entretenimiento
@@ -13,17 +13,21 @@ tags: [proyecto, arquitectura, tech-stack, archify, living-doc]
 
 ## 🏗️ Tech Stack Oficial
 
-- **Lenguaje & Runtime:** Python 3.10+
-- **Bibliotecas de Dominio & HTTP:** `requests`, `howlongtobeatpy`, `python-dotenv`, `urllib.parse`
-- **Frontend / Analítica (Opcional / Dashboard):** `streamlit`, `pandas`, `plotly`
-- **Persistencia Externa & SSoT:** Notion Database API (`v2022-06-28`), Supabase (driver complementario)
+- **Lenguaje & Runtimes:** TypeScript 5.8+ sobre **Bun 1.4+** (alta velocidad en ejecución y testing nativo con `bun test`).
+- **Framework Web & RPC:** **Hono v4+** con exportación de `AppType` para RPC tipado de extremo a extremo hacia el frontend.
+- **Persistencia Local-First:** **SQLite 3** embebido (`file:./data/entertainment.db`) con **Prisma ORM** (cero dependencias de PostgreSQL, transacciones ACID locales y latencia <1ms).
+- **Frontend Showcase Web:** **Next.js 16 (App Router)** con Tailwind CSS v4, Motion y el catálogo estético de Marca Personal (`SpotlightCard`, `DarkIslandSplineCard`, `ConsolidatedMetricBand`, etc.).
+- **Persistencia Externa & Headless CMS:** Notion Database API (`v2022-06-28`) con sondeo incremental inteligente por `last_edited_time`.
+- **Selector Dinámico de IA Multi-Proveedor:**
+  - Google Gemini (`@google/genai` con `gemini-2.5-flash`)
+  - DeepSeek API (`deepseek-chat`)
+  - Groq LPU (`llama-3.3-70b-versatile`)
+  - Ollama Local (`http://localhost:11434`)
 - **APIs de Metadatos de Terceros:**
-  - Steam Web API (`IPlayerService`, Store API)
+  - Steam Web API (`IPlayerService`, `ISteamUser`, Store API)
   - The Movie Database (TMDB v3 API)
   - Wikipedia API (`es.wikipedia.org/w/api.php`)
-  - HowLongToBeat (HLTB scraper asíncrono/síncrono)
-  - RAWG Video Games Database API (fallback opcional)
-- **Automatización & CI/CD:** GitHub Actions (cron jobs programados cada 6h y 24h, triggers de despacho manual `workflow_dispatch`)
+  - HowLongToBeat (HLTB scraper)
 
 ---
 
@@ -40,22 +44,36 @@ El diagrama visual de componentes, límites de red y dependencias se genera en f
 ## 🏛️ Topología y Flujo de Procesamiento
 
 ```text
-[ GitHub Actions Cron ]
-         │
-         ├──► [ games.py ] ──► Steam API / HLTB / Wikipedia ──► [ Notion Games DB ]
-         │
-         └──► [ movies.py ] ──► TMDB API / Wikipedia ──────────► [ Notion Movies DB ]
+┌─────────────────────────┐
+│ External APIs & Cloud   │
+│ (Steam, Notion, TMDB)   │
+└────────────┬────────────┘
+             │
+             ▼
+┌───────────────────────────────────────────────┐
+│      MODULAR MONOLITH BACKEND (Bun 1.4+)      │
+│  ┌────────────────────┐   ┌─────────────────┐ │
+│  │ Daemon API Core    ├──►│ SQLite Embebido │ │
+│  │ (Hono RPC/Workers) │   │ (Prisma ORM)    │ │
+│  └─────────┬──────────┘   └─────────────────┘ │
+└────────────┼──────────────────────────────────┘
+             │ Hono RPC (hc<AppType>)
+             ▼
+┌─────────────────────────┐
+│ Next.js 16 Showcase UI  │
+│ (Bento, Spline, Live)   │
+└─────────────────────────┘
 ```
 
-1. **Disparador:** GitHub Actions inicia el flujo programado según el schedule cron (`games.yml`: `0 */6 * * *`, `peliculas.yml`: `0 6 * * *`).
-2. **Ingesta y Filtrado:** El motor consulta Notion para extraer los títulos existentes y evitar duplicados o sobreescritura de campos con bloqueo manual.
-3. **Consulta de Proveedores Externos:** Se ejecutan llamadas concurrentes/secuenciales con mecanismos de fallback y normalización fonética/ortográfica.
-4. **Mutación de Estado:** Se despachan mutaciones atómicas (`POST` para creación de páginas, `PATCH` para actualización incremental de propiedades) respetando la tasa de refresco y cuotas de la API de Notion.
+1. **Daemon Desatendido:** Workers en segundo plano ejecutándose en Bun 1.4+ que gestionan el sondeo incremental de Notion (cada 120s) y el monitoreo en vivo de Steam (cada 60s).
+2. **Persistencia SQLite:** Almacena catálogo consolidado, historial de sesiones atómicas (`GameSession`) y agregados de series temporales (`DailyPlaytime`).
+3. **Pipeline de Enriquecimiento IA:** Selector polimórfico que genera análisis de Vibe, pitch personalizado y tropos narrativos en JSON determinista.
+4. **Showcase Web:** Consume la API en tiempo real con latencias sub-milisegundo para renderizar las tarjetas Bento, el badge interactivo "Jugando AHORA" y las curvas de horas de juego.
 
 ---
 
 ## 📚 Especificaciones Técnicas y Contratos Relacionados
 
-- **Contrato de Datos y API:** [[PRJ_Notion_Rastreador_de_Entretenimiento_api_spec|Especificación de API y Modelos Notion]]
+- **Contrato de Datos y API:** [[PRJ_Notion_Rastreador_de_Entretenimiento_api_spec|Especificación de API y Modelos SQLite]]
 - **Abstracciones del Sistema y Código:** [[PRJ_Notion_Rastreador_de_Entretenimiento_abstractions|Abstracciones y Data Seams]]
 - **Sistema de Diseño y Tokens:** [[PRJ_Notion_Rastreador_de_Entretenimiento_design_system|Sistema de Diseño y Tokens UI/UX]]

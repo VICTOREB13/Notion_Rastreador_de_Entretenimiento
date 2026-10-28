@@ -5,12 +5,13 @@ Sigue el protocolo de la Arquitectura V8 (SDD + TDD + ODD, Git Gates & Harness²
 
 1. **Planificación y SDD Inicial (Mesa de Control):**
    - Actualiza los artefactos vivos (`artifacts/project_overview.md`, `artifacts/architecture/architecture.md`) y compila el diagrama interactivo con Archify (`artifacts/architecture/architecture_diagram.html` con JSON en `artifacts/architecture/src/`).
+   - Investiga activamente versiones de dependencias, nuevas funciones del lenguaje/framework y sintaxis moderna con `context7` MCP (`resolve-library-id` y `query-docs`) sin inflar el contexto (prohibido buscar rutas o código local en context7).
    - Define el plan y tareas de la iteración (`artifacts/planning/implementation_plan.md`, `artifacts/planning/task.md`).
    - Si aplica, crea el Milestone y los Issues en GitHub usando `gh milestone create` y `gh issue create`.
 
 2. **Despacho de Subagentes Especializados (Tier Flash High, alias: flash):**
-   - **Backend-Architect:** Aplica Vertical Slice Architecture (VSA). Formaliza contratos en los artefactos vivos `artifacts/architecture/api_spec.md` y `artifacts/architecture/abstractions.md`. Genera el slice autocontenido (`features/<slice>/`), co-ubicando esquemas, lógica de negocio y tests TDD ejecutables en <500ms.
-   - **Frontend-UI:** Consulta `api_spec.md` y define/mantiene el sistema de diseño vivo en `artifacts/architecture/design_system.md`. Para landing pages, declara `Design Read` y Three Dials (`design-taste-frontend`). Para dashboards/aplicaciones transaccionales, aplica presupuestos estrictos de DOM (<800 warning, <1400 fatal) con `ui-ux-pro-max`, `refactoring-ui` y `design-everyday-things`.
+   - **Backend-Architect:** Aplica Vertical Slice Architecture (VSA). Formaliza contratos en los artefactos vivos `artifacts/architecture/api_spec.md` y `artifacts/architecture/abstractions.md`. Consulta activamente versiones y novedades de ORMs/drivers en `context7` MCP (sin buscar código local). Genera el slice autocontenido (`features/<slice>/`), co-ubicando esquemas, lógica de negocio y tests TDD ejecutables en <500ms.
+   - **Frontend-UI:** Consulta `api_spec.md`, investiga versiones y novedades de componentes/estilos en `context7` MCP (sin buscar código local) y define/mantiene el sistema de diseño vivo en `artifacts/architecture/design_system.md`. Para landing pages, declara `Design Read` y Three Dials (`design-taste-frontend`). Para dashboards/aplicaciones transaccionales, aplica presupuestos estrictos de DOM (<800 warning, <1400 fatal) con `ui-ux-pro-max`, `refactoring-ui` y `design-everyday-things`.
 
 3. **Auditoría Imparcial con Pirámide de Testing de 3 Niveles (Systems-Auditor):**
    - Ejecuta: Nivel 1 (unitarios Bun <500ms), Nivel 2 (smoke tests deterministas headless Playwright), Nivel 3 (auditoría visual y DOM con Playwright MCP).

@@ -2,79 +2,78 @@
   "schema_version": 1,
   "diagram_type": "architecture",
   "meta": {
-    "title": "Arquitectura Notion Rastreador de Entretenimiento",
+    "title": "Arquitectura Notion Rastreador de Entretenimiento (Modular Monolith)",
     "output": "artifacts/architecture/architecture_diagram.html",
     "quality_profile": "showcase",
     "views": [
       {
         "id": "full-pipeline",
-        "label": "Pipeline ETL Completo",
-        "focus": ["gh-actions", "core-engine", "notion-db", "steam-api", "tmdb-api", "hltb-service", "wiki-api"],
-        "note": "Flujo automatizado de extracción desde APIs externas, normalización heurística y carga en bases de datos Notion."
+        "label": "Monolito Modular Completo",
+        "focus": ["steam-api", "notion-cms", "tmdb-api", "ai-selector", "daemon-api", "sqlite-db", "showcase-web"],
+        "note": "Arquitectura local-first con SQLite embebido, daemon en tiempo real sobre Bun y selector dinámico de IA."
       },
       {
-        "id": "games-flow",
-        "label": "Flujo Videojuegos (Steam + HLTB)",
-        "focus": ["gh-actions", "core-engine", "steam-api", "hltb-service", "notion-db"],
-        "note": "Sincronización periódica cada 6 horas de títulos jugados, estimaciones de duración y portadas."
+        "id": "sync-flow",
+        "label": "Flujo de Sincronización y Tiempo Real",
+        "focus": ["steam-api", "notion-cms", "daemon-api", "sqlite-db"],
+        "note": "Delta polling de Notion y monitoreo continuo de sesiones de Steam."
       },
       {
-        "id": "movies-flow",
-        "label": "Flujo Películas (TMDB + Wikipedia)",
-        "focus": ["gh-actions", "core-engine", "tmdb-api", "wiki-api", "notion-db"],
-        "note": "Enriquecimiento diario cada 24 horas con sinopsis oficiales, posters y artículos de Wikipedia."
+        "id": "ai-showcase",
+        "label": "Pipeline de IA y Showcase",
+        "focus": ["ai-selector", "daemon-api", "sqlite-db", "showcase-web"],
+        "note": "Enriquecimiento contextual de entretenimiento y consumo reactivo vía Hono RPC."
       }
     ]
   },
   "components": [
-    { "id": "gh-actions", "type": "cloud", "label": "GitHub Actions", "sublabel": "Cron Scheduler", "pos": [60, 60], "size": [150, 55] },
-    { "id": "steam-api", "type": "cloud", "label": "Steam Web API", "sublabel": "Store & Player", "pos": [60, 160], "size": [150, 55] },
-    { "id": "hltb-service", "type": "cloud", "label": "HowLongToBeat", "sublabel": "Duration Scraper", "pos": [60, 250], "size": [150, 55] },
-    { "id": "tmdb-api", "type": "cloud", "label": "TMDB API v3", "sublabel": "Posters & Details", "pos": [60, 340], "size": [150, 55] },
-    { "id": "wiki-api", "type": "cloud", "label": "Wikipedia API", "sublabel": "OpenSearch Links", "pos": [60, 430], "size": [150, 55] },
-    { "id": "core-engine", "type": "backend", "label": "Python ETL Core", "sublabel": "games.py / movies.py", "pos": [360, 235], "size": [170, 70] },
-    { "id": "dashboard", "type": "frontend", "label": "Streamlit UI", "sublabel": "Bento Analytics", "pos": [360, 410], "size": [170, 60] },
-    { "id": "notion-db", "type": "database", "label": "Notion Database API", "sublabel": "Games & Movies DBs", "pos": [680, 235], "size": [170, 70] }
+    { "id": "steam-api", "type": "cloud", "label": "Steam Web API", "sublabel": "Active Sessions & Store", "pos": [60, 60], "size": [160, 55] },
+    { "id": "notion-cms", "type": "cloud", "label": "Notion Headless CMS", "sublabel": "Curated Databases", "pos": [60, 160], "size": [160, 55] },
+    { "id": "tmdb-api", "type": "cloud", "label": "TMDB & Wikipedia", "sublabel": "Posters & Synopses", "pos": [60, 260], "size": [160, 55] },
+    { "id": "ai-selector", "type": "cloud", "label": "Selector Dinámico IA", "sublabel": "Gemini / DeepSeek / Ollama", "pos": [60, 360], "size": [160, 55] },
+    { "id": "daemon-api", "type": "backend", "label": "Daemon API Core", "sublabel": "Hono RPC & Workers (Bun)", "pos": [380, 160], "size": [190, 75] },
+    { "id": "sqlite-db", "type": "database", "label": "SQLite Embebido", "sublabel": "entertainment.db (Prisma)", "pos": [380, 340], "size": [190, 65] },
+    { "id": "showcase-web", "type": "frontend", "label": "Showcase Web", "sublabel": "Next.js 16 & Bento UI", "pos": [700, 210], "size": [180, 75] }
   ],
   "boundaries": [
-    { "kind": "region", "label": "Proveedores de Metadatos Externos", "wraps": ["steam-api", "hltb-service", "tmdb-api", "wiki-api"] },
-    { "kind": "region", "label": "Persistencia Notion", "wraps": ["notion-db"] }
+    { "kind": "region", "label": "Proveedores Externos & Motores de IA", "wraps": ["steam-api", "notion-cms", "tmdb-api", "ai-selector"] },
+    { "kind": "region", "label": "Modular Monolith Backend (Bun 1.4+)", "wraps": ["daemon-api", "sqlite-db"] },
+    { "kind": "region", "label": "Frontend & Consumo", "wraps": ["showcase-web"] }
   ],
   "connections": [
-    { "id": "cron-to-engine", "from": "gh-actions", "to": "core-engine", "label": "Trigger Cron", "variant": "emphasis" },
-    { "id": "steam-to-engine", "from": "steam-api", "to": "core-engine" },
-    { "id": "hltb-to-engine", "from": "hltb-service", "to": "core-engine" },
-    { "id": "tmdb-to-engine", "from": "tmdb-api", "to": "core-engine" },
-    { "id": "wiki-to-engine", "from": "wiki-api", "to": "core-engine" },
-    { "id": "engine-to-notion", "from": "core-engine", "to": "notion-db", "label": "POST / PATCH", "variant": "emphasis" },
-    { "id": "engine-to-dashboard", "from": "core-engine", "to": "dashboard", "label": "Bento Export", "variant": "dashed", "fromSide": "bottom", "toSide": "top", "labelDy": 30 }
+    { "id": "steam-to-daemon", "from": "steam-api", "to": "daemon-api" },
+    { "id": "notion-to-daemon", "from": "notion-cms", "to": "daemon-api", "label": "Delta Polling", "variant": "emphasis", "labelDx": -45 },
+    { "id": "tmdb-to-daemon", "from": "tmdb-api", "to": "daemon-api" },
+    { "id": "ai-to-daemon", "from": "ai-selector", "to": "daemon-api" },
+    { "id": "daemon-to-db", "from": "daemon-api", "to": "sqlite-db", "label": "Prisma ORM", "variant": "emphasis", "fromSide": "bottom", "toSide": "top", "labelDy": 30 },
+    { "id": "daemon-to-web", "from": "daemon-api", "to": "showcase-web", "label": "Hono RPC", "variant": "emphasis" }
   ],
   "cards": [
     {
       "dot": "cyan",
-      "title": "Orquestación y Disparadores",
+      "title": "Monolito Modular Local-First",
       "items": [
-        "GitHub Actions programado cada 6 horas para juegos de Steam",
-        "Workflow diario cada 24 horas para enriquecimiento de películas en TMDB",
-        "Inyección segura de tokens mediante GitHub Repository Secrets"
+        "Ejecución autónoma sobre Bun 1.4+ con Hono RPC y exportación de AppType",
+        "Persistencia ACID en SQLite embebido (cero PostgreSQL ni servicios pesados)",
+        "Latencia sub-milisegundo en transacciones de series de juego y sesiones"
       ]
     },
     {
       "dot": "emerald",
-      "title": "Motor ETL y Lógica de Dominio",
+      "title": "Sincronización Inteligente & Tiempo Real",
       "items": [
-        "Normalización de títulos y fuzzy matching anti-duplicados (ratio >= 0.85)",
-        "Protección de candados manuales para preservar ediciones del usuario",
-        "Cadena de fallback multi-idioma (es-ES -> en-US) en consultas TMDB"
+        "Sondeo incremental Notion por last_edited_time eliminando consultas redundantes",
+        "Monitoreo en vivo de Steam cada 60s registrando aperturas/cierres de sesiones",
+        "Protección estricta de candados manuales contra sobreescrituras"
       ]
     },
     {
       "dot": "violet",
-      "title": "Persistencia en Notion",
+      "title": "Selector Dinámico de IA Multi-Proveedor",
       "items": [
-        "Bases de datos independientes y relacionales para Videojuegos y Películas",
-        "Actualizaciones atómicas incrementales para no alterar el historial",
-        "Asignación automática de estados (Por Jugar, Jugando, Jugado)"
+        "Soporte nativo para Gemini 2.5 Flash, DeepSeek, Groq y Ollama local",
+        "Generación determinista de Vibes, Pitch personalizado y tropos narrativos",
+        "Caché atómica y fallback de conexión en caliente sin reiniciar servicios"
       ]
     }
   ]

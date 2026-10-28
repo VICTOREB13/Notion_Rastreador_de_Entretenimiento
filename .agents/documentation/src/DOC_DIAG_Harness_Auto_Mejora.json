@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Arquitectura Harness²: Arnés Determinista y Bucle de Auto-Mejora Recursiva",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "full-loop",
+        "label": "Bucle Harness² Completo",
+        "focus": ["ide_session", "orca_hooks", "circuit_brk", "distill_eng", "systems_aud", "learned_heur", "harness_git"],
+        "note": "Ciclo completo de auto-mejora recursiva: prevención en caliente y retroalimentación al arnés."
+      },
+      {
+        "id": "circuit-breaker",
+        "label": "Circuit Breaker & Offloading",
+        "focus": ["ide_session", "orca_hooks", "circuit_brk", "tool_store", "schema_val"],
+        "note": "Intercepción de herramientas, lista blanca inmutable y bloqueo anti-loop."
+      },
+      {
+        "id": "distillation-audit",
+        "label": "Destilación y Causa Raíz",
+        "focus": ["trace_db", "distill_eng", "friction_rep", "systems_aud", "learned_heur"],
+        "note": "Extracción de fricción en tiempo de ejecución y diagnóstico de defectos de código vs arnés."
+      }
+    ],
+    "output": ".agents/skills/DOC_DIAG_Harness_Auto_Mejora.html"
+  },
+  "components": [
+    { "id": "ide_session", "type": "frontend", "label": "Sesión de Agente", "sublabel": "Antigravity CLI / Orca", "pos": [60, 70], "size": [150, 60], "tag": "Runtime" },
+    { "id": "harness_git", "type": "cloud", "label": "Arnés Git-Native", "sublabel": "chore(harness): ...", "pos": [60, 350], "size": [150, 60], "tag": "Harness² Loop" },
+
+    { "id": "orca_hooks", "type": "security", "label": "Hooks Deterministas", "sublabel": "pre & post-tool.cmd", "pos": [290, 70], "size": [150, 60], "tag": "Intercepción" },
+    { "id": "schema_val", "type": "backend", "label": "Schema Validator", "sublabel": "validate_artifact.ts", "pos": [520, 70], "size": [150, 60], "tag": "Offloading" },
+    { "id": "circuit_brk", "type": "security", "label": "Circuit Breaker", "sublabel": "circuit_breaker.ts", "pos": [290, 210], "size": [150, 60], "tag": "Defensa Activa" },
+    { "id": "tool_store", "type": "database", "label": "Tool Counter State", "sublabel": "tool_counter.json", "pos": [520, 210], "size": [150, 60], "tag": "Persistencia" },
+
+    { "id": "trace_db", "type": "database", "label": "Session Traces DB", "sublabel": "transcript & SQLite", "pos": [750, 70], "size": [150, 60], "tag": "Observabilidad" },
+    { "id": "distill_eng", "type": "backend", "label": "Trace Distiller", "sublabel": "distill_session.ts", "pos": [980, 70], "size": [150, 60], "tag": "Compactor" },
+    { "id": "friction_rep", "type": "frontend", "label": "Friction Report ODD", "sublabel": "friction_report.md", "pos": [980, 350], "size": [150, 60], "tag": "Diagnóstico <25L" },
+
+    { "id": "systems_aud", "type": "security", "label": "Systems-Auditor", "sublabel": "Fase 5 Root Cause QA", "pos": [750, 350], "size": [150, 60], "tag": "Gatekeeper" },
+    { "id": "learned_heur", "type": "backend", "label": "Entropía Controlada", "sublabel": "learned_heuristics.md", "pos": [290, 350], "size": [150, 60], "tag": "FIFO 30L / 10R" }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Entorno Agéntico & Control de Versiones",
+      "wraps": ["ide_session", "harness_git"]
+    },
+    {
+      "kind": "security-group",
+      "label": "Capa Determinista de Intercepción & Offloading",
+      "wraps": ["orca_hooks", "schema_val", "circuit_brk", "tool_store"]
+    },
+    {
+      "kind": "region",
+      "label": "Capa de Observabilidad ODD & Destilación",
+      "wraps": ["trace_db", "distill_eng", "friction_rep", "systems_aud"]
+    }
+  ],
+  "connections": [
+    { "id": "c_session_hooks", "from": "ide_session", "to": "orca_hooks", "label": "Tool Call" },
+    { "id": "c_hooks_val", "from": "orca_hooks", "to": "schema_val", "label": "Offload CLI" },
+    { "id": "c_hooks_brk", "from": "orca_hooks", "to": "circuit_brk", "label": "Pre-Hook", "fromSide": "bottom", "toSide": "top", "labelAt": [365, 170] },
+    { "id": "c_brk_store", "from": "circuit_brk", "to": "tool_store", "label": "Atomic Sync" },
+    { "id": "c_val_trace", "from": "schema_val", "to": "trace_db", "label": "Telemetry" },
+    { "id": "c_brk_heur", "from": "circuit_brk", "to": "learned_heur", "label": "Auto-Heal", "fromSide": "bottom", "toSide": "top" },
+    { "id": "c_trace_distill", "from": "trace_db", "to": "distill_eng", "label": "Log Stream" },
+    { "id": "c_distill_rep", "from": "distill_eng", "to": "friction_rep", "label": "ODD <25L", "fromSide": "bottom", "toSide": "top", "labelAt": [1055, 210] },
+    { "id": "c_rep_auditor", "from": "friction_rep", "to": "systems_aud", "label": "Inspección", "fromSide": "left", "toSide": "right" },
+    { "id": "c_aud_heur", "from": "systems_aud", "to": "learned_heur", "label": "Defecto Arnés", "fromSide": "bottom", "toSide": "bottom" },
+    { "id": "c_heur_git", "from": "learned_heur", "to": "harness_git", "label": "FIFO <=10" },
+    { "id": "c_git_session", "from": "harness_git", "to": "ide_session", "label": "Harness² Loop", "fromSide": "top", "toSide": "bottom" }
+  ],
+  "cards": [
+    {
+      "dot": "rose",
+      "title": "Circuit Breaker & Auto-Heal (Opción A)",
+      "items": [
+        "Lista blanca inmutable (Zero-Lockout) para herramientas críticas",
+        "Límite de 12 lecturas consecutivas (read/view) sin búsqueda ni escritura",
+        "Auto-sanación en caliente (--auto-heal): inyecta heurística al 2do fallo o bloqueo"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Destilador de Trazas (Bun + SQLite)",
+      "items": [
+        "Procesa trazas JSONL y SQLite nativo en <100ms sin costo de IA",
+        "Genera friction_report.md (<25 líneas) con métricas de sesión",
+        "Detecta bucles repetitivos, ráfagas y preclasifica anomalías ODD"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Presupuesto de Entropía & Auditoría (Opción B)",
+      "items": [
+        "Límite FIFO de 30 líneas y 10 reglas máximas en learned_heuristics.md",
+        "Diagnóstico binario de causa raíz: Defecto de Código vs Defecto de Arnés",
+        "Certificación Quality Gate con validate_artifact.ts --heuristics y commits semánticos"
+      ]
+    }
+  ]
+}

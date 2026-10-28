@@ -1,11 +1,33 @@
 # Entorno
 .env
+.env*.local
+
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
+
+# Node / Bun
+node_modules/
+bun.lockb
+
+# Next.js / Build Artifacts
+.next/
+out/
+dist/
+build/
+*.tsbuildinfo
+
+# SQLite Database
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+data/
 
 # IDEs
 .vscode/
 .idea/
 
 release.yml
+_workspace/

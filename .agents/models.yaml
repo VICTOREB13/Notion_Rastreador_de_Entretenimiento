@@ -5,16 +5,21 @@
 # Las instrucciones de los agentes y playbooks referencian estos Tiers semánticos
 # y alias de Antigravity ('pro', 'flash', 'flash_lite') en lugar de números de versión
 # fijos, permitiendo que la arquitectura se mantenga permanentemente future-proof.
+#
+# NOTA DE COMPATIBILIDAD (Autoload Skills):
+# Tanto 'autoload_skills' (utilizado en este archivo models.yaml y directivas de AGENTS.md)
+# como 'auto_load_skills' (utilizado en el frontmatter YAML de los SKILL.md de Antigravity)
+# son alias canónicos equivalentes y soportados en la arquitectura.
 
 version: "1.0.0"
-updated_at: "2026-09-08"
+updated_at: "2026-10-26"
 
 tiers:
   pro:
     name: "Tier Pro (High)"
     alias: "pro"
     description: "Máxima capacidad de razonamiento estratégico, planificación a largo plazo, resolución de dependencias complejas y cumplimiento estricto de YAGNI."
-    recommended_runtime: "Gemini Pro High (última versión disponible en IDE, ej. 3.1 Pro / 4 Pro)"
+    recommended_runtime: "Gemini Pro High (última versión disponible en IDE)"
     assigned_agents:
       - "Project-Planner"
     role: "Orquestador Principal / Tech Lead (Mesa de Control)"
@@ -23,7 +28,7 @@ tiers:
     name: "Tier Flash (High)"
     alias: "flash"
     description: "Alta velocidad de ejecución, generación precisa de código, diseño UI responsivo, automatización de pruebas y auditoría de seguridad en contextos aislados."
-    recommended_runtime: "Gemini Flash High (última versión disponible en IDE, ej. 3.8 Flash / 4 Flash)"
+    recommended_runtime: "Gemini Flash High (última versión disponible en IDE)"
     assigned_agents:
       - "Backend-Architect"
       - "Frontend-UI"
@@ -66,6 +71,8 @@ agents:
     autoload_skills:
       - ui-ux-pro-max
       - design-taste-frontend
+      - artifact-standards
+    on_demand_skills:
       - refactoring-ui
       - redesign-existing-projects
       - vercel-react-best-practices
@@ -74,7 +81,6 @@ agents:
       - microinteractions
       - top-design
       - design-everyday-things
-      - artifact-standards
 
   Systems-Auditor:
     tier: "flash"

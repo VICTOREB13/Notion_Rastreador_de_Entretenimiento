@@ -1,31 +1,38 @@
 ---
 tipo: overview
 proyecto: Notion_Rastreador_de_Entretenimiento
-version: v1.0.0
+version: v2.0.0
 estado: activo
-fecha: 2026-10-25
-tags: [proyecto, overview, artefacto, master-index]
+fecha: 2026-10-28
+tags: [proyecto, overview, artefacto, master-index, docker, hono, nextjs16, sqlite]
 ---
 
 # 🚀 Visión General del Proyecto: Notion Rastreador de Entretenimiento
 
-> **Rol del Documento (SSoT del Negocio):** Mantiene la visión de negocio y el estado funcional del proyecto. Aquí es donde reside formalmente la versión global del proyecto (`version: v1.0.0`). Actúa como índice maestro navegable para Obsidian y agentes autónomos bajo el estándar SDLC V8.
+> **Rol del Documento (SSoT del Negocio):** Mantiene la visión de negocio y el estado funcional del proyecto. Aquí es donde reside formalmente la versión global del proyecto (`version: v2.0.0`). Actúa como índice maestro navegable para Obsidian y agentes autónomos bajo el estándar SDLC V8.
 
 ## 📖 ¿Qué hace el proyecto?
 
-**Notion Rastreador de Entretenimiento** es un sistema de automatización y orquestación de datos diseñado para sincronizar, consolidar y enriquecer colecciones personales de **Videojuegos** y **Películas** en bases de datos relacionales de **Notion**, ejecutado de forma desatendida mediante **GitHub Actions**.
+**Notion Rastreador de Entretenimiento** es un ecosistema de monolito modular contenedorizado diseñado para sincronizar, consolidar, enriquecer con IA y visualizar colecciones personales de **Videojuegos** y **Películas**. Integra bases de datos relacionales de **Notion**, la API de **Steam**, **Prisma ORM** sobre **SQLite embebido** en modo WAL, un microservicio backend reactivo con **Hono RPC** en Bun 1.4+, enriquecimiento contextual inteligente con **Gemini 2.5 Flash**, y un frontend personal de **Showcase Web** en **Next.js 16** con Bento Grid y dock flotante interactivo.
 
 ### Capacidades Nucleares:
-1. **Rastreador de Videojuegos (`games.py`):**
-   - Sincronización automática con la biblioteca de Steam para títulos con más de 30 minutos de tiempo jugado.
-   - Enriquecimiento de metadatos: portadas en alta resolución, enlaces a Wikipedia y géneros.
-   - Estimación de tiempos de juego con HowLongToBeat (historia principal y completista).
-   - Deduplicación heurística mediante *fuzzy matching* (`difflib.SequenceMatcher`) con normalización de caracteres especiales.
-2. **Rastreador de Películas (`movies.py`):**
-   - Detección inteligente de nuevos registros ingresados en Notion.
-   - Búsqueda multi-estrategia con fallback en The Movie Database (TMDB) extrayendo posters oficiales, sinopsis en español y categorización por género.
-   - Vinculación automática a artículos de Wikipedia en español.
-   - Política estricta de protección de datos ("candados manuales") para no sobreescribir ediciones personalizadas del usuario.
+1. **Microservicio Backend Daemon (`@repo/server`):**
+   - Servidor Hono con exportación de `AppType` para Hono RPC totalmente tipado de extremo a extremo.
+   - Sincronización incremental bidireccional con Notion respetando candados manuales de usuario.
+   - Monitoreo en tiempo real de Steam (sesiones de juego activas con debounce de gracia de 3 min).
+   - Agregación de series de tiempo para analíticas diarias de tiempo jugado.
+2. **Capa de Persistencia Local-First (`@repo/database`):**
+   - SQLite embebido (`./data/entertainment.db`) con Prisma ORM 6.4 y pragmas de alta concurrencia WAL (`journal_mode = WAL`, `busy_timeout = 5000`).
+   - Esquemas relacionales normalizados para `games`, `movies`, `game_sessions`, `daily_playtime`, `ai_enrichments` y `ai_settings`.
+3. **Pipeline de Enriquecimiento con Gemini 2.5 Flash:**
+   - Análisis contextual y generación estructurada con `@google/genai` (vibeTags, personalizedPitch, thematicTropes, completionEstimateWeeks).
+   - Prevención estricta de consultas N+1 mediante caché local en SQLite y batching con `findManyByTargets`.
+4. **Showcase Web Personal (`@repo/web`):**
+   - Aplicación web responsiva en Next.js 16 (App Router con Turbopack), Tailwind CSS v4, Motion y Lucide React.
+   - Bento Grid con vista unificada de Videojuegos, Películas, Estado en Vivo y recomendaciones IA.
+   - Presupuesto DOM estrictamente controlado (< 800 nodos en vista principal).
+5. **Contenerización y Despliegue en Dokploy:**
+   - Orquestación lista para producción con `docker-compose.yml` usando imágenes GHCR pre-compiladas multi-stage.
 
 ---
 
@@ -41,5 +48,5 @@ tags: [proyecto, overview, artefacto, master-index]
 ### 🟡 Artefactos Delta (Iteración Activa)
 - **Plan de Implementación:** [[PRJ_Notion_Rastreador_de_Entretenimiento_implementation_plan|Plan de Implementación (Migración VSA)]]
 - **Checklist de Tareas:** [[PRJ_Notion_Rastreador_de_Entretenimiento_task|Checklist de Tareas Atómicas]]
-- **Historial de Cambios SemVer:** [[PRJ_Notion_Rastreador_de_Entretenimiento_changelog_v1|Changelog Oficial v1.0.0]]
+- **Historial de Cambios SemVer:** [[PRJ_Notion_Rastreador_de_Entretenimiento_changelog_v1|Changelog Oficial v2.0.0]]
 - **Último Quality Gate:** [[PRJ_Notion_Rastreador_de_Entretenimiento_audit_report|Reporte de Auditoría y Quality Gate]]

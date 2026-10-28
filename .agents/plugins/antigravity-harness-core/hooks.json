@@ -1,0 +1,56 @@
+{
+  "antigravity-harness-core": {
+    "SessionStart": [
+      {
+        "type": "command",
+        "command": "bun run ./src/session_start.ts",
+        "timeout": 15
+      }
+    ],
+    "PreInvocation": [
+      {
+        "type": "command",
+        "command": "bun run ./src/pre_invocation.ts",
+        "timeout": 15
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun run ./src/pre_tool_use.ts",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun run ./src/post_tool_use.ts",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "PostInvocation": [
+      {
+        "type": "command",
+        "command": "bun run ./src/post_invocation.ts",
+        "timeout": 15
+      }
+    ],
+    "Stop": [
+      {
+        "type": "command",
+        "command": "bun run ./src/stop_guardian.ts",
+        "timeout": 20
+      }
+    ]
+  }
+}

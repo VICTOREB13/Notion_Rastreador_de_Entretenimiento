@@ -1,0 +1,125 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+model Game {
+  id                String          @id @default(cuid())
+  notionPageId      String          @unique
+  title             String
+  cleanTitle        String
+  steamAppId        Int?
+  playtimeForever   Float           @default(0.0)
+  playtimeNotion    Float           @default(0.0)
+  hltbMain          Float?
+  hltbCompletionist Float?
+  coverUrl          String?
+  genres            String          @default("[]")
+  link              String?
+  platform          String          @default("PC")
+  status            String          @default("Por Jugar")
+  startDate         String?
+  lastSyncAt        DateTime?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  sessions          GameSession[]
+  dailyPlaytime     DailyPlaytime[]
+
+  @@index([status, cleanTitle])
+  @@index([steamAppId])
+  @@index([notionPageId])
+  @@map("games")
+}
+
+model Movie {
+  id           String    @id @default(cuid())
+  notionPageId String    @unique
+  title        String
+  cleanTitle   String
+  tmdbId       Int?
+  posterUrl    String?
+  overview     String?
+  genres       String    @default("[]")
+  wikiUrl      String?
+  status       String    @default("Por Ver")
+  year         Int?
+  lastSyncAt   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([status, cleanTitle])
+  @@index([tmdbId])
+  @@index([notionPageId])
+  @@map("movies")
+}
+
+model GameSession {
+  id              String    @id @default(cuid())
+  gameId          String
+  game            Game      @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  steamAppId      Int?
+  startedAt       DateTime  @default(now())
+  endedAt         DateTime?
+  durationMinutes Int       @default(0)
+  isLive          Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([gameId, startedAt])
+  @@index([isLive])
+  @@map("game_sessions")
+}
+
+model DailyPlaytime {
+  id        String   @id @default(cuid())
+  date      String
+  gameId    String
+  game      Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  minutes   Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([date, gameId])
+  @@index([date])
+  @@map("daily_playtime")
+}
+
+model AiEnrichment {
+  id                     String   @id @default(cuid())
+  targetType             String
+  targetId               String
+  vibeTags               String   @default("[]")
+  personalizedPitch      String
+  thematicTropes         String   @default("[]")
+  completionEstimateWeeks Float?
+  provider               String   @default("gemini")
+  modelUsed              String
+  rawResponse            String?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@unique([targetType, targetId])
+  @@index([targetType])
+  @@map("ai_enrichments")
+}
+
+model AiSettings {
+  id             String   @id @default("default")
+  activeProvider String   @default("gemini")
+  geminiApiKey   String?
+  deepseekApiKey String?
+  groqApiKey     String?
+  ollamaBaseUrl  String?  @default("http://localhost:11434")
+  selectedModel  String   @default("gemini-2.5-flash")
+  temperature    Float    @default(0.7)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("ai_settings")
+}

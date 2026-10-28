@@ -2,101 +2,271 @@
 tipo: abstracciones
 proyecto: Notion_Rastreador_de_Entretenimiento
 estado: activo
-tags: [proyecto, arquitectura, abstracciones, backend, living-doc]
+tags: [proyecto, arquitectura, abstracciones, backend, ports-adapters, typescript, living-doc]
 ---
 
 # 🏛️ Abstracciones del Sistema y Arquitectura de Código
 
-> **Artefacto Vivo (Perpetuo / Zero-Touch):** Este documento es el plano arquitectónico permanente del código fuente. No lleva versión ni fecha volátil en el frontmatter. Documenta las clases maestras, interfaces de dominio, servicios de negocio y fronteras lógicas. Solo se modifica cuando se introduce una nueva interfaz transversal o se altera un servicio nuclear del dominio.
+> **Artefacto Vivo (Perpetuo / Zero-Touch):** Este documento es el plano arquitectónico permanente del código fuente. No lleva versión ni fecha volátil en el frontmatter. Documenta las clases maestras, interfaces de dominio, servicios de negocio, puertos/adaptadores y data seams.
+> **Evolución Modular Monolith:** Define la arquitectura en TypeScript 100% Type-Safe sobre Bun, con persistencia desacoplada en SQLite local (`packages/database`), contratos Hono RPC y selector dinámico de IA multi-proveedor.
 
 ---
 
 ## 🏛️ Filosofía de Diseño y Paradigmas de Código
 
-- **Patrón Arquitectónico Actual:** Scripting modular orientado a tareas batch (Pipeline ETL: Extract, Transform, Load).
-- **Meta Arquitectónica V8:** Migración hacia **Vertical Slice Architecture (VSA)** dividiendo el dominio en:
-  - `features/games/` (Sincronización, normalización y deduplicación de juegos).
-  - `features/movies/` (Búsqueda TMDB, fallback y enriquecimiento de películas).
-  - `core/clients/` (Clientes HTTP desacoplados para Notion, Steam, TMDB, Wikipedia).
+- **Patrón Arquitectónico:** **Monolito Modular con Arquitectura Hexagonal (Ports & Adapters)** y **Vertical Slice Architecture (VSA)**.
+- **División de Capas:**
+  - `packages/database/`: Modelado declarativo Prisma, migraciones SQLite y repositorios concretos.
+  - `packages/core/`: Entidades de dominio, contratos e interfaces puras (cero dependencias de infraestructura).
+  - `packages/server/`: Daemon en segundo plano (workers periódicos) y API HTTP Hono RPC con tipado exportado `AppType`.
 - **Principios Rectores:**
-  - **Idempotencia:** Las ejecuciones sucesivas del pipeline no deben duplicar entradas en Notion ni corromper metadatos existentes.
-  - **Zero-Overwrite (Protección de Candados):** Los campos rellenados manualmente o con estados terminales (`Jugado`) quedan sellados ante sobreescrituras automáticas.
-  - **Fuzzy Deduplication:** Uso de distancias de similitud de cadenas (`SequenceMatcher`) para unificar discrepancias ortográficas, subtítulos y puntuaciones.
+  - **Inversión de Dependencias (DIP):** Todos los servicios de aplicación dependen de interfaces abstractas (`INotionSyncClient`, `ISteamClient`, `IAiProvider`, repositorios), nunca de implementaciones concretas.
+  - **Local-First & Offline Resilience:** Persistencia primaria en SQLite embebido (`entertainment.db`); el sistema continúa operando incluso sin conexión a Notion o Steam.
+  - **Zero-Overwrite (Protección de Candados):** Las propiedades curadas manualmente por el usuario o en estados terminales (`Jugado`, `Vista`) están protegidas contra sobreescrituras por sincronizaciones automáticas.
+  - **Fuzzy Deduplication:** Normalización ortográfica y cálculo de similitud Levenshtein / Dice Coefficient para evitar duplicados entre Steam, TMDB y Notion.
 
 ---
 
-## 🧩 Módulos y Costuras Lógicas del Sistema
+## 📐 Interfaces y Contratos de Dominio (Ports & Adapters)
 
-### 1. Módulo de Videojuegos (`games.py`)
-Encargado de la ingesta de títulos desde la cuenta de Steam del usuario, la consulta de datos de juego y horas de duración, y la persistencia en Notion.
+### 1. Clientes de Integración Externa (Driven Ports)
 
-- **`obtener_todos_juegos_notion()`**:
-  - Consulta paginada (`/v1/databases/{id}/query`) para volcar en memoria el índice actual de juegos registrados.
-- **`crear_juego_notion(nombre, steam_appid, horas)`**:
-  - Instancia una nueva página en Notion con valores por defecto (Plataforma PC, estado según horas jugadas).
-- **`actualizar_juego_notion(page_id, horas, ...)`**:
-  - Aplica parches incrementales (`PATCH /v1/pages/{id}`) únicamente en atributos modificados.
-- **`obtener_hltb(nombre)`**:
-  - Invoca `howlongtobeatpy` para extraer estimaciones de horas de campaña principal y 100% completista.
-- **`buscar_steam_detalles(appid)`**:
-  - Extrae portadas, capturas y lista de géneros desde la Store API de Steam.
+#### `INotionSyncClient`
+Abstracción de comunicación con Notion REST API (v2022-06-28):
+```typescript
+export interface NotionPageDelta {
+  id: string;
+  lastEditedTime: string;
+  properties: Record<string, unknown>;
+}
 
-### 2. Módulo de Películas (`movies.py`)
-Encargado de inspeccionar entradas pendientes en la base de datos de películas de Notion y enriquecerlas con metadatos cinematográficos oficiales.
+export interface INotionSyncClient {
+  fetchModifiedPages(databaseId: string, lastEditedAfter: Date): Promise<NotionPageDelta[]>;
+  fetchAllPages(databaseId: string): Promise<NotionPageDelta[]>;
+  createPage(databaseId: string, properties: Record<string, unknown>): Promise<string>;
+  updatePageProperties(pageId: string, properties: Record<string, unknown>): Promise<void>;
+  queryDatabase(databaseId: string, filter?: Record<string, unknown>): Promise<NotionPageDelta[]>;
+}
+```
 
-- **`buscar_clave_propiedad(props, opciones)`**:
-  - Normalizador de esquemas Notion tolerante a variaciones tipográficas (`Título`, `Titulo`, `Name`, `Title`).
-- **`obtener_titulo_pelicula(props)`**:
-  - Extractor defensivo de texto enriquecido Notion que previene excepciones `KeyError` o `IndexError` en registros vacíos.
-- **`buscar_tmdb(titulo_original)`**:
-  - Algoritmo de resolución heurística en cascada:
-    1. Título saneado + Año entre paréntesis en español.
-    2. Título saneado sin año en español.
-    3. Título saneado en inglés (`en-US`).
-    4. Título original en español.
-- **`buscar_wikipedia_pelicula(titulo)`**:
-  - Consulta a la OpenSearch API de Wikipedia para vincular el artículo más relevante.
-- **`actualizar_pelicula_notion(page_id, poster_url, sinopsis, generos, wiki_url, ...)`**:
-  - Aplica la actualización en Notion protegiendo las propiedades preexistentes no vacías.
+#### `ISteamClient`
+Abstracción de interacción con Steam Web API y Store API:
+```typescript
+export interface SteamOwnedGame {
+  appId: number;
+  name: string;
+  playtimeMinutes: number;
+  imgIconUrl?: string;
+}
+
+export interface SteamPlayerSummary {
+  steamId: string;
+  personaName: string;
+  isPlaying: boolean;
+  gameId?: number;
+  gameExtraInfo?: string;
+}
+
+export interface SteamStoreDetails {
+  appId: number;
+  name: string;
+  headerImage: string;
+  genres: string[];
+  shortDescription?: string;
+}
+
+export interface ISteamClient {
+  getOwnedGames(steamId: string): Promise<SteamOwnedGame[]>;
+  getPlayerSummary(steamId: string): Promise<SteamPlayerSummary>;
+  getAppDetails(appId: number): Promise<SteamStoreDetails | null>;
+}
+```
+
+#### `ITmdbClient`
+Abstracción para la búsqueda y extracción de metadatos cinematográficos:
+```typescript
+export interface TmdbMovieMatch {
+  id: number;
+  title: string;
+  originalTitle: string;
+  overview: string;
+  posterPath: string | null;
+  releaseDate: string;
+  genres: string[];
+}
+
+export interface ITmdbClient {
+  searchMovie(title: string, year?: number, language?: string): Promise<TmdbMovieMatch | null>;
+  getMovieDetails(tmdbId: number, language?: string): Promise<TmdbMovieMatch | null>;
+}
+```
+
+#### `IWikipediaClient` & `IHltbClient`
+```typescript
+export interface IWikipediaClient {
+  searchArticleUrl(title: string, language?: string): Promise<string | null>;
+}
+
+export interface HltbEstimate {
+  mainHours: number | null;
+  completionistHours: number | null;
+}
+
+export interface IHltbClient {
+  searchDuration(title: string): Promise<HltbEstimate>;
+}
+```
 
 ---
 
-## 🛠️ Funciones Críticas y Lógica Pura
+### 2. Selector Dinámico de IA Multi-Proveedor
 
-### `limpiar_nombre(n: str) -> str`
-- **Ubicación:** `games.py` (Línea 32)
-- **Entrada:** Cadena de texto arbitraria con título del juego.
-- **Salida:** Cadena normalizada en minúsculas, sin símbolos de registro (`™`, `®`, `©`), caracteres de puntuación ni espacios redundantes.
-- **Invariante:** `limpiar_nombre("DOOM®: Eternal (2020)") == "doom eternal 2020"`.
+#### `IAiProvider`
+Contrato polimórfico implementado por cada motor de inferencia (Google Gemini, DeepSeek, Groq, Ollama):
+```typescript
+export interface AiEnrichmentResult {
+  vibeTags: string[];
+  personalizedPitch: string;
+  thematicTropes: string[];
+  completionEstimateWeeks?: number;
+  rawResponse?: string;
+}
 
-### `similar(a: str, b: str) -> float`
-- **Ubicación:** `games.py` (Línea 41)
-- **Entrada:** Dos cadenas de texto.
-- **Salida:** Ratio flotante entre 0.0 y 1.0 computado vía `SequenceMatcher`.
-- **Regla de Negocio:** Un ratio $\ge 0.85$ califica dos títulos como el mismo juego para evitar registros duplicados.
+export interface AiPromptPayload {
+  title: string;
+  type: "GAME" | "MOVIE";
+  overview?: string;
+  genres: string[];
+  playtimeOrDuration?: string;
+  userContext?: string;
+}
+
+export interface IAiProvider {
+  readonly id: "gemini" | "deepseek" | "groq" | "ollama";
+  readonly defaultModel: string;
+  generateEnrichment(payload: AiPromptPayload, modelOverride?: string): Promise<AiEnrichmentResult>;
+  testConnection(): Promise<boolean>;
+}
+```
+
+#### `IGeminiEnricher` (Implementación Especializada `@google/genai`)
+- Utiliza `gemini-2.5-flash` con `responseMimeType: "application/json"` y `responseJsonSchema` determinista.
 
 ---
 
-## 🌐 Variables de Estado, Constantes Globales y Configuración
+### 3. Repositorios de Persistencia (SQLite / Prisma Ports)
 
-### 1. Variables de Entorno Requeridas (`.env` / GitHub Secrets)
-- `NOTION_TOKEN`: Token Bearer de la integración oficial de Notion. Obligatorio.
-- `DB_ID_GAMES`: Identificador UUID de la base de datos de videojuegos en Notion. Obligatorio para `games.py`.
-- `DB_ID_MOVIES`: Identificador UUID de la base de datos de películas en Notion. Obligatorio para `movies.py`.
-- `STEAM_KEY`: Clave de acceso a la Steam Web API. Obligatorio para sincronización de Steam.
-- `STEAM_USER_ID`: ID numérico de 64 bits del perfil de Steam. Obligatorio.
-- `TMDB_KEY`: API Key v3 de The Movie Database. Obligatorio para `movies.py`.
-- `RAWG_KEY`: API Key de RAWG. Opcional (fallback).
+#### `IGameRepository`
+```typescript
+export interface GameFilter {
+  status?: string;
+  search?: string;
+  limit?: number;
+  offset?: number;
+}
 
-### 2. Constantes de Dominio
-- `ESTADOS_FINALES = ["Jugado"]`: Conjunto inmutable de estados terminales que impiden la mutación de estado por tiempo de juego.
-- `HEADERS_NOTION`: Cabeceras con versión fija `"Notion-Version": "2022-06-28"`.
+export interface IGameRepository {
+  findById(id: string): Promise<Game | null>;
+  findByNotionPageId(notionPageId: string): Promise<Game | null>;
+  findBySteamAppId(steamAppId: number): Promise<Game | null>;
+  findByCleanTitle(cleanTitle: string): Promise<Game | null>;
+  upsert(gameData: Partial<Game>): Promise<Game>;
+  list(filter?: GameFilter): Promise<{ items: Game[]; total: number }>;
+  updatePlaytime(id: string, playtimeForever: number, notionPlaytime?: number): Promise<void>;
+  updateStatus(id: string, status: string): Promise<void>;
+}
+```
+
+#### `IMovieRepository`
+```typescript
+export interface MovieFilter {
+  status?: string;
+  search?: string;
+  year?: number;
+  limit?: number;
+  offset?: number;
+}
+
+export interface IMovieRepository {
+  findById(id: string): Promise<Movie | null>;
+  findByNotionPageId(notionPageId: string): Promise<Movie | null>;
+  findByTmdbId(tmdbId: number): Promise<Movie | null>;
+  upsert(movieData: Partial<Movie>): Promise<Movie>;
+  list(filter?: MovieFilter): Promise<{ items: Movie[]; total: number }>;
+  updateStatus(id: string, status: string): Promise<void>;
+}
+```
+
+#### `ISessionRepository` & `IDailyPlaytimeRepository`
+```typescript
+export interface ISessionRepository {
+  findActiveSession(): Promise<GameSession | null>;
+  startSession(gameId: string, steamAppId?: number, startedAt?: Date): Promise<GameSession>;
+  closeSession(sessionId: string, endedAt: Date, durationMinutes: number): Promise<GameSession>;
+  getRecentSessions(limit?: number): Promise<(GameSession & { game: Game })[]>;
+}
+
+export interface IDailyPlaytimeRepository {
+  recordPlaytime(date: string, gameId: string, additionalMinutes: number): Promise<DailyPlaytime>;
+  getTimeSeries(days: number): Promise<{ date: string; hours: number }[]>;
+}
+```
+
+#### `IAiSettingsRepository` & `IAiEnrichmentRepository`
+```typescript
+export interface IAiSettingsRepository {
+  getSettings(): Promise<AiSettings>;
+  updateSettings(data: Partial<AiSettings>): Promise<AiSettings>;
+}
+
+export interface IAiEnrichmentRepository {
+  findByTarget(targetType: "GAME" | "MOVIE", targetId: string): Promise<AiEnrichment | null>;
+  findManyByTargets(targetType: "GAME" | "MOVIE", targetIds: string[]): Promise<Map<string, AiEnrichmentResult>>;
+  getParsedEnrichment?(targetType: "GAME" | "MOVIE", targetId: string): Promise<AiEnrichmentResult | null>;
+  upsert(data: Partial<AiEnrichment>): Promise<AiEnrichment>;
+}
+```
+
+---
+
+## ⚙️ Servicios Núcleo y Casos de Uso (Application Services)
+
+### 1. `NotionDeltaPoller`
+- **Responsabilidad:** Consultar periódicamente Notion con filtro `last_edited_time > watermark`.
+- **Efectos Secundarios:**
+  - Actualiza catálogo local SQLite sin sobreescribir campos protegidos.
+  - Dispara enriquecimiento automático si el título no cuenta con metadatos.
+  - Actualiza la marca de agua `sync_metadata.last_notion_sync_at`.
+
+### 2. `SteamLiveMonitor`
+- **Responsabilidad:** Consulta cada 60s `GetPlayerSummaries` de Steam.
+- **Lógica de Transición de Estados:**
+  - Si `isPlaying === true` y no hay sesión activa: invoca `startSession()`.
+  - Si `isPlaying === false` y existe sesión activa: invoca `closeSession()`, calcula `durationMinutes` y actualiza `DailyPlaytime`.
+  - Si el juego activo está en estado `"Por Jugar"`, promueve automáticamente su estado a `"Jugando"` tanto en SQLite como en Notion.
+
+### 3. `AiSelectorService`
+- **Responsabilidad:** Cargar el proveedor activo configurado en `ai_settings`, orquestar la llamada con fallback resiliente en caso de cuota excedida y persistir el resultado en `ai_enrichments`.
+
+---
+
+## 🛠️ Funciones Puras de Utilidad y Deduplicación
+
+### `cleanGameTitle(title: string): string`
+- Elimina sufijos de plataforma, marcas registradas (`™`, `®`, `©`), caracteres no alfanuméricos y espacios redundantes.
+- Garantiza idempotencia: `cleanGameTitle("Cyberpunk 2077® (2020)") === "cyberpunk 2077 2020"`.
+
+### `computeSimilarityRatio(strA: string, strB: string): number`
+- Computa coeficiente Dice / Levenshtein normalizado entre 0.0 y 1.0.
+- Si `ratio >= 0.85`, se consideran el mismo título para deduplicación.
 
 ---
 
 ## 🔄 Costuras de Flujo de Datos (Data Seams)
 
-1. **Flujo de Videojuegos:**
-   `GitHub Actions Cron` -> `games.py:obtener_juegos_steam` -> `games.py:obtener_todos_juegos_notion` -> `Fuzzy Matching` -> `crear_juego_notion` | `actualizar_juego_notion` -> `Notion API`.
-2. **Flujo de Películas:**
-   `GitHub Actions Cron` -> `movies.py:obtener_peliculas_notion` -> `movies.py:buscar_tmdb` -> `movies.py:buscar_wikipedia_pelicula` -> `actualizar_pelicula_notion` -> `Notion API`.
+1. **Ingesta y Delta Polling:**
+   `Notion REST API (Delta)` ➔ `NotionSyncClient` ➔ `NotionDeltaPoller` ➔ `GameRepository` / `MovieRepository` ➔ `SQLite (entertainment.db)`.
+2. **Monitor en Vivo:**
+   `Steam Web API` ➔ `SteamClient` ➔ `SteamLiveMonitor` ➔ `SessionRepository` ➔ `DailyPlaytimeRepository` ➔ SSE / Hono RPC `/api/live/status`.
+3. **Pipeline de Enriquecimiento IA:**
+   `Game / Movie sin Vibe` ➔ `AiSelectorService` ➔ `IAiProvider (Gemini/Groq/Ollama)` ➔ `AiEnrichmentRepository` ➔ `NotionSyncClient (Patch Vibe & Pitch)` ➔ `Next.js Showcase UI`.

@@ -1,0 +1,56 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Orquestación de Agentes y Subagentes (Teamwork)",
+    "quality_profile": "standard",
+    "views": [
+      {
+        "id": "full-cycle",
+        "label": "Ciclo Completo",
+        "focus": ["user", "planner", "backend", "frontend", "auditor", "devops"],
+        "note": "Flujo desde la solicitud inicial del usuario hasta el despliegue final pasando por el Quality Gate."
+      },
+      {
+        "id": "quality-gate",
+        "label": "Quality Gate",
+        "focus": ["auditor", "devops"],
+        "note": "Barrera de calidad que autoriza o bloquea el despliegue hacia DevOps."
+      }
+    ],
+    "output": "artifacts/architecture/agent_orchestration_diagram.html"
+  },
+  "lanes": [
+    { "id": "orchestrator", "label": "Orquestación Principal (Project-Planner)" },
+    { "id": "construction", "label": "Construcción en Subagentes (Backend & Frontend)" },
+    { "id": "quality", "label": "Quality Gate (Systems-Auditor)", "variant": "exception" },
+    { "id": "deployment", "label": "Despliegue (DevOps-Engineer)" }
+  ],
+  "phases": [
+    { "id": "plan_phase", "label": "Fase 1: Plan Rápido (Disco)", "fromCol": 0, "toCol": 1 },
+    { "id": "build_phase", "label": "Fase 2: Construcción Aislada", "fromCol": 2, "toCol": 3, "variant": "emphasis" },
+    { "id": "gate_phase", "label": "Fase 3: Quality Gate", "fromCol": 4, "toCol": 4, "variant": "security" },
+    { "id": "deploy_phase", "label": "Fase 4: Despliegue", "fromCol": 5, "toCol": 5, "variant": "dashed" }
+  ],
+  "mainPath": ["user", "planner", "backend", "frontend", "auditor", "devops"],
+  "nodes": [
+    { "id": "user", "lane": "orchestrator", "col": 0, "type": "external", "label": "Usuario", "sublabel": "Requisitos & Feedback", "width": 140 },
+    { "id": "planner", "lane": "orchestrator", "col": 1, "type": "backend", "label": "Project-Planner", "sublabel": "Tier Pro (High)", "tag": "Orquestador", "width": 140 },
+    { "id": "backend", "lane": "construction", "col": 2, "type": "backend", "label": "Backend-Architect", "sublabel": "Tier Flash (High)", "tag": "API & DB", "width": 140 },
+    { "id": "frontend", "lane": "construction", "col": 3, "type": "frontend", "label": "Frontend-UI", "sublabel": "Tier Flash (High)", "tag": "UI & DOM <1400", "width": 140 },
+    { "id": "auditor", "lane": "quality", "col": 4, "type": "security", "label": "Systems-Auditor", "sublabel": "Playwright & Tests", "tag": "Gatekeeper", "width": 140 },
+    { "id": "devops", "lane": "deployment", "col": 5, "type": "cloud", "label": "DevOps-Engineer", "sublabel": "Docker & Compose", "tag": "Solo si PASS", "width": 140 }
+  ],
+  "edges": [
+    { "id": "e_user_planner", "from": "user", "to": "planner", "label": "Requisitos" },
+    { "id": "e_plan_back", "from": "planner", "to": "backend", "label": "Spawn Tarea Backend" },
+    { "id": "e_back_front", "from": "backend", "to": "frontend", "label": "api_spec.md" },
+    { "id": "e_front_audit", "from": "frontend", "to": "auditor", "label": "Código listo" },
+    { "id": "e_audit_devops", "from": "auditor", "to": "devops", "label": "veredicto: PASS" }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "Orquestación en Disco", "items": ["Project-Planner nunca codifica directamente en el chat raíz", "Escribe architecture.md, implementation_plan.md y task.md en disco"] },
+    { "dot": "emerald", "title": "Pool de Subagentes", "items": ["Contextos aislados con Tier Flash (High)", "Backend diseña api_spec.md antes de codificar, Frontend cuida CRP y DOM"] },
+    { "dot": "rose", "title": "Quality Gate Imparcial", "items": ["Systems-Auditor ejecuta pruebas y Playwright E2E", "Si veredicto: FAIL, bloquea despliegue y exige corrección"] }
+  ]
+}

@@ -9,7 +9,28 @@ on:
   workflow_dispatch: # Permite sincronización manual desde la pestaña Actions en GitHub
 
 jobs:
+  check-vault-token:
+    name: 🔍 Verificar Secreto VAULT_PAT
+    runs-on: ubuntu-latest
+    outputs:
+      configured: ${{ steps.check.outputs.configured }}
+    steps:
+      - id: check
+        name: Validar presencia de VAULT_PAT
+        env:
+          VAULT_PAT: ${{ secrets.VAULT_PAT }}
+        run: |
+          if [ -n "$VAULT_PAT" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::notice ::Secreto VAULT_PAT no configurado en el repositorio. Sincronización con Obsidian omitida de forma segura."
+          fi
+
   sync-to-vault:
+    name: 📤 Sincronizar Artefactos a Obsidian
+    needs: check-vault-token
+    if: needs.check-vault-token.outputs.configured == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: 📥 Clonar Repositorio del Proyecto
@@ -28,7 +49,7 @@ jobs:
       - name: 🔄 Procesar, Renombrar y Copiar Artefactos
         run: |
           # 1. Define el nombre base de tu proyecto
-          PROYECTO="Notion_Tracker" # <-- Cambia esto por tu proyecto (ej: Homepage, Pasantias)
+          PROYECTO="PLANTILLA" # <-- Cambia esto por tu proyecto (ej: Homepage, Pasantias)
           
           # 2. Configura las variables de rutas y prefijos
           PREFIJO="PRJ_${PROYECTO}_"

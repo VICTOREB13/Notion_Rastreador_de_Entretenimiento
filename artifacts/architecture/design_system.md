@@ -2,7 +2,6 @@
 tipo: design_system
 proyecto: Notion_Rastreador_de_Entretenimiento
 estado: activo
-fecha: 2026-10-25
 tags: [proyecto, design-system, ui-ux, design-tokens, living-doc]
 ---
 

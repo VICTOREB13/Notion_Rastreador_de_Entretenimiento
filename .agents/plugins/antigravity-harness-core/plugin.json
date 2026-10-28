@@ -1,0 +1,19 @@
+{
+  "name": "antigravity-harness-core",
+  "version": "9.0.0",
+  "description": "Harness³: Autonomous Tridimensional Self-Improvement & Native Lifecycle Hooks for Antigravity CLI",
+  "author": {
+    "name": "Antigravity Agentic Team",
+    "url": "https://github.com/vmesp/Plantilla-Base-Agentes"
+  },
+  "license": "MIT",
+  "keywords": [
+    "antigravity",
+    "harness3",
+    "circuit-breaker",
+    "auto-heal",
+    "telemetry",
+    "quality-gate",
+    "ephemeral-injection"
+  ]
+}

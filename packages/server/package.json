@@ -1,0 +1,25 @@
+{
+  "name": "@repo/server",
+  "version": "1.0.0",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "dev": "bun --watch src/index.ts",
+    "start": "bun run src/index.ts",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@google/genai": "^2.31.0",
+    "@hono/zod-validator": "^0.4.3",
+    "@repo/database": "workspace:*",
+    "google-auth-library": "^11.3.1",
+    "hono": "^4.7.0",
+    "p-retry": "^8.0.1",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.0",
+    "typescript": "^5.8.0"
+  }
+}

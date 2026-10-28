@@ -1,0 +1,63 @@
+# ==============================================================================
+# Notion Rastreador de Entretenimiento - Docker Compose (Dokploy / Production)
+# ==============================================================================
+# Despliegue listo para Dokploy o ejecucion directa con imagenes GHCR pre-compiladas.
+#
+# Uso:
+#   docker compose pull
+#   docker compose up -d
+# ==============================================================================
+
+services:
+  daemon-api:
+    image: ${DOCKER_IMAGE_API:-ghcr.io/victoreb13/notion-entertainment-daemon-api:latest}
+    container_name: notion-entertainment-daemon-api
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - HOST=0.0.0.0
+      - DATABASE_URL=file:/app/data/entertainment.db
+      - NOTION_TOKEN=${NOTION_TOKEN:-}
+      - DB_ID_GAMES=${DB_ID_GAMES:-}
+      - DB_ID_MOVIES=${DB_ID_MOVIES:-}
+      - STEAM_KEY=${STEAM_KEY:-}
+      - STEAM_USER_ID=${STEAM_USER_ID:-}
+      - STEAM_POLL_INTERVAL_MS=${STEAM_POLL_INTERVAL_MS:-60000}
+      - NOTION_POLL_INTERVAL_MS=${NOTION_POLL_INTERVAL_MS:-120000}
+      - STEAM_GRACE_PERIOD_MS=${STEAM_GRACE_PERIOD_MS:-180000}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.5-flash}
+    volumes:
+      - ./data:/app/data
+    networks:
+      - entertainment-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3001/healthz || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  showcase-web:
+    image: ${DOCKER_IMAGE_WEB:-ghcr.io/victoreb13/notion-entertainment-showcase-web:latest}
+    container_name: notion-entertainment-showcase-web
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - INTERNAL_API_URL=http://daemon-api:3001
+      - NEXT_PUBLIC_API_URL=/api
+    depends_on:
+      daemon-api:
+        condition: service_healthy
+    networks:
+      - entertainment-network
+
+networks:
+  entertainment-network:
+    driver: bridge

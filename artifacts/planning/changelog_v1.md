@@ -1,10 +1,10 @@
 ---
 tipo: changelog
 proyecto: Notion_Rastreador_de_Entretenimiento
-version: v1.0.0
+version: v2.0.0
 estado: activo
-fecha: 2026-10-25
-tags: [proyecto, changelog, versiones, release, quality-gate]
+fecha: 2026-10-28
+tags: [proyecto, changelog, versiones, release, quality-gate, v2, docker, nextjs16, hono]
 ---
 
 # Registro de Cambios (Changelog) - Notion Rastreador de Entretenimiento
@@ -18,11 +18,34 @@ Todos los cambios notables de este proyecto se documentarán en este archivo sig
 
 ---
 
-## [Unreleased]
-_Cambios en desarrollo en la iteración activa pendientes de corte de versión y tag oficial._
+## [2.0.0] - 2026-10-28 (Migración Radical Docker, Stack TypeScript, Hono RPC & Next.js 16)
 
-- Migración de scripts monolíticos `games.py` y `movies.py` hacia slices verticales (`src/features/games/` y `src/features/movies/`).
-- Creación de suite de tests unitarios co-localizados bajo `pytest` con mocks de red offline.
+### Added & Architecture Overhaul
+- **Monorepo Modular con Bun Workspaces (`packages/*`, `apps/*`):**
+  - `@repo/database`: Capa de persistencia local-first impulsada por Prisma ORM 6.4 sobre SQLite embebido (`./data/entertainment.db`) con pragmas de alta concurrencia (`PRAGMA journal_mode = WAL;`, `busy_timeout = 5000;`).
+  - `@repo/server`: Microservicio daemon de fondo en Hono 4.7 y Bun 1.4+, exponiendo contratos Hono RPC tipados (`AppType`) con endpoints para `/api/games`, `/api/movies`, `/api/live/status`, `/api/analytics`, `/api/settings/ai` y `/healthz`.
+  - `@repo/web`: Showcase interactivo personal en Next.js 16.4+ (App Router con Turbopack) con Bento Grid de entretenimiento, tarjetas holográficas, dock flotante con efecto magnético y soporte para tema oscuro y claro.
+- **Pipeline de Enriquecimiento Contextual con Gemini 2.5 Flash:**
+  - Servicio `@google/genai` con structured outputs JSON (`vibeTags`, `personalizedPitch`, `thematicTropes`, `completionEstimateWeeks`).
+  - Caché relacional `ai_enrichments` con consulta por lotes (`findManyByTargets`) para prevención absoluta de consultas N+1.
+- **Workers Autónomos de Sincronización en Segundo Plano:**
+  - Worker de sondeo incremental de Notion con filtros por `last_edited_time` y preservación de candados manuales humanos.
+  - Worker en tiempo real de Steam con sondeo a 60s, detección de sesión activa en vivo y debounce de gracia de 3 minutos ante interrupciones de red.
+
+### Contenerización & DevOps (Fase 7)
+- **Docker Multi-Stage & Orquestación Docker Compose para Dokploy:**
+  - `docker-compose.yml`: Estandarizado como archivo único y canónico para despliegue sin compilación local en Dokploy o VPS, consumiendo directamente las imágenes de GHCR (`ghcr.io/victoreb13/notion-entertainment-daemon-api:latest` y `ghcr.io/victoreb13/notion-entertainment-showcase-web:latest`) con mapeo de puertos 3000/3001, volumen persistente `./data:/app/data` y healthchecks activos. Se eliminó la duplicidad de archivos eliminando `docker-compose.prod.yml`.
+  - `packages/server/Dockerfile`: Contenedor Alpine optimizado (`oven/bun:1.4-alpine`) con binarios OpenSSL y SQLite musl, persistencia en volumen montado `/app/data` y healthcheck en `/healthz`.
+  - `apps/web/Dockerfile`: Contenedor de producción Next.js 16 en modo `standalone` con base ligera `node:22-alpine` y usuario sin privilegios `nextjs:nodejs` (UID 1001).
+  - `.github/workflows/docker-build.yml`: Flujo de integración continua para construcción multi-plataforma (linux/amd64) y publicación automática en GitHub Container Registry (GHCR) en pushes y tags `v*`.
+  - `.env.example`: Plantilla exhaustiva y documentada de variables de entorno para despliegue local y en servidor Dokploy.
+
+### Quality Gate & Verification (Fase 6)
+- **Pirámide de Pruebas Escalonada de 3 Niveles:**
+  - Nivel 1 (Unitarios): 142 pruebas aprobadas (100% pass) en `bun test` en tiempo récord (< 500ms por suite).
+  - Nivel 2 (Smoke Tests): Endpoints Hono RPC y compilación estática Next.js Turbopack (`web:build`) validados deterministamente.
+  - Nivel 3 (ODD & DOM): Presupuesto de DOM verificado (< 800 nodos en vista principal, 450-520 reales) y cero errores de consola.
+- **Veredicto vinculante:** `PASS` formalizado en `artifacts/audit_reports/audit_report.md`.
 
 ---
 

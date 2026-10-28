@@ -1,0 +1,28 @@
+name: Harness CI Quality Gate
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  quality-gate:
+    name: Deterministic Quality Gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: ⚡ Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: 🧪 Run Harness Unit Tests
+        run: bun run test
+
+      - name: 📋 Validate Artifacts, Heuristics & SDD Contracts
+        run: bun run validate
