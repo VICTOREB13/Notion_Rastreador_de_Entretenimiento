@@ -12,6 +12,8 @@ jobs:
   quality-gate:
     name: Deterministic Quality Gate
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: "file:./data/entertainment.db"
     steps:
       - name: 📥 Checkout Repository
         uses: actions/checkout@v4
@@ -24,8 +26,11 @@ jobs:
       - name: 📦 Install Dependencies
         run: bun install --frozen-lockfile
 
-      - name: 🛠️ Generate Prisma Client
-        run: bun run db:generate
+      - name: 🛠️ Generate Prisma Client & Push SQLite Schema
+        run: |
+          mkdir -p packages/database/prisma/data data
+          bun run db:generate
+          bun run db:push
 
       - name: 🧪 Run Harness Unit Tests
         run: bun run test
