@@ -29,5 +29,4 @@ data/
 .vscode/
 .idea/
 
-release.yml
 _workspace/
