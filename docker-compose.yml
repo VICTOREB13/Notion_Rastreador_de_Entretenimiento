@@ -14,7 +14,7 @@ services:
     container_name: notion-entertainment-daemon-api
     restart: unless-stopped
     ports:
-      - "3001:3001"
+      - "${HOST_PORT_API:-20011}:3001"
     environment:
       - NODE_ENV=production
       - PORT=3001
@@ -46,7 +46,7 @@ services:
     container_name: notion-entertainment-showcase-web
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "${HOST_PORT_WEB:-20010}:3000"
     environment:
       - NODE_ENV=production
       - PORT=3000

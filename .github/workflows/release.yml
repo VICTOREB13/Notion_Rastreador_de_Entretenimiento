@@ -109,8 +109,8 @@ jobs:
           ```
 
           Acceso:
-          - **Showcase Web:** http://localhost:3000
-          - **Daemon API / Health:** http://localhost:3001/healthz
+          - **Showcase Web:** `http://localhost:20010` (o `http://<IP_DOKPLOY>:20010`)
+          - **Daemon API / Health:** `http://localhost:20011/healthz` (o `http://<IP_DOKPLOY>:20011/healthz`)
           EOF
 
       - name: Crear Release Oficial en GitHub
