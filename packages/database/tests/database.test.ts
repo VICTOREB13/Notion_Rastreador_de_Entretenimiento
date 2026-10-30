@@ -1,7 +1,10 @@
+import fs from "node:fs";
+import path from "node:path";
 import { describe, it, expect, beforeAll, afterAll } from "bun:test";
 import {
   prisma,
   configurePragmas,
+  ensureDatabaseDirectory,
   cleanGameTitle,
   computeSimilarityRatio,
   gameRepository,
@@ -280,6 +283,53 @@ describe("SQLite Database & Prisma Repositories", () => {
       });
 
       await Promise.all(concurrentTasks);
+    });
+  });
+
+  describe("ensureDatabaseDirectory (Defense-in-depth)", () => {
+    const testCustomDir = path.resolve("./data/test_auto_created_dir");
+    const testCustomDirWithParams = path.resolve("./data/test_auto_created_dir_params");
+
+    afterAll(() => {
+      if (fs.existsSync(testCustomDir)) {
+        fs.rmdirSync(testCustomDir);
+      }
+      if (fs.existsSync(testCustomDirWithParams)) {
+        fs.rmdirSync(testCustomDirWithParams);
+      }
+    });
+
+    it("should handle undefined and non-file URLs without throwing", () => {
+      expect(() => ensureDatabaseDirectory(undefined)).not.toThrow();
+      expect(() => ensureDatabaseDirectory("")).not.toThrow();
+      expect(() => ensureDatabaseDirectory("postgresql://user:pass@localhost:5432/db")).not.toThrow();
+      expect(() => ensureDatabaseDirectory("file::memory:?cache=shared")).not.toThrow();
+    });
+
+    it("should create directory for standard SQLite file URLs if missing", () => {
+      const dbUrl = `file:${testCustomDir}/sub.db`;
+      ensureDatabaseDirectory(dbUrl);
+      expect(fs.existsSync(testCustomDir)).toBe(true);
+    });
+
+    it("should strip query parameters and create directory cleanly", () => {
+      const dbUrl = `file:${testCustomDirWithParams}/sub.db?connection_limit=1&busy_timeout=5000`;
+      ensureDatabaseDirectory(dbUrl);
+      expect(fs.existsSync(testCustomDirWithParams)).toBe(true);
+    });
+
+    it("should handle RFC 8089 file:/// URIs with absolute Windows and POSIX paths", () => {
+      const testTripleSlashDir = path.resolve("./data/test_triple_slash_dir");
+      try {
+        const normalized = testTripleSlashDir.replace(/\\/g, "/");
+        const dbUrl = `file:///${normalized}/sub.db`;
+        ensureDatabaseDirectory(dbUrl);
+        expect(fs.existsSync(testTripleSlashDir)).toBe(true);
+      } finally {
+        if (fs.existsSync(testTripleSlashDir)) {
+          fs.rmdirSync(testTripleSlashDir);
+        }
+      }
     });
   });
 });

@@ -11,6 +11,9 @@
 services:
   daemon-api:
     image: ${DOCKER_IMAGE_API:-ghcr.io/victoreb13/notion-entertainment-daemon-api:latest}
+    build:
+      context: .
+      dockerfile: packages/server/Dockerfile
     container_name: notion-entertainment-daemon-api
     restart: unless-stopped
     ports:
@@ -37,14 +40,17 @@ services:
     networks:
       - entertainment-network
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3001/healthz || exit 1"]
-      interval: 30s
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:3001/healthz || bun -e \"fetch('http://127.0.0.1:3001/healthz').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))\" || exit 1"]
+      interval: 15s
       timeout: 5s
-      retries: 3
-      start_period: 10s
+      retries: 5
+      start_period: 45s
 
   showcase-web:
     image: ${DOCKER_IMAGE_WEB:-ghcr.io/victoreb13/notion-entertainment-showcase-web:latest}
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
     container_name: notion-entertainment-showcase-web
     restart: unless-stopped
     ports:

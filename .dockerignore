@@ -1,0 +1,37 @@
+# ==============================================================================
+# Docker Build Context Ignore List
+# Prevents large host directories, native binaries, and secrets from entering build context
+# ==============================================================================
+
+# Dependency and cache directories (avoid cross-compilation host pollution)
+node_modules
+.bun
+.npm
+
+# Next.js and TypeScript build artifacts
+.next
+dist
+build
+out
+*.tsbuildinfo
+
+# SQLite Database files (mount via volumes at runtime instead)
+data
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# Local environment configuration and credentials
+.env
+.env*.local
+
+# Git version control
+.git
+.github
+
+# IDE and temporary folders
+.vscode
+.idea
+_workspace
+*.log

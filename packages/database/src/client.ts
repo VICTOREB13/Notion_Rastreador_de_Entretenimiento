@@ -1,8 +1,39 @@
+import fs from "node:fs";
+import path from "node:path";
 import { PrismaClient } from "@prisma/client";
 
 if (!process.env.DATABASE_URL) {
   process.env.DATABASE_URL = "file:./data/entertainment.db";
 }
+
+/**
+ * Defensa en profundidad: asegura que el directorio de la base de datos SQLite exista
+ * antes de instanciar PrismaClient o ejecutar operaciones en disco.
+ */
+export function ensureDatabaseDirectory(url: string | undefined = process.env.DATABASE_URL): void {
+  if (!url || !url.startsWith("file:")) return;
+  let rawPath = url.replace(/^file:/, "").split("?")[0];
+  if (!rawPath || rawPath.startsWith(":memory:")) return;
+
+  // Normalizar file:///C:/path en Windows y file:///app/data en POSIX
+  if (/^\/{1,3}[a-zA-Z]:/.test(rawPath)) {
+    rawPath = rawPath.replace(/^\/{1,3}/, "");
+  } else if (/^\/{3,}/.test(rawPath)) {
+    rawPath = rawPath.replace(/^\/{2}/, "");
+  }
+
+  const dbDir = path.dirname(rawPath);
+  if (dbDir && dbDir !== "." && dbDir !== "") {
+    try {
+      fs.mkdirSync(dbDir, { recursive: true });
+    } catch {
+      // Ignorar si el directorio ya existe o no se puede crear en este entorno
+    }
+  }
+}
+
+// Asegurar existencia del directorio previo a instanciar PrismaClient
+ensureDatabaseDirectory(process.env.DATABASE_URL);
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;

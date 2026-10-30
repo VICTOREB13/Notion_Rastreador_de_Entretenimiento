@@ -1,0 +1,4 @@
+# Ensure shell scripts and container files always retain LF line endings to avoid '\r: not found' on Linux / Alpine
+*.sh text eol=lf
+Dockerfile* text eol=lf
+.dockerignore text eol=lf

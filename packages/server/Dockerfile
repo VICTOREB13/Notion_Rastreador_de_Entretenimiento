@@ -5,8 +5,8 @@
 
 FROM oven/bun:1.4-alpine AS base
 
-# Install OpenSSL & SQLite libraries for Prisma native query engine on Alpine Linux
-RUN apk add --no-cache openssl sqlite-libs
+# Install OpenSSL, SQLite libraries, and curl for Prisma native query engine and healthchecks
+RUN apk add --no-cache openssl sqlite-libs curl
 
 WORKDIR /app
 
@@ -14,6 +14,10 @@ WORKDIR /app
 COPY package.json bun.lock tsconfig.json ./
 COPY packages/database ./packages/database
 COPY packages/server ./packages/server
+
+# Copy and configure entrypoint script with LF normalization for Alpine Linux
+COPY packages/server/docker-entrypoint.sh /app/docker-entrypoint.sh
+RUN sed -i 's/\r$//' /app/docker-entrypoint.sh && chmod +x /app/docker-entrypoint.sh
 
 # Install monorepo dependencies and generate Prisma Client for Alpine musl
 RUN bun install
@@ -30,5 +34,6 @@ ENV HOST="0.0.0.0"
 VOLUME ["/app/data"]
 EXPOSE 3001
 
-# Run migrations automatically to initialize or update SQLite schema on startup, then launch server
-CMD ["sh", "-c", "cd /app/packages/database && bunx prisma migrate deploy && cd /app && bun run packages/server/src/index.ts"]
+# Entrypoint initializes SQLite schema safely via db:push and hands over to Bun runtime
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
+CMD ["bun", "run", "packages/server/src/index.ts"]
