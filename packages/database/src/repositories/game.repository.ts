@@ -24,11 +24,26 @@ export class GameRepository implements IGameRepository {
   async upsert(data: Prisma.GameCreateInput): Promise<Game> {
     const normalizedCleanTitle = data.cleanTitle ? cleanGameTitle(data.cleanTitle) : cleanGameTitle(data.title);
 
+    const completedAt = data.completedAt ?? data.completionDate ?? null;
+    const completionDate = data.completionDate ?? data.completedAt ?? null;
+    const userNotes = data.userNotes ?? data.personalSummary ?? data.summary ?? null;
+    const personalSummary = data.personalSummary ?? data.userNotes ?? data.summary ?? null;
+    const summary = data.summary ?? data.personalSummary ?? data.userNotes ?? null;
+    const genres = data.genres ?? data.notionGenres ?? "[]";
+    const notionGenres = data.notionGenres ?? data.genres ?? "[]";
+
     return prisma.game.upsert({
       where: { notionPageId: data.notionPageId },
       create: {
         ...data,
         cleanTitle: normalizedCleanTitle,
+        genres,
+        notionGenres,
+        completedAt: completedAt ?? undefined,
+        completionDate: completionDate ?? undefined,
+        userNotes: userNotes ?? undefined,
+        personalSummary: personalSummary ?? undefined,
+        summary: summary ?? undefined,
       },
       update: {
         title: data.title,
@@ -39,14 +54,14 @@ export class GameRepository implements IGameRepository {
         hltbMain: data.hltbMain,
         hltbCompletionist: data.hltbCompletionist,
         coverUrl: data.coverUrl,
-        genres: data.genres,
-        notionGenres: data.notionGenres,
+        genres: data.genres ?? genres,
+        notionGenres: data.notionGenres ?? notionGenres,
         rating: data.rating,
-        completedAt: data.completedAt ?? data.completionDate,
-        completionDate: data.completionDate ?? data.completedAt,
-        userNotes: data.userNotes ?? data.personalSummary ?? data.summary,
-        personalSummary: data.personalSummary ?? data.userNotes ?? data.summary,
-        summary: data.summary ?? data.personalSummary ?? data.userNotes,
+        completedAt: data.completedAt !== undefined ? data.completedAt : (completionDate ?? undefined),
+        completionDate: data.completionDate !== undefined ? data.completionDate : (completedAt ?? undefined),
+        userNotes: data.userNotes !== undefined ? data.userNotes : (summary ?? undefined),
+        personalSummary: data.personalSummary !== undefined ? data.personalSummary : (summary ?? undefined),
+        summary: data.summary !== undefined ? data.summary : (userNotes ?? undefined),
         link: data.link,
         platform: data.platform,
         status: data.status,

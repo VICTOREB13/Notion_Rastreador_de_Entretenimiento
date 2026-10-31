@@ -86,16 +86,16 @@ export function ConsolidatedMetricBand({ columns, className }: ConsolidatedMetri
         return (
           <div
             key={col.id || index}
-            className="p-4 sm:p-5 flex flex-col justify-between hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors duration-200"
+            className="group p-4 sm:p-5 flex flex-col justify-between hover:bg-zinc-50 dark:hover:bg-zinc-800/40 hover:-translate-y-0.5 transition-all duration-200 cursor-default"
           >
             <div className="flex items-center justify-between gap-2 mb-3">
               <div className="flex items-center gap-2 min-w-0">
                 {icon && (
-                  <span className="text-zinc-400 shrink-0">
+                  <span className="text-zinc-400 shrink-0 group-hover:scale-110 group-hover:text-rose-500 transition-all duration-200">
                     {icon}
                   </span>
                 )}
-                <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 truncate">
+                <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 group-hover:text-zinc-800 dark:group-hover:text-zinc-200 transition-colors duration-200 truncate">
                   {col.label}
                 </span>
               </div>

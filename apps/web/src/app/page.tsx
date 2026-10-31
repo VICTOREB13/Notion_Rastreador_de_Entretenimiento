@@ -60,8 +60,8 @@ export default function EntertainmentShowcasePage() {
 
   const { data: liveStatusData, isLoading: isLiveLoading } = useLiveStatusQuery();
   const { data: analytics } = useAnalyticsQuery(daysNumber);
-  const { data: gamesData } = useGamesQuery({ status: gameStatus, limit: 200 });
-  const { data: moviesData } = useMoviesQuery({ status: movieStatus, limit: 200 });
+  const { data: gamesData, isLoading: isGamesLoading } = useGamesQuery({ status: gameStatus, limit: 200 });
+  const { data: moviesData, isLoading: isMoviesLoading } = useMoviesQuery({ status: movieStatus, limit: 200 });
 
   const games: GameItem[] = (gamesData?.data as unknown as GameItem[]) || [];
   const movies: MovieItem[] = (moviesData?.data as unknown as MovieItem[]) || [];
@@ -86,7 +86,7 @@ export default function EntertainmentShowcasePage() {
     <main className="min-h-screen bg-zinc-50 dark:bg-[#09090B] text-zinc-900 dark:text-zinc-100 pb-28 pt-6 sm:pt-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto transition-colors duration-200">
       {/* Brand Header with Authentic Vectors, Crimson Border & Version Badge */}
       <BrandHeader
-        version="v2.2.0"
+        version="v2.2.1"
         onOpenTelemetry={() => setIsTelemetryOpen(true)}
         actions={
           <div className="flex items-center gap-2">
@@ -196,6 +196,7 @@ export default function EntertainmentShowcasePage() {
           search={search}
           games={games}
           movies={movies}
+          isLoading={isGamesLoading || isMoviesLoading}
           onSelectGame={(g) => setSelectedItem({ item: g, type: "GAME" })}
           onSelectMovie={(m) => setSelectedItem({ item: m, type: "MOVIE" })}
         />

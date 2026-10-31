@@ -44,6 +44,13 @@ El sistema utiliza un monolito modular con persistencia embebida en **SQLite 3**
   - `hltbCompletionist`: `Float?` (Horas estimadas 100% completista HLTB)
   - `coverUrl`: `String?` (URL de la portada en alta definición)
   - `genres`: `String` (JSON serializado de géneros `["Acción", "RPG"]`, Default `"[]"`)
+  - `notionGenres`: `String` (JSON serializado de géneros originales de Notion, Default `"[]"`)
+  - `rating`: `Float?` (Calificación personal en escala 1.0 a 5.0)
+  - `completedAt`: `String?` (Fecha ISO de culminación `YYYY-MM-DD`)
+  - `completionDate`: `String?` (Alias histórico de `completedAt`)
+  - `userNotes`: `String?` (Pensamiento, opinión personal y notas del usuario)
+  - `personalSummary`: `String?` (Alias de `userNotes`)
+  - `summary`: `String?` (Alias histórico de `userNotes`)
   - `link`: `String?` (Enlace oficial / Wikipedia / Steam Store)
   - `platform`: `String` (Default `"PC"`)
   - `status`: `String` (Estado: `"Por Jugar" | "Jugando" | "Jugado"`, Default `"Por Jugar"`, Indexed)
@@ -217,12 +224,13 @@ El sistema utiliza un monolito modular con persistencia embebida en **SQLite 3**
 ### 1. Videojuegos: `/api/games`
 
 #### `GET /api/games`
-- **Descripción:** Obtiene la lista paginada y filtrada de videojuegos con sus enriquecimientos de IA y datos de sesión.
+- **Descripción:** Obtiene la lista paginada y filtrada de videojuegos con sus enriquecimientos de IA y datos de sesión. Soporta carga completa de 117+ títulos mediante `limit=200` o `all=true`.
 - **Query Params:**
   - `status?: string` (`"Por Jugar" | "Jugando" | "Jugado"`)
   - `search?: string` (Búsqueda por título)
-  - `limit?: number` (Default: `50`, Max: `100`)
+  - `limit?: number` (Default: `200`, Max: `500`)
   - `offset?: number` (Default: `0`)
+  - `all?: boolean` (Carga la totalidad del catálogo sin truncamiento)
 - **Respuesta 200 OK:**
 ```json
 {
@@ -240,9 +248,16 @@ El sistema utiliza un monolito modular con persistencia embebida en **SQLite 3**
       "hltbCompletionist": 103.0,
       "coverUrl": "https://cdn.akamai.steamstatic.com/...",
       "genres": ["RPG", "Acción", "Mundo Abierto"],
+      "notionGenres": ["RPG", "Acción"],
+      "rating": 4.5,
+      "completedAt": "2024-03-15",
+      "completionDate": "2024-03-15",
+      "userNotes": "Excelente inmersión narrativa y jugabilidad.",
+      "personalSummary": "Excelente inmersión narrativa y jugabilidad.",
+      "summary": "Excelente inmersión narrativa y jugabilidad.",
       "link": "https://store.steampowered.com/app/1091500",
       "platform": "PC",
-      "status": "Jugando",
+      "status": "Jugado",
       "startDate": "2026-09-15",
       "aiEnrichment": {
         "vibeTags": ["Distopía Neón", "Adrenalina Pura", "Cerebral"],
@@ -252,7 +267,7 @@ El sistema utiliza un monolito modular con persistencia embebida en **SQLite 3**
       }
     }
   ],
-  "pagination": { "total": 128, "limit": 50, "offset": 0 }
+  "pagination": { "total": 128, "limit": 200, "offset": 0 }
 }
 ```
 
@@ -273,7 +288,7 @@ El sistema utiliza un monolito modular con persistencia embebida en **SQLite 3**
 ```
 
 #### `GET /api/games/:id`
-- **Descripción:** Obtiene un videojuego por su ID (CUID) o `cleanTitle` slug, incluyendo géneros parseados y enriquecimiento IA.
+- **Descripción:** Obtiene un videojuego por su ID (CUID) o `cleanTitle` slug, incluyendo géneros parseados, géneros de Notion, calificación personal, fecha de culminación, notas/resumen y enriquecimiento IA.
 - **Respuesta 200 OK:**
 ```json
 {
@@ -282,6 +297,14 @@ El sistema utiliza un monolito modular con persistencia embebida en **SQLite 3**
     "id": "cuid_game_1",
     "title": "Cyberpunk 2077",
     "cleanTitle": "cyberpunk 2077",
+    "genres": ["RPG", "Acción", "Mundo Abierto"],
+    "notionGenres": ["RPG", "Acción"],
+    "rating": 4.5,
+    "completedAt": "2024-03-15",
+    "completionDate": "2024-03-15",
+    "userNotes": "Excelente inmersión narrativa y jugabilidad.",
+    "personalSummary": "Excelente inmersión narrativa y jugabilidad.",
+    "summary": "Excelente inmersión narrativa y jugabilidad.",
     "aiEnrichment": {
       "vibeTags": ["Distopía Neón", "Adrenalina Pura"],
       "personalizedPitch": "Inmersión cruda en Night City...",

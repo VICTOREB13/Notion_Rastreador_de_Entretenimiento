@@ -81,7 +81,7 @@ export function FloatingIslandNavDock({
               }}
               title={item.label}
               className={cn(
-                "relative flex items-center gap-2 px-3.5 py-2 rounded-full text-xs font-medium transition-all duration-200 active:scale-95 cursor-pointer",
+                "relative flex items-center gap-2 px-3.5 py-2 rounded-full text-xs font-medium transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer",
                 isActive
                   ? "bg-zinc-100 dark:bg-white/10 text-zinc-900 dark:text-white shadow-xs font-semibold border border-zinc-200 dark:border-white/15"
                   : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white hover:bg-zinc-100/70 dark:hover:bg-white/5"
@@ -91,7 +91,7 @@ export function FloatingIslandNavDock({
               <span className="hidden sm:inline-block max-w-[120px] truncate">{item.label}</span>
 
               {isActive && (
-                <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0 shadow-xs shadow-rose-500/50 animate-pulse" />
               )}
 
               {item.badge !== undefined && (

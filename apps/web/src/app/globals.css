@@ -103,6 +103,16 @@
   }
 }
 
+/* Shimmer skeleton sweep animation */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
 /* Shiny Text Kinetic Effect */
 @keyframes shiny-text-shimmer {
   0% {

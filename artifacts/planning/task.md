@@ -42,6 +42,12 @@ tags: [tareas, refactorizacion, brand-components, telemetry, dark-mode, light-mo
 - [x] `TASK-316`: Ajustar contraste de `LiveGamingBadge.tsx` en descanso para modo claro, soporte HLTB independiente (principal/completista), carga de hasta 500 titulos y micro-animacion fading.
 - [x] `TASK-317`: Bump de version a `v2.2.0`, tagging anotado en git y push a origin/main.
 
+### Fase 7: Microinteracciones de Catalogo, Loading States con Shimmer y Release v2.2.1
+- [x] `TASK-318`: Integrar skeletons con barrido shimmer en `BentoCatalogGrid.tsx` y conectar `isLoading` con queries TanStack.
+- [x] `TASK-319`: Anadir microinteracciones reactivas en `GameCard.tsx`, `MovieCard.tsx`, `CatalogHeader.tsx` (busqueda, focus ring, hover lift y clear icon) y botones de accion.
+- [x] `TASK-320`: Enriquecer feedback visual en `ConsolidatedMetricBand.tsx` y `FloatingIslandNavDock.tsx`.
+- [x] `TASK-321`: Validacion integral (`bun test`, `bun run typecheck`, `bun run validate`, `bun run web:build`), bump a v2.2.1, git commit y tag release.
+
 ---
 
 ## Referencias

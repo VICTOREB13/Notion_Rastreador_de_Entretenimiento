@@ -62,17 +62,31 @@ export class NotionSyncService {
 
   // --- Helpers para extracción segura de propiedades Notion ---
 
+  private normalizePropKey(str: string): string {
+    return str
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "");
+  }
+
   private findProp(props: Record<string, any>, aliases: string[]): any {
     for (const alias of aliases) {
       if (alias in props) return props[alias];
     }
     const lowerMap: Record<string, string> = {};
+    const normMap: Record<string, string> = {};
     for (const key of Object.keys(props)) {
       lowerMap[key.toLowerCase()] = key;
+      normMap[this.normalizePropKey(key)] = key;
     }
     for (const alias of aliases) {
       const lower = alias.toLowerCase();
       if (lower in lowerMap) return props[lowerMap[lower]];
+    }
+    for (const alias of aliases) {
+      const norm = this.normalizePropKey(alias);
+      if (norm in normMap) return props[normMap[norm]];
     }
     return undefined;
   }
@@ -82,12 +96,18 @@ export class NotionSyncService {
       if (alias in props) return alias;
     }
     const lowerMap: Record<string, string> = {};
+    const normMap: Record<string, string> = {};
     for (const key of Object.keys(props)) {
       lowerMap[key.toLowerCase()] = key;
+      normMap[this.normalizePropKey(key)] = key;
     }
     for (const alias of aliases) {
       const lower = alias.toLowerCase();
       if (lower in lowerMap) return lowerMap[lower];
+    }
+    for (const alias of aliases) {
+      const norm = this.normalizePropKey(alias);
+      if (norm in normMap) return normMap[norm];
     }
     return null;
   }
@@ -178,13 +198,35 @@ export class NotionSyncService {
     if (prop?.rich_text && Array.isArray(prop.rich_text) && prop.rich_text.length > 0) {
       return prop.rich_text.map((t: any) => t.plain_text || t.text?.content || "").join("").trim() || null;
     }
+    if (prop?.formula?.type === "string" && typeof prop.formula.string === "string") {
+      return prop.formula.string.trim() || null;
+    }
     return null;
   }
 
-  private extractDate(props: Record<string, any>, aliases: string[]): string | null {
+  private extractDate(props: Record<string, any>, aliases: string[], preferEnd: boolean = false): string | null {
     const prop = this.findProp(props, aliases);
+    if (!prop) return null;
+
+    if (preferEnd && prop?.date?.end) {
+      return prop.date.end;
+    }
     if (prop?.date?.start) {
       return prop.date.start;
+    }
+    if (prop?.date?.end) {
+      return prop.date.end;
+    }
+    if (prop?.formula?.type === "date" && prop?.formula?.date) {
+      if (preferEnd && prop.formula.date.end) return prop.formula.date.end;
+      return prop.formula.date.start || prop.formula.date.end || null;
+    }
+    if (prop?.rollup?.type === "date" && prop?.rollup?.date) {
+      if (preferEnd && prop.rollup.date.end) return prop.rollup.date.end;
+      return prop.rollup.date.start || prop.rollup.date.end || null;
+    }
+    if (prop?.formula?.type === "string" && typeof prop.formula.string === "string") {
+      return prop.formula.string.trim() || null;
     }
     return null;
   }
@@ -200,12 +242,17 @@ export class NotionSyncService {
       num = prop.formula.number;
     } else if (prop?.rollup?.type === "number" && typeof prop.rollup.number === "number") {
       num = prop.rollup.number;
+    } else if (prop?.rollup?.type === "array" && Array.isArray(prop.rollup.array) && prop.rollup.array.length > 0) {
+      const first = prop.rollup.array[0];
+      if (typeof first?.number === "number") num = first.number;
     }
 
-    if (num !== null) {
+    if (num !== null && !isNaN(num)) {
+      if (num <= 0) return null;
       if (num > 5 && num <= 10) return Math.round((num / 2) * 10) / 10;
       if (num > 10 && num <= 100) return Math.round((num / 20) * 10) / 10;
-      return Math.min(5, Math.max(1, Math.round(num * 10) / 10));
+      if (num > 100) return null;
+      return Math.min(5, Math.max(0.5, Math.round(num * 10) / 10));
     }
 
     let textVal = "";
@@ -213,52 +260,133 @@ export class NotionSyncService {
       textVal = prop.select.name;
     } else if (prop?.status?.name) {
       textVal = prop.status.name;
+    } else if (prop?.multi_select && Array.isArray(prop.multi_select) && prop.multi_select.length > 0) {
+      textVal = prop.multi_select.map((m: any) => m.name).join(" ");
     } else if (prop?.formula?.type === "string" && typeof prop.formula.string === "string") {
       textVal = prop.formula.string;
     } else if (prop?.rich_text && Array.isArray(prop.rich_text) && prop.rich_text.length > 0) {
       textVal = prop.rich_text.map((t: any) => t.plain_text || t.text?.content || "").join("").trim();
+    } else if (prop?.rollup?.type === "array" && Array.isArray(prop.rollup.array) && prop.rollup.array.length > 0) {
+      const first = prop.rollup.array[0];
+      if (first?.select?.name) textVal = first.select.name;
+      else if (first?.rich_text) textVal = first.rich_text.map((t: any) => t.plain_text || "").join("").trim();
     }
 
-    if (textVal) {
-      // 1. Conteo de estrellas visuales (⭐, ★, 🌟)
-      const stars = textVal.match(/[⭐★🌟]/g);
-      if (stars && stars.length > 0) {
-        return Math.min(5, stars.length);
-      }
+    textVal = textVal.trim();
+    if (!textVal) return null;
 
-      // 2. Formato fraccionario (ej: "5/5", "4.5/5", "8/10", "9/10")
-      const fracMatch = textVal.match(/(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)/);
-      if (fracMatch) {
-        const val = parseFloat(fracMatch[1]);
-        const max = parseFloat(fracMatch[2]);
-        if (max === 5) return Math.min(5, Math.max(1, val));
-        if (max === 10) return Math.min(5, Math.max(1, Math.round((val / 2) * 10) / 10));
-        if (max === 100) return Math.min(5, Math.max(1, Math.round((val / 20) * 10) / 10));
-        return Math.min(5, Math.max(1, Math.round((val / max) * 5 * 10) / 10));
-      }
+    // Conteo o descarte de casos explícitos "sin calificar" o 0
+    const lower = textVal.toLowerCase();
+    if (
+      lower === "0" ||
+      lower === "0/5" ||
+      lower === "0/10" ||
+      lower === "0.0" ||
+      lower === "sin calificar" ||
+      lower === "unrated" ||
+      lower === "none" ||
+      lower === "n/a" ||
+      lower === "-" ||
+      lower === "--" ||
+      lower === "☆☆☆☆☆"
+    ) {
+      return null;
+    }
 
-      // 3. Formato texto "X estrellas" o "X stars"
-      const starsTextMatch = textVal.match(/(\d+(?:\.\d+)?)\s*(?:estrellas?|stars?)/i);
-      if (starsTextMatch) {
-        const val = parseFloat(starsTextMatch[1]);
-        return Math.min(5, Math.max(1, val));
-      }
+    // 1. Formato fraccionario (ej: "5/5", "4.5/5", "8/10", "9/10", "4.5 de 5", "9 de 10", "4.5 / 5 ⭐")
+    const fracMatch = textVal.match(/(\d+(?:[\.,]\d+)?)\s*(?:\/|de|sobre)\s*(\d+(?:[\.,]\d+)?)/i);
+    if (fracMatch) {
+      const val = parseFloat(fracMatch[1].replace(",", "."));
+      const max = parseFloat(fracMatch[2].replace(",", "."));
+      if (val <= 0 || isNaN(val) || isNaN(max) || max <= 0) return null;
+      if (max === 5) return Math.min(5, Math.max(0.5, Math.round(val * 10) / 10));
+      if (max === 10) return Math.min(5, Math.max(0.5, Math.round((val / 2) * 10) / 10));
+      if (max === 100) return Math.min(5, Math.max(0.5, Math.round((val / 20) * 10) / 10));
+      return Math.min(5, Math.max(0.5, Math.round((val / max) * 5 * 10) / 10));
+    }
 
-      // 4. Número directo en texto (ej: "5", "4.5", "8")
-      const parsed = parseFloat(textVal.replace(",", "."));
-      if (!isNaN(parsed)) {
-        if (parsed > 5 && parsed <= 10) return Math.round((parsed / 2) * 10) / 10;
-        if (parsed > 10 && parsed <= 100) return Math.round((parsed / 20) * 10) / 10;
-        return Math.min(5, Math.max(1, parsed));
-      }
+    // 2. Número con estrella o texto de estrellas (ej: "4.5 ⭐", "5 ⭐", "4.5 estrellas", "5 stars", "⭐ 4.5", "5 ⭐ - Masterpiece")
+    const numStarMatch =
+      textVal.match(/(?:[⭐★🌟]\s*)?(\d+(?:[\.,]\d+)?)\s*(?:[⭐★🌟]|estrellas?|stars?)/i) ||
+      textVal.match(/(?:estrellas?|stars?)\s*(\d+(?:[\.,]\d+)?)/i);
+    if (numStarMatch) {
+      const parsedVal = parseFloat(numStarMatch[1].replace(",", "."));
+      if (parsedVal <= 0 || isNaN(parsedVal)) return null;
+      if (parsedVal > 5 && parsedVal <= 10) return Math.round((parsedVal / 2) * 10) / 10;
+      if (parsedVal > 10 && parsedVal <= 100) return Math.round((parsedVal / 20) * 10) / 10;
+      if (parsedVal <= 5) return Math.min(5, Math.max(0.5, Math.round(parsedVal * 10) / 10));
+    }
+
+    // 3. Conteo de estrellas visuales exclusivamente o con medio símbolo (ej: "⭐⭐⭐⭐⭐", "⭐⭐⭐⭐½", "★★★★☆", "★★★½")
+    const stars = textVal.match(/[⭐★🌟]/g);
+    if (stars && stars.length > 0) {
+      const hasHalf = textVal.includes("½") || textVal.toLowerCase().includes(".5");
+      const computed = stars.length + (hasHalf ? 0.5 : 0);
+      return Math.min(5, Math.max(0.5, Math.round(computed * 10) / 10));
+    }
+
+    // 4. Formato de select con etiqueta al inicio (ej: "5 - Obra Maestra", "4 - Muy Bueno", "4.5: Excelente")
+    const leadingNumMatch = textVal.match(/^(\d+(?:[\.,]\d+)?)\s*(?:[-–—:]|\s)\s*[a-zA-ZáéíóúÁÉÍÓÚñÑ]/);
+    if (leadingNumMatch) {
+      const parsed = parseFloat(leadingNumMatch[1].replace(",", "."));
+      if (parsed <= 0 || isNaN(parsed)) return null;
+      if (parsed > 5 && parsed <= 10) return Math.round((parsed / 2) * 10) / 10;
+      if (parsed > 10 && parsed <= 100) return Math.round((parsed / 20) * 10) / 10;
+      if (parsed <= 5) return Math.min(5, Math.max(0.5, Math.round(parsed * 10) / 10));
+    }
+
+    // 5. Número directo en texto (ej: "5", "4.5", "4,5", "8", "10")
+    const parsed = parseFloat(textVal.replace(",", "."));
+    if (!isNaN(parsed)) {
+      if (parsed <= 0) return null;
+      if (parsed > 5 && parsed <= 10) return Math.round((parsed / 2) * 10) / 10;
+      if (parsed > 10 && parsed <= 100) return Math.round((parsed / 20) * 10) / 10;
+      if (parsed <= 5) return Math.min(5, Math.max(0.5, Math.round(parsed * 10) / 10));
     }
 
     return null;
   }
 
   private extractCompletionDate(props: Record<string, any>, aliases: string[]): string | null {
-    const dateVal = this.extractDate(props, aliases);
+    const dateVal = this.extractDate(props, aliases, true);
     if (dateVal) return dateVal;
+
+    const prop = this.findProp(props, aliases);
+    if (!prop) return null;
+
+    if (prop?.date?.end) {
+      return prop.date.end;
+    }
+    if (prop?.date?.start) {
+      return prop.date.start;
+    }
+    if (prop?.formula?.date?.end) {
+      return prop.formula.date.end;
+    }
+    if (prop?.formula?.date?.start) {
+      return prop.formula.date.start;
+    }
+    if (prop?.rollup?.date?.end) {
+      return prop.rollup.date.end;
+    }
+    if (prop?.rollup?.date?.start) {
+      return prop.rollup.date.start;
+    }
+    if (prop?.rollup?.type === "array" && Array.isArray(prop.rollup.array) && prop.rollup.array.length > 0) {
+      const first = prop.rollup.array[0];
+      if (first?.date?.end || first?.date?.start) return first.date.end || first.date.start;
+      if (first?.select?.name) return first.select.name.trim();
+      if (first?.rich_text) return first.rich_text.map((t: any) => t.plain_text || "").join("").trim() || null;
+    }
+    if (prop?.formula?.type === "string" && typeof prop.formula.string === "string" && prop.formula.string.trim()) {
+      return prop.formula.string.trim();
+    }
+    if (prop?.select?.name && prop.select.name.trim()) {
+      return prop.select.name.trim();
+    }
+    if (prop?.status?.name && prop.status.name.trim()) {
+      return prop.status.name.trim();
+    }
 
     const textVal = this.extractRichText(props, aliases);
     if (textVal) return textVal;
@@ -349,7 +477,7 @@ export class NotionSyncService {
       const coverUrl =
         this.extractFileUrl(props, ["Portada", "Cover", "Banner"]) || pageCoverUrl;
       const genres = this.extractMultiSelect(props, ["Géneros", "Generos", "Genres"]);
-      const link = this.extractUrl(props, ["Link", "URL", "Enlace"]);
+      const link = this.extractUrl(props, ["Link", "URL", "Wikipedia", "Wiki", "Enlace"]);
       const platform = this.extractSelect(props, ["Plataforma", "Platform"], "PC");
       let status = this.extractSelect(props, ["Estado", "Status"], "Por Jugar");
       const startDate = this.extractDate(props, ["Fecha de Inicio", "Start Date"]);
@@ -357,17 +485,33 @@ export class NotionSyncService {
         "Fecha de Culminación (primera campaña)",
         "Fecha de Culminación",
         "Fecha de Culminacion",
+        "Fecha Culminación",
+        "Fecha Culminacion",
         "Fecha de Finalización",
         "Fecha de Finalizacion",
+        "Fecha Finalización",
+        "Fecha Finalizacion",
+        "Fecha de Término",
+        "Fecha de Termino",
+        "Fecha Término",
+        "Fecha Termino",
+        "Fecha de Completado",
+        "Fecha Completado",
+        "Fecha Completada",
+        "Fecha Terminado",
         "Completion Date",
         "Completed Date",
         "Finished Date",
+        "Date Completed",
+        "Completed At",
+        "Finished At",
         "Fecha Fin",
         "Fecha de Fin",
         "Fecha Final",
         "Culminado",
         "Finalizado",
-        "Fecha Terminado",
+        "Terminado",
+        "Completed",
       ]);
       const rating = this.extractRating(props, [
         "Calificación Personal",
@@ -384,24 +528,44 @@ export class NotionSyncService {
       ]);
       const summary = this.extractSummary(props, [
         "Pensamiento Personal",
+        "Pensamientos Personales",
         "Pensamiento",
+        "Pensamientos",
         "Opinión Personal",
         "Opinión",
+        "Opinion Personal",
         "Opinion",
+        "Opiniones",
         "Notas Personales",
         "Notas",
+        "User Notes",
+        "Personal Notes",
+        "Mis Notas",
+        "Mi Opinión",
+        "Mi Opinion",
         "Comentario Personal",
+        "Comentarios Personales",
         "Comentario",
         "Comentarios",
+        "Review Personal",
+        "Personal Review",
         "Review",
+        "Reviews",
+        "Reseña Personal",
         "Reseña",
+        "Resena Personal",
         "Resena",
+        "Reseñas",
         "Personal Thoughts",
+        "Thoughts",
         "Notes",
+        "Personal Summary",
         "Resumen Personal",
         "Resumen",
-        "Critica",
+        "Crítica Personal",
+        "Critica Personal",
         "Crítica",
+        "Critica",
       ]);
 
       // Comprobar existencia previa por notionPageId o cleanTitle
@@ -578,6 +742,45 @@ export class NotionSyncService {
         "Nota",
         "Score",
       ]);
+      const summary = this.extractSummary(props, [
+        "Pensamiento Personal",
+        "Pensamientos Personales",
+        "Pensamiento",
+        "Pensamientos",
+        "Opinión Personal",
+        "Opinión",
+        "Opinion Personal",
+        "Opinion",
+        "Opiniones",
+        "Notas Personales",
+        "Notas",
+        "User Notes",
+        "Personal Notes",
+        "Mis Notas",
+        "Mi Opinión",
+        "Mi Opinion",
+        "Comentario Personal",
+        "Comentarios Personales",
+        "Comentario",
+        "Comentarios",
+        "Review Personal",
+        "Personal Review",
+        "Review",
+        "Reviews",
+        "Reseña Personal",
+        "Reseña",
+        "Resena Personal",
+        "Resena",
+        "Personal Thoughts",
+        "Thoughts",
+        "Notes",
+        "Personal Summary",
+        "Resumen Personal",
+        "Crítica Personal",
+        "Critica Personal",
+        "Crítica",
+        "Critica",
+      ]);
 
       let existing = await this.movieRepo.findByNotionPageId(page.id);
       if (!existing && clean) {
@@ -610,6 +813,7 @@ export class NotionSyncService {
           year: year ?? existing.year,
           completionDate: completionDate ?? existing.completionDate,
           rating: rating ?? existing.rating,
+          summary: summary ?? existing.summary,
           lastSyncAt: now,
         });
         updated++;
@@ -626,6 +830,7 @@ export class NotionSyncService {
           year: year ?? undefined,
           completionDate: completionDate ?? undefined,
           rating: rating ?? undefined,
+          summary: summary ?? undefined,
           lastSyncAt: now,
         });
         created++;

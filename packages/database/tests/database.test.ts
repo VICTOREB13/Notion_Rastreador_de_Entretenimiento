@@ -159,6 +159,26 @@ describe("SQLite Database & Prisma Repositories", () => {
       expect(allResult.total).toBeGreaterThanOrEqual(1);
       expect(allResult.items.length).toBe(allResult.total);
     });
+
+    it("should synchronize aliased columns on create (completedAt/completionDate, userNotes/summary, genres/notionGenres)", async () => {
+      const aliasTestId = "test-notion-alias-sync";
+      const created = await gameRepository.upsert({
+        notionPageId: aliasTestId,
+        title: "Celeste",
+        completedAt: "2024-01-15",
+        userNotes: "Plataformas desafiante y conmovedor.",
+        genres: JSON.stringify(["Plataformas", "Indie"]),
+      });
+
+      expect(created.completedAt).toBe("2024-01-15");
+      expect(created.completionDate).toBe("2024-01-15");
+      expect(created.userNotes).toBe("Plataformas desafiante y conmovedor.");
+      expect(created.personalSummary).toBe("Plataformas desafiante y conmovedor.");
+      expect(created.summary).toBe("Plataformas desafiante y conmovedor.");
+      expect(created.notionGenres).toBe(JSON.stringify(["Plataformas", "Indie"]));
+
+      await gameRepository.delete(created.id);
+    });
   });
 
   describe("MovieRepository", () => {

@@ -303,5 +303,71 @@ describe("NotionSyncService (Intelligent Delta Polling & Anti-Loop Guard)", () =
     // Limpieza
     await gameRepo.delete(savedGame!.id);
   });
+
+  it("should correctly parse edge-case ratings: '4.5 ⭐', '0' (unrated as null), half-stars, and Spanish fractions", async () => {
+    // Verificar helper extractRating directamente a través del servicio
+    const s = syncService as any;
+
+    // 1. Números con estrellas no deben colapsar a 1
+    expect(s.extractRating({ Cal: { select: { name: "4.5 ⭐" } } }, ["Cal"])).toBe(4.5);
+    expect(s.extractRating({ Cal: { select: { name: "5 ⭐" } } }, ["Cal"])).toBe(5);
+    expect(s.extractRating({ Cal: { select: { name: "4 ⭐" } } }, ["Cal"])).toBe(4);
+    expect(s.extractRating({ Cal: { select: { name: "10/10 ⭐" } } }, ["Cal"])).toBe(5);
+    expect(s.extractRating({ Cal: { select: { name: "8/10 ⭐" } } }, ["Cal"])).toBe(4);
+    expect(s.extractRating({ Cal: { select: { name: "4.5 / 5 ⭐" } } }, ["Cal"])).toBe(4.5);
+
+    // 2. Unrated / 0 no debe convertirse en 1 estrella
+    expect(s.extractRating({ Cal: { number: 0 } }, ["Cal"])).toBeNull();
+    expect(s.extractRating({ Cal: { select: { name: "0" } } }, ["Cal"])).toBeNull();
+    expect(s.extractRating({ Cal: { select: { name: "0/5" } } }, ["Cal"])).toBeNull();
+    expect(s.extractRating({ Cal: { select: { name: "0 estrellas" } } }, ["Cal"])).toBeNull();
+    expect(s.extractRating({ Cal: { select: { name: "Sin calificar" } } }, ["Cal"])).toBeNull();
+    expect(s.extractRating({ Cal: { select: { name: "☆☆☆☆☆" } } }, ["Cal"])).toBeNull();
+
+    // 3. Medias estrellas y estrellas vacías
+    expect(s.extractRating({ Cal: { select: { name: "⭐⭐⭐⭐½" } } }, ["Cal"])).toBe(4.5);
+    expect(s.extractRating({ Cal: { select: { name: "⭐⭐⭐½" } } }, ["Cal"])).toBe(3.5);
+    expect(s.extractRating({ Cal: { select: { name: "★★★★☆" } } }, ["Cal"])).toBe(4);
+    expect(s.extractRating({ Cal: { select: { name: "★★★☆☆" } } }, ["Cal"])).toBe(3);
+
+    // 4. Formatos textuales en español
+    expect(s.extractRating({ Cal: { select: { name: "4.5 de 5" } } }, ["Cal"])).toBe(4.5);
+    expect(s.extractRating({ Cal: { select: { name: "9 sobre 10" } } }, ["Cal"])).toBe(4.5);
+    expect(s.extractRating({ Cal: { select: { name: "5 - Obra Maestra" } } }, ["Cal"])).toBe(5);
+  });
+
+  it("should extract completion date and personal thoughts using formulas and extended aliases", async () => {
+    const extendedPageId = "notion-game-extended-props";
+    mockNotion.allPagesResponse = [
+      {
+        id: extendedPageId,
+        lastEditedTime: "2026-10-25T17:00:00.000Z",
+        properties: {
+          Título: { title: [{ text: { content: "Chrono Trigger" } }] },
+          Rating: { select: { name: "5 ⭐" } },
+          "Fecha de Término": { formula: { type: "date", date: { start: "2023-11-20" } } },
+          "Personal Summary": { formula: { type: "string", string: "Inolvidable viaje en el tiempo y banda sonora legendaria." } },
+          Genres: { multi_select: [{ name: "JRPG" }] },
+          Estado: { status: { name: "Jugado" } },
+        },
+      },
+    ];
+
+    await syncService.syncGames(true);
+
+    const savedGame = await gameRepo.findByNotionPageId(extendedPageId);
+    expect(savedGame).not.toBeNull();
+    expect(savedGame?.title).toBe("Chrono Trigger");
+    expect(savedGame?.rating).toBe(5);
+    expect(savedGame?.completedAt).toBe("2023-11-20");
+    expect(savedGame?.completionDate).toBe("2023-11-20");
+    expect(savedGame?.userNotes).toBe("Inolvidable viaje en el tiempo y banda sonora legendaria.");
+    expect(savedGame?.personalSummary).toBe("Inolvidable viaje en el tiempo y banda sonora legendaria.");
+    expect(savedGame?.summary).toBe("Inolvidable viaje en el tiempo y banda sonora legendaria.");
+    expect(JSON.parse((savedGame as any)?.notionGenres || "[]")).toEqual(["JRPG"]);
+
+    // Limpieza
+    await gameRepo.delete(savedGame!.id);
+  });
 });
 

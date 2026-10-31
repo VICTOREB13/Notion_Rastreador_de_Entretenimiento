@@ -42,6 +42,7 @@ export class MovieRepository implements IMovieRepository {
         year: data.year,
         completionDate: data.completionDate,
         rating: data.rating,
+        summary: data.summary,
         lastSyncAt: data.lastSyncAt,
       },
     });

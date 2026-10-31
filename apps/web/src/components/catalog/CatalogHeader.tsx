@@ -49,20 +49,26 @@ export function CatalogHeader({
         />
 
         {/* Search Input Bar (Organic, integrated, zero Cmd+K slop) */}
-        <div className="relative w-full lg:w-80">
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 dark:text-zinc-500 pointer-events-none" />
+        <div className="group/search relative w-full lg:w-80">
+          <Search
+            className={cn(
+              "w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 transition-colors duration-200 pointer-events-none",
+              search ? "text-rose-500" : "text-zinc-400 dark:text-zinc-500 group-focus-within/search:text-rose-500"
+            )}
+          />
           <input
             type="text"
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Buscar por título, género o notas..."
-            className="w-full pl-10 pr-9 py-2 rounded-full bg-zinc-100 dark:bg-zinc-900/80 border border-zinc-200 dark:border-white/10 text-xs text-zinc-900 dark:text-zinc-200 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-hidden focus:border-rose-500/50 focus:ring-1 focus:ring-rose-500/30 transition-all shadow-inner"
+            className="w-full pl-10 pr-9 py-2 rounded-full bg-zinc-100 dark:bg-zinc-900/80 border border-zinc-200 dark:border-white/10 text-xs text-zinc-900 dark:text-zinc-200 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-hidden focus:border-rose-500/60 focus:ring-2 focus:ring-rose-500/20 transition-all duration-200 shadow-inner"
           />
           {search && (
             <button
               type="button"
               onClick={() => onSearchChange("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-white transition-colors cursor-pointer"
+              aria-label="Limpiar búsqueda"
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-white transition-all duration-200 cursor-pointer hover:scale-110 active:scale-95 hover:rotate-90"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -86,10 +92,10 @@ export function CatalogHeader({
             type="button"
             onClick={() => onStatusChange(item.id)}
             className={cn(
-              "px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap border transition-all cursor-pointer",
+              "px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap border transition-all duration-200 cursor-pointer active:scale-95 hover:-translate-y-0.5",
               status === item.id
-                ? "bg-zinc-900 text-white dark:bg-white/10 dark:text-zinc-100 border-zinc-900 dark:border-white/20 font-semibold shadow-xs"
-                : "bg-transparent text-zinc-600 dark:text-zinc-400 border-transparent hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-zinc-200/50 dark:hover:bg-zinc-900"
+                ? "bg-zinc-900 text-white dark:bg-white/10 dark:text-zinc-100 border-zinc-900 dark:border-white/20 font-semibold shadow-xs ring-1 ring-zinc-900/10 dark:ring-white/10"
+                : "bg-transparent text-zinc-600 dark:text-zinc-400 border-transparent hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-zinc-200/60 dark:hover:bg-zinc-800/80 hover:border-zinc-300/50 dark:hover:border-white/5"
             )}
           >
             {item.label}

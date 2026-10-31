@@ -498,6 +498,43 @@ describe("Frontend Web Utilities (@repo/web)", () => {
     expect(gridContent).toContain('category === "ALL" ? "video" : "poster"');
     expect(gridContent).toContain("animate-in fade-in duration-300");
   });
+
+  test("v2.2.1 UI Updates: BentoCatalogGrid skeleton loading with shimmer, microinteractions on search, cards, and nav", async () => {
+    const fs = await import("fs");
+    const path = await import("path");
+
+    // BentoCatalogGrid skeleton loading & shimmer support
+    const gridPath = path.resolve(__dirname, "../src/components/catalog/BentoCatalogGrid.tsx");
+    const gridContent = fs.readFileSync(gridPath, "utf-8");
+    expect(gridContent).toContain("BentoCatalogSkeleton");
+    expect(gridContent).toContain("isLoading");
+    expect(gridContent).toContain("animate-[shimmer_2s_infinite]");
+
+    // CatalogHeader microinteractions
+    const headerPath = path.resolve(__dirname, "../src/components/catalog/CatalogHeader.tsx");
+    const headerContent = fs.readFileSync(headerPath, "utf-8");
+    expect(headerContent).toContain("group/search");
+    expect(headerContent).toContain("group-focus-within/search:text-rose-500");
+    expect(headerContent).toContain("hover:rotate-90");
+
+    // GameCard and MovieCard hover microinteractions
+    const gameCardPath = path.resolve(__dirname, "../src/components/catalog/GameCard.tsx");
+    const gameContent = fs.readFileSync(gameCardPath, "utf-8");
+    expect(gameContent).toContain("hover:-translate-y-1.5");
+    expect(gameContent).toContain("hover:border-rose-500/40");
+    expect(gameContent).toContain("group-hover:scale-106");
+
+    const movieCardPath = path.resolve(__dirname, "../src/components/catalog/MovieCard.tsx");
+    const movieContent = fs.readFileSync(movieCardPath, "utf-8");
+    expect(movieContent).toContain("hover:-translate-y-1.5");
+    expect(movieContent).toContain("hover:border-rose-500/40");
+    expect(movieContent).toContain("group-hover:scale-106");
+
+    // BrandHeader version v2.2.1
+    const brandPath = path.resolve(__dirname, "../src/components/brand/BrandHeader.tsx");
+    const brandContent = fs.readFileSync(brandPath, "utf-8");
+    expect(brandContent).toContain("v2.2.1");
+  });
 });
 
 

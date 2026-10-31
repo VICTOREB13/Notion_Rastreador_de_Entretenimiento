@@ -29,14 +29,18 @@ export async function fetchGames(params: {
   search?: string;
   limit?: number;
   offset?: number;
+  all?: boolean;
 } = {}) {
+  const queryParams: Record<string, string> = {
+    limit: String(params.limit ?? 200),
+    offset: String(params.offset ?? 0),
+  };
+  if (params.status) queryParams.status = params.status;
+  if (params.search) queryParams.search = params.search;
+  if (params.all !== undefined) queryParams.all = String(params.all);
+
   const res = await client.api.games.$get({
-    query: {
-      status: params.status,
-      search: params.search,
-      limit: String(params.limit ?? 50),
-      offset: String(params.offset ?? 0),
-    },
+    query: queryParams as any,
   });
   if (!res.ok) throw new Error("Error fetching games");
   const json = await res.json();
