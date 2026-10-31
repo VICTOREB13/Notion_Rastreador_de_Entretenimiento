@@ -17,6 +17,7 @@ export interface BentoCatalogGridProps {
   isLoading?: boolean;
   onSelectGame: (game: GameItem) => void;
   onSelectMovie: (movie: MovieItem) => void;
+  onClearSearch?: () => void;
   className?: string;
 }
 
@@ -77,6 +78,7 @@ export function BentoCatalogGrid({
   isLoading = false,
   onSelectGame,
   onSelectMovie,
+  onClearSearch,
   className,
 }: BentoCatalogGridProps) {
   const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
@@ -146,12 +148,21 @@ export function BentoCatalogGrid({
 
   if (combinedItems.length === 0) {
     return (
-      <div className="py-16 text-center rounded-2xl border border-zinc-200 dark:border-white/5 bg-zinc-100/80 dark:bg-[#111113]/50 text-zinc-600 dark:text-zinc-300">
+      <div className="py-16 text-center rounded-2xl border border-zinc-200 dark:border-white/5 bg-zinc-100/80 dark:bg-[#111113]/50 text-zinc-600 dark:text-zinc-300 animate-in fade-in zoom-in-[0.98] duration-200">
         <Gamepad2 className="w-10 h-10 text-zinc-400 dark:text-zinc-600 mx-auto mb-2" />
         <h4 className="text-sm font-semibold text-zinc-800 dark:text-zinc-300">No se encontraron títulos</h4>
         <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
           {search ? `Ningún resultado coincide con "${search}".` : "No hay elementos en esta vista."}
         </p>
+        {search && onClearSearch && (
+          <button
+            type="button"
+            onClick={onClearSearch}
+            className="mt-4 inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 hover:border-rose-500/40 text-zinc-700 dark:text-zinc-300 hover:text-rose-600 dark:hover:text-rose-400 transition-all duration-200 hover:-translate-y-0.5 active:scale-95 shadow-xs cursor-pointer"
+          >
+            Restablecer búsqueda
+          </button>
+        )}
       </div>
     );
   }

@@ -33,7 +33,7 @@ export function LiveGamingBadge({ status, isLoading, className }: LiveGamingBadg
     return (
       <div
         className={cn(
-          "inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-emerald-950/60 border border-emerald-500/30 text-xs text-emerald-200 backdrop-blur-md shadow-xs animate-in fade-in duration-300",
+          "inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-emerald-950/60 border border-emerald-500/30 text-xs text-emerald-200 backdrop-blur-md shadow-xs animate-in fade-in duration-300 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:shadow-emerald-500/10 cursor-default select-none",
           className
         )}
       >
@@ -62,7 +62,7 @@ export function LiveGamingBadge({ status, isLoading, className }: LiveGamingBadg
   return (
     <div
       className={cn(
-        "inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-100 dark:bg-zinc-900/80 border border-zinc-200 dark:border-white/10 text-xs text-zinc-600 dark:text-zinc-400 backdrop-blur-md shadow-2xs",
+        "inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-100 dark:bg-zinc-900/80 border border-zinc-200 dark:border-white/10 text-xs text-zinc-600 dark:text-zinc-400 backdrop-blur-md shadow-2xs transition-all duration-200 hover:-translate-y-0.5 hover:border-zinc-300 dark:hover:border-white/20 cursor-default select-none",
         className
       )}
     >

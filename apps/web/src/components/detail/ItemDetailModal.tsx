@@ -105,14 +105,15 @@ export function ItemDetailModal({ item, type, onClose }: ItemDetailModalProps) {
     >
       <div
         data-lenis-prevent
-        className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white dark:bg-[#111113] border border-zinc-200 dark:border-white/10 rounded-2xl shadow-floating text-zinc-900 dark:text-zinc-100 p-6 sm:p-8"
+        className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white dark:bg-[#111113] border border-zinc-200 dark:border-white/10 rounded-2xl shadow-floating text-zinc-900 dark:text-zinc-100 p-6 sm:p-8 animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}
         <button
           type="button"
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 rounded-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white transition-colors cursor-pointer z-20"
+          aria-label="Cerrar modal de detalle"
+          className="absolute top-4 right-4 p-2 rounded-full bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-white/10 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white transition-all duration-200 cursor-pointer z-20 hover:scale-110 active:scale-95 hover:rotate-90 shadow-2xs"
         >
           <X className="w-4 h-4" />
         </button>
@@ -174,10 +175,10 @@ export function ItemDetailModal({ item, type, onClose }: ItemDetailModalProps) {
                 href={(movie?.wikiUrl || game?.link)!}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 border border-rose-200 dark:border-rose-500/20 transition-colors"
+                className="group shrink-0 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 border border-rose-200 dark:border-rose-500/20 transition-all duration-200 hover:-translate-y-0.5 active:scale-95 shadow-2xs"
               >
                 <span>{(movie?.wikiUrl || game?.link)?.includes("wikipedia.org") ? "Wikipedia" : "Enlace"}</span>
-                <ExternalLink className="w-3 h-3" />
+                <ExternalLink className="w-3 h-3 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform duration-200" />
               </a>
             )}
           </div>
@@ -211,7 +212,7 @@ export function ItemDetailModal({ item, type, onClose }: ItemDetailModalProps) {
               {((isGame && game?.notionGenres && game.notionGenres.length > 0) ? game.notionGenres : currentItem.genres).map((genre, idx) => (
                 <span
                   key={idx}
-                  className="px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/5"
+                  className="px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/5 hover:border-rose-500/30 hover:scale-105 transition-all duration-150 select-none"
                 >
                   {genre}
                 </span>
@@ -222,7 +223,7 @@ export function ItemDetailModal({ item, type, onClose }: ItemDetailModalProps) {
 
         {/* User's Personal Thoughts / Summary / Opinion from Notion */}
         {(game?.summary || movie?.summary) && (
-          <div className="mt-5 p-4 rounded-xl bg-amber-500/5 dark:bg-amber-950/20 border border-amber-500/20">
+          <div className="mt-5 p-4 rounded-xl bg-amber-500/5 dark:bg-amber-950/20 border border-amber-500/20 hover:border-amber-500/40 transition-colors duration-200">
             <div className="flex items-center gap-1.5 mb-1.5 text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
               <MessageSquare className="w-3.5 h-3.5" />
               <span>Mi Resumen & Opinión Personal</span>
@@ -236,7 +237,7 @@ export function ItemDetailModal({ item, type, onClose }: ItemDetailModalProps) {
         {/* HLTB Breakdown for Games */}
         {isGame && (game?.hltbMain || game?.hltbCompletionist) && (
           <div className="mt-5 p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/5 grid grid-cols-2 gap-2 text-center">
-            <div>
+            <div className="p-2 rounded-lg hover:bg-zinc-100/60 dark:hover:bg-zinc-800/40 transition-colors duration-150">
               <span className="text-[10px] font-mono uppercase text-zinc-400 dark:text-zinc-500 block">
                 Historia Principal
               </span>
@@ -244,7 +245,7 @@ export function ItemDetailModal({ item, type, onClose }: ItemDetailModalProps) {
                 {game.hltbMain ? `${game.hltbMain}h` : "--"}
               </span>
             </div>
-            <div>
+            <div className="p-2 rounded-lg hover:bg-zinc-100/60 dark:hover:bg-zinc-800/40 transition-colors duration-150">
               <span className="text-[10px] font-mono uppercase text-zinc-400 dark:text-zinc-500 block">
                 Completista 100%
               </span>
@@ -283,9 +284,9 @@ export function ItemDetailModal({ item, type, onClose }: ItemDetailModalProps) {
               type="button"
               onClick={handleReEnrich}
               disabled={isEnriching}
-              className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-zinc-100 hover:bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-white/10 transition-colors disabled:opacity-50 cursor-pointer"
+              className="group flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-zinc-100 hover:bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-200 border border-zinc-200 hover:border-rose-500/30 dark:border-white/10 dark:hover:border-rose-500/30 transition-all duration-200 hover:-translate-y-0.5 active:scale-95 disabled:opacity-50 disabled:pointer-events-none cursor-pointer shadow-2xs"
             >
-              <RefreshCw className={cn("w-3 h-3", isEnriching && "animate-spin")} />
+              <RefreshCw className={cn("w-3 h-3 group-hover:rotate-180 transition-transform duration-500", isEnriching && "animate-spin")} />
               <span>{isEnriching ? "Analizando..." : "Re-analizar con IA"}</span>
             </button>
           </div>

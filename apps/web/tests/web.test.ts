@@ -530,10 +530,32 @@ describe("Frontend Web Utilities (@repo/web)", () => {
     expect(movieContent).toContain("hover:border-rose-500/40");
     expect(movieContent).toContain("group-hover:scale-106");
 
-    // BrandHeader version v2.2.1
+    // BrandHeader version v2.2.2
     const brandPath = path.resolve(__dirname, "../src/components/brand/BrandHeader.tsx");
     const brandContent = fs.readFileSync(brandPath, "utf-8");
-    expect(brandContent).toContain("v2.2.1");
+    expect(brandContent).toContain("v2.2.2");
+
+    // ItemDetailModal microinteractions (close button, external link, re-enrich)
+    const modalPath = path.resolve(__dirname, "../src/components/detail/ItemDetailModal.tsx");
+    const modalContent = fs.readFileSync(modalPath, "utf-8");
+    expect(modalContent).toContain("hover:rotate-90");
+    expect(modalContent).toContain("group-hover:translate-x-0.5");
+    expect(modalContent).toContain("group-hover:rotate-180");
+
+    // AiRecommendationHero microinteraction on action button
+    const heroPath = path.resolve(__dirname, "../src/components/catalog/AiRecommendationHero.tsx");
+    const heroContent = fs.readFileSync(heroPath, "utf-8");
+    expect(heroContent).toContain("group-hover:translate-x-1");
+
+    // LiveGamingBadge hover feedback
+    const liveBadgePath = path.resolve(__dirname, "../src/components/live/LiveGamingBadge.tsx");
+    const liveBadgeContent = fs.readFileSync(liveBadgePath, "utf-8");
+    expect(liveBadgeContent).toContain("hover:-translate-y-0.5");
+
+    // ThemeToggle microinteraction
+    const themeTogglePath = path.resolve(__dirname, "../src/components/ui/ThemeToggle.tsx");
+    const themeToggleContent = fs.readFileSync(themeTogglePath, "utf-8");
+    expect(themeToggleContent).toContain("group-hover:rotate-12");
   });
 });
 

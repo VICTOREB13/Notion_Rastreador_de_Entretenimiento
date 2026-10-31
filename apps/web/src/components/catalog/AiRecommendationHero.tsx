@@ -58,18 +58,18 @@ export function AiRecommendationHero({
 
           <div className="flex flex-wrap items-center gap-2 mt-4 text-xs font-mono">
             {firstVibe && (
-              <span className="px-2.5 py-1 rounded-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 text-rose-600 dark:text-rose-300">
+              <span className="px-2.5 py-1 rounded-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 hover:border-rose-500/30 text-rose-600 dark:text-rose-300 transition-colors duration-150 select-none">
                 Vibe: {firstVibe}
               </span>
             )}
             {aiData?.completionEstimateWeeks && (
-              <span className="px-2.5 py-1 rounded-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300 flex items-center gap-1">
+              <span className="px-2.5 py-1 rounded-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 hover:border-zinc-300 dark:hover:border-white/20 text-zinc-700 dark:text-zinc-300 flex items-center gap-1 transition-colors duration-150 select-none">
                 <Compass className="w-3 h-3 text-zinc-400" />
                 Tiempo Estimado: ~{aiData.completionEstimateWeeks} semanas
               </span>
             )}
             {game.platform && (
-              <span className="px-2.5 py-1 rounded-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 text-zinc-500 dark:text-zinc-400 hidden sm:inline-flex">
+              <span className="px-2.5 py-1 rounded-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 text-zinc-500 dark:text-zinc-400 hidden sm:inline-flex select-none">
                 Plataforma: {game.platform}
               </span>
             )}
@@ -80,10 +80,10 @@ export function AiRecommendationHero({
           <button
             type="button"
             onClick={() => onSelectGame(game)}
-            className="self-start md:self-center shrink-0 flex items-center gap-2 px-5 py-3 rounded-full bg-rose-600 hover:bg-rose-500 text-white font-medium text-xs sm:text-sm shadow-card hover:shadow-card-hover active:scale-95 transition-all duration-200 cursor-pointer"
+            className="group self-start md:self-center shrink-0 flex items-center gap-2 px-5 py-3 rounded-full bg-rose-600 hover:bg-rose-500 text-white font-medium text-xs sm:text-sm shadow-card hover:shadow-card-hover hover:shadow-rose-500/25 hover:-translate-y-0.5 active:scale-95 transition-all duration-200 cursor-pointer"
           >
             <span>Explorar Ficha y Tropos</span>
-            <ArrowRight className="w-4 h-4" />
+            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200" />
           </button>
         )}
       </div>

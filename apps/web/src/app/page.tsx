@@ -86,7 +86,7 @@ export default function EntertainmentShowcasePage() {
     <main className="min-h-screen bg-zinc-50 dark:bg-[#09090B] text-zinc-900 dark:text-zinc-100 pb-28 pt-6 sm:pt-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto transition-colors duration-200">
       {/* Brand Header with Authentic Vectors, Crimson Border & Version Badge */}
       <BrandHeader
-        version="v2.2.1"
+        version="v2.2.2"
         onOpenTelemetry={() => setIsTelemetryOpen(true)}
         actions={
           <div className="flex items-center gap-2">
@@ -196,7 +196,14 @@ export default function EntertainmentShowcasePage() {
           search={search}
           games={games}
           movies={movies}
-          isLoading={isGamesLoading || isMoviesLoading}
+          isLoading={
+            category === "GAMES"
+              ? isGamesLoading
+              : category === "MOVIES"
+              ? isMoviesLoading
+              : isGamesLoading || isMoviesLoading
+          }
+          onClearSearch={() => setSearch("")}
           onSelectGame={(g) => setSelectedItem({ item: g, type: "GAME" })}
           onSelectMovie={(m) => setSelectedItem({ item: m, type: "MOVIE" })}
         />

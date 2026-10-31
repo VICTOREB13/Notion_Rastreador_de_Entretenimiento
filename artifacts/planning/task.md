@@ -48,6 +48,12 @@ tags: [tareas, refactorizacion, brand-components, telemetry, dark-mode, light-mo
 - [x] `TASK-320`: Enriquecer feedback visual en `ConsolidatedMetricBand.tsx` y `FloatingIslandNavDock.tsx`.
 - [x] `TASK-321`: Validacion integral (`bun test`, `bun run typecheck`, `bun run validate`, `bun run web:build`), bump a v2.2.1, git commit y tag release.
 
+### Fase 8: Microinteracciones en Modales, Feedback de Búsqueda y Release v2.2.2
+- [x] `TASK-322`: Anadir microinteracciones y feedback de hover/active en `ItemDetailModal.tsx` (rotacion de cierre, elevacion de enlace externo, micro-rotacion en re-analisis con IA, hover en generos y HLTB).
+- [x] `TASK-323`: Enriquecer feedback visual en `AiRecommendationHero.tsx` (desplazamiento interactivo de flecha, hover en vibe badges), `LiveGamingBadge.tsx` y `ThemeToggle.tsx`.
+- [x] `TASK-324`: Perfeccionar calculo de `isLoading` por categoria y boton de restablecer busqueda en estado vacio en `BentoCatalogGrid.tsx`.
+- [x] `TASK-325`: Validacion integral (`bun test`, `bun run typecheck`, `bun run validate`, `bun run web:build`), bump a v2.2.2, git commit semantico y tag release.
+
 ---
 
 ## Referencias
