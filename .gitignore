@@ -30,3 +30,14 @@ data/
 .idea/
 
 _workspace/
+
+# Metodología Interna de Agentes y Harness
+.agents/
+scripts/
+artifacts/
+AGENTS.md
+Master Prompt.md
+PROJECT_BRIEF.md
+
+# Evitar raíces no canónicas accidentales
+/src/

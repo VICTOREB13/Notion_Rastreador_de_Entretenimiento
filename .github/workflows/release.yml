@@ -57,10 +57,10 @@ jobs:
         run: bun test
 
       - name: Validar Paridad de Contratos SDD (Contract Drift Guard)
-        run: bun run lint:contracts
+        run: if [ -f scripts/lint_contracts.ts ]; then bun run lint:contracts; else echo "SDD Contract Drift Guard skipped (internal scripts not in public repo)"; fi
 
       - name: Validar Estándares de Artefactos y Heurísticas
-        run: bun run test:artifacts
+        run: if [ -f scripts/validate_existing_artifacts.ts ]; then bun run test:artifacts; else echo "Artifacts validation skipped (internal artifacts not in public repo)"; fi
 
       - name: Compilación de Producción Frontend (Next.js Standalone)
         run: |

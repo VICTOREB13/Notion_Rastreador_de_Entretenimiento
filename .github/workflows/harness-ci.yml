@@ -36,4 +36,4 @@ jobs:
         run: bun run test
 
       - name: 📋 Validate Artifacts, Heuristics & SDD Contracts
-        run: bun run validate
+        run: if [ -f scripts/validate_existing_artifacts.ts ]; then bun run validate; else echo "Harness validation skipped (internal methodology untracked in public repo)"; fi
