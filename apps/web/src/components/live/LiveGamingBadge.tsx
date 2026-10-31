@@ -16,11 +16,11 @@ export function LiveGamingBadge({ status, isLoading, className }: LiveGamingBadg
     return (
       <div
         className={cn(
-          "inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900 border border-white/10 text-xs text-zinc-400 animate-pulse",
+          "inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 text-xs text-zinc-600 dark:text-zinc-400 animate-pulse",
           className
         )}
       >
-        <span className="w-2 h-2 rounded-full bg-zinc-600" />
+        <span className="w-2 h-2 rounded-full bg-zinc-400 dark:bg-zinc-600" />
         <span>Sincronizando estado de Steam...</span>
       </div>
     );
@@ -62,12 +62,12 @@ export function LiveGamingBadge({ status, isLoading, className }: LiveGamingBadg
   return (
     <div
       className={cn(
-        "inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900/80 border border-white/10 text-xs text-zinc-400 backdrop-blur-md",
+        "inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-100 dark:bg-zinc-900/80 border border-zinc-200 dark:border-white/10 text-xs text-zinc-600 dark:text-zinc-400 backdrop-blur-md shadow-2xs",
         className
       )}
     >
-      <span className="w-2 h-2 rounded-full bg-zinc-600" />
-      <span className="font-mono text-[11px] text-zinc-400">Steam: En descanso</span>
+      <span className="w-2 h-2 rounded-full bg-zinc-400 dark:bg-zinc-600" />
+      <span className="font-mono text-[11px] text-zinc-700 dark:text-zinc-400 font-medium">Steam: En descanso</span>
     </div>
   );
 }

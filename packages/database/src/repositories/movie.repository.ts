@@ -40,6 +40,8 @@ export class MovieRepository implements IMovieRepository {
         wikiUrl: data.wikiUrl,
         status: data.status,
         year: data.year,
+        completionDate: data.completionDate,
+        rating: data.rating,
         lastSyncAt: data.lastSyncAt,
       },
     });

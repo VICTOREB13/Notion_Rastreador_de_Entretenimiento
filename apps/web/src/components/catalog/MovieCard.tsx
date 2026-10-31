@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Film, Sparkles, Calendar } from "lucide-react";
+import { Film, Sparkles, Calendar, Star } from "lucide-react";
 import { SpotlightCard } from "../brand/SpotlightCard";
 import { cn } from "@/lib/utils";
 import type { MovieItem } from "@/lib/types";
@@ -10,9 +10,10 @@ export interface MovieCardProps {
   movie: MovieItem;
   onClick?: () => void;
   className?: string;
+  aspectRatio?: "video" | "poster";
 }
 
-export function MovieCard({ movie, onClick, className }: MovieCardProps) {
+export function MovieCard({ movie, onClick, className, aspectRatio = "poster" }: MovieCardProps) {
   const aiData = movie.aiEnrichment;
   const isWatched = movie.status === "Vista";
   const isWatching = movie.status === "Viendo";
@@ -29,8 +30,13 @@ export function MovieCard({ movie, onClick, className }: MovieCardProps) {
       )}
     >
       <div>
-        {/* Poster Container */}
-        <div className="relative aspect-[2/3] w-full bg-zinc-100 dark:bg-zinc-950 overflow-hidden">
+        {/* Poster / Cover Container */}
+        <div
+          className={cn(
+            "relative w-full bg-zinc-100 dark:bg-zinc-950 overflow-hidden",
+            aspectRatio === "video" ? "aspect-video" : "aspect-[2/3]"
+          )}
+        >
           {movie.posterUrl && !imageError ? (
             <img
               src={movie.posterUrl}
@@ -43,6 +49,16 @@ export function MovieCard({ movie, onClick, className }: MovieCardProps) {
             <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-100 dark:bg-zinc-900 text-zinc-400 dark:text-zinc-600">
               <Film className="w-10 h-10 mb-1" />
               <span className="text-[11px] font-mono">Sin póster</span>
+            </div>
+          )}
+
+          {/* Rating Badge */}
+          {movie.rating && (
+            <div className="absolute top-2.5 left-2.5">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-zinc-950/80 border border-amber-500/30 text-amber-300 backdrop-blur-md shadow-xs">
+                <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
+                <span>{movie.rating}/5</span>
+              </span>
             </div>
           )}
 

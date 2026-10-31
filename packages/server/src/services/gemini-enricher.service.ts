@@ -16,12 +16,16 @@ import {
   aiSettingsRepository,
 } from "@repo/database";
 import { GeminiClient, geminiClient } from "../clients/gemini.client";
-import { NotionClient, notionClient } from "../clients/notion.client";
 import { config } from "../config";
 
 export interface EnrichOptions {
   force?: boolean;
   model?: string;
+  /**
+   * @deprecated Directiva arquitectónica estricta: los datos de IA se guardan
+   * EXCLUSIVAMENTE en SQLite local y se muestran en la web. Notion jamás se modifica.
+   * Este parámetro se ignora para evitar errores 400 y consumo innecesario de cuota.
+   */
   syncToNotion?: boolean;
 }
 
@@ -44,7 +48,7 @@ export class GeminiEnricherService {
     private movieRepo: IMovieRepository = movieRepository,
     private enrichmentRepo: IAiEnrichmentRepository = aiEnrichmentRepository,
     private settingsRepo: IAiSettingsRepository = aiSettingsRepository,
-    private notion: INotionSyncClient = notionClient
+    private _notion?: INotionSyncClient
   ) {}
 
   private async resolveSettings(modelOverride?: string): Promise<{
@@ -150,10 +154,9 @@ export class GeminiEnricherService {
       rawResponse: enrichment.rawResponse ?? null,
     });
 
-    // Sincronización opcional / no bloqueante hacia Notion
-    if (options?.syncToNotion !== false && game.notionPageId) {
-      await this.syncEnrichmentToNotion(game.notionPageId, enrichment);
-    }
+    // NOTA ARQUITECTÓNICA: Los datos de enriquecimiento IA se persisten EXCLUSIVAMENTE
+    // en la base de datos local SQLite y se sirven a la web. Notion JAMÁS debe ser alterado
+    // ni contaminado con columnas o propiedades de IA ("Vibe IA", "Pitch IA").
 
     return {
       game,
@@ -219,10 +222,9 @@ export class GeminiEnricherService {
       rawResponse: enrichment.rawResponse ?? null,
     });
 
-    // Sincronización opcional hacia Notion
-    if (options?.syncToNotion !== false && movie.notionPageId) {
-      await this.syncEnrichmentToNotion(movie.notionPageId, enrichment);
-    }
+    // NOTA ARQUITECTÓNICA: Los datos de enriquecimiento IA se persisten EXCLUSIVAMENTE
+    // en la base de datos local SQLite y se sirven a la web. Notion JAMÁS debe ser alterado
+    // ni contaminado con columnas o propiedades de IA ("Vibe IA", "Pitch IA").
 
     return {
       movie,
@@ -231,39 +233,27 @@ export class GeminiEnricherService {
     };
   }
 
-  private async syncEnrichmentToNotion(
-    notionPageId: string,
-    enrichment: AiEnrichmentResult
+  /**
+   * NO-OP intencional por directiva arquitectónica:
+   * Los datos de enriquecimiento de IA (vibeTags, personalizedPitch, thematicTropes, completionEstimateWeeks)
+   * se almacenan EXCLUSIVAMENTE en SQLite local y se sirven en la interfaz web.
+   * Notion jamás debe ser alterado ni contaminado con columnas de IA ("Vibe IA", "Pitch IA").
+   */
+  async syncEnrichmentToNotion(
+    _notionPageId?: string,
+    _enrichment?: AiEnrichmentResult
   ): Promise<void> {
-    const propsToUpdate: Record<string, unknown> = {};
+    // Deliberate no-op: jamás alterar Notion con propiedades de IA
+  }
 
-    if (enrichment.vibeTags && enrichment.vibeTags.length > 0) {
-      propsToUpdate["Vibe IA"] = {
-        multi_select: enrichment.vibeTags.map((name) => ({ name })),
-      };
-    }
-
-    if (enrichment.personalizedPitch) {
-      propsToUpdate["Pitch IA"] = {
-        rich_text: [
-          {
-            type: "text",
-            text: { content: enrichment.personalizedPitch },
-          },
-        ],
-      };
-    }
-
-    if (Object.keys(propsToUpdate).length === 0) return;
-
-    try {
-      await this.notion.updatePageProperties(notionPageId, propsToUpdate);
-    } catch (err: any) {
-      console.warn(
-        `[GeminiEnricherService] Aviso: No se pudieron sincronizar propiedades de IA en página Notion ${notionPageId}:`,
-        err?.message || err
-      );
-    }
+  /**
+   * Alias NO-OP intencional por directiva arquitectónica para syncToNotion.
+   */
+  async syncToNotion(
+    _notionPageId?: string,
+    _enrichment?: AiEnrichmentResult
+  ): Promise<void> {
+    // Deliberate no-op: jamás alterar Notion con propiedades de IA
   }
 }
 

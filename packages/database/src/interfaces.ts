@@ -17,6 +17,7 @@ export interface GameFilter {
   search?: string;
   limit?: number;
   offset?: number;
+  all?: boolean;
 }
 
 export interface IGameRepository {

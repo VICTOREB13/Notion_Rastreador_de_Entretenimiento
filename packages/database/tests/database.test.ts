@@ -100,6 +100,11 @@ describe("SQLite Database & Prisma Repositories", () => {
         hltbMain: 51.5,
         hltbCompletionist: 173.0,
         genres: JSON.stringify(["RPG", "Aventura"]),
+        notionGenres: JSON.stringify(["RPG", "Aventura"]),
+        rating: 4.8,
+        completedAt: "2026-10-25",
+        userNotes: "Una obra maestra absoluta de los RPG de mundo abierto.",
+        personalSummary: "Una obra maestra absoluta de los RPG de mundo abierto.",
         status: "Jugando",
         platform: "PC",
       });
@@ -109,12 +114,22 @@ describe("SQLite Database & Prisma Repositories", () => {
       expect(game.title).toBe("The Witcher 3: Wild Hunt™");
       expect(game.cleanTitle).toBe("the witcher 3 wild hunt");
       expect(game.steamAppId).toBe(292030);
+      expect(game.rating).toBe(4.8);
+      expect(game.completedAt).toBe("2026-10-25");
+      expect(game.userNotes).toBe("Una obra maestra absoluta de los RPG de mundo abierto.");
+      expect(game.personalSummary).toBe("Una obra maestra absoluta de los RPG de mundo abierto.");
+      expect(JSON.parse(game.notionGenres)).toEqual(["RPG", "Aventura"]);
       createdGameId = game.id;
     });
 
     it("should find game by different identifiers including cleanTitle", async () => {
       const byId = await gameRepository.findById(createdGameId);
       expect(byId?.title).toBe("The Witcher 3: Wild Hunt™");
+      expect(byId?.rating).toBe(4.8);
+      expect(byId?.completedAt).toBe("2026-10-25");
+      expect(byId?.userNotes).toBe("Una obra maestra absoluta de los RPG de mundo abierto.");
+      expect(byId?.personalSummary).toBe("Una obra maestra absoluta de los RPG de mundo abierto.");
+      expect(JSON.parse(byId?.notionGenres || "[]")).toEqual(["RPG", "Aventura"]);
 
       const byNotion = await gameRepository.findByNotionPageId(testNotionPageId);
       expect(byNotion?.id).toBe(createdGameId);
@@ -135,10 +150,14 @@ describe("SQLite Database & Prisma Repositories", () => {
       expect(withStatus.status).toBe("Jugado");
     });
 
-    it("should list games with filters", async () => {
+    it("should list games with filters including all=true", async () => {
       const result = await gameRepository.list({ search: "Witcher", status: "Jugado" });
       expect(result.total).toBeGreaterThanOrEqual(1);
       expect(result.items.some((g) => g.id === createdGameId)).toBe(true);
+
+      const allResult = await gameRepository.list({ all: true });
+      expect(allResult.total).toBeGreaterThanOrEqual(1);
+      expect(allResult.items.length).toBe(allResult.total);
     });
   });
 

@@ -13,7 +13,7 @@ const listQuerySchema = z.object({
   status: z.string().optional(),
   search: z.string().optional(),
   year: z.coerce.number().optional(),
-  limit: z.coerce.number().min(1).max(100).default(50),
+  limit: z.coerce.number().min(1).max(500).default(200),
   offset: z.coerce.number().min(0).default(0),
 });
 

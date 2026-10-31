@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Clock, Trophy, Sparkles, Gamepad2 } from "lucide-react";
+import { Clock, Trophy, Sparkles, Gamepad2, Star } from "lucide-react";
 import { SpotlightCard } from "../brand/SpotlightCard";
 import { cn, formatHours } from "@/lib/utils";
 import type { GameItem } from "@/lib/types";
@@ -15,7 +15,8 @@ export interface GameCardProps {
 export function GameCard({ game, onClick, className }: GameCardProps) {
   const aiData = game.aiEnrichment;
   const playtime = game.playtimeForever || 0;
-  const hltb = game.hltbMain || null;
+  const hltb = game.hltbMain || game.hltbCompletionist || null;
+  const isCompletionistOnly = !game.hltbMain && Boolean(game.hltbCompletionist);
   const completionPercentage = hltb && hltb > 0 ? Math.min(100, (playtime / hltb) * 100) : null;
 
   const isCompleted = game.status === "Jugado";
@@ -47,6 +48,16 @@ export function GameCard({ game, onClick, className }: GameCardProps) {
             <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-100 dark:bg-zinc-900 text-zinc-400 dark:text-zinc-600">
               <Gamepad2 className="w-10 h-10 mb-1" />
               <span className="text-[11px] font-mono">Sin carátula</span>
+            </div>
+          )}
+
+          {/* Rating Badge */}
+          {game.rating && (
+            <div className="absolute top-2.5 left-2.5">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-zinc-950/80 border border-amber-500/30 text-amber-300 backdrop-blur-md shadow-xs">
+                <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
+                <span>{game.rating}/5</span>
+              </span>
             </div>
           )}
 
@@ -121,7 +132,7 @@ export function GameCard({ game, onClick, className }: GameCardProps) {
           {hltb ? (
             <div className="flex items-center gap-1 text-[11px] font-mono text-zinc-500 dark:text-zinc-400">
               <Trophy className="w-3 h-3 text-amber-500/70" />
-              <span>HLTB {hltb}h</span>
+              <span>HLTB {hltb}h{isCompletionistOnly ? " (100%)" : ""}</span>
             </div>
           ) : (
             <span className="text-[10px] font-mono text-zinc-400 dark:text-zinc-500">Steam</span>

@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { Gamepad2, Film, ChevronDown } from "lucide-react";
 import { GameCard } from "./GameCard";
 import { MovieCard } from "./MovieCard";
+import { cn } from "@/lib/utils";
 import type { GameItem, MovieItem } from "@/lib/types";
 import type { CategoryFilter, StatusFilter } from "./CatalogHeader";
 
@@ -104,7 +105,7 @@ export function BentoCatalogGrid({
   }
 
   return (
-    <div className={className}>
+    <div key={`${category}-${status}`} className={cn("animate-in fade-in duration-300 transition-opacity", className)}>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {visibleItems.map((item) => {
           if (item.type === "GAME") {
@@ -120,6 +121,7 @@ export function BentoCatalogGrid({
             <MovieCard
               key={`movie-${item.data.id}`}
               movie={item.data}
+              aspectRatio={category === "ALL" ? "video" : "poster"}
               onClick={() => onSelectMovie(item.data)}
             />
           );

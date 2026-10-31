@@ -57,6 +57,7 @@ export async function buildNotionUpdatePayload(
   const currentSteamId = extractNotionNumber(props, ["Steam ID", "Steam App ID", "SteamId", "AppId"]);
   const estadoActual = extractNotionStatus(props, ["Estado", "Status"]) || "";
   let hltbPrincipal = extractNotionNumber(props, ["HLTB Principal", "HLTB Main"]);
+  let hltbCompletista = extractNotionNumber(props, ["HLTB Completista", "HLTB 100%"]);
   const tieneFechaInicio = hasNotionDate(props, ["Fecha de Inicio", "Fecha de inicio", "Start Date"]);
   const tieneFechaCulm = hasNotionDate(props, [
     "Fecha de Culminación (primera campaña)",
@@ -91,16 +92,17 @@ export async function buildNotionUpdatePayload(
     needsUpdate = true;
   }
 
-  // Regla 4: Consulta HLTB solo si falta en Notion
-  if (hltbPrincipal === null) {
+  // Regla 4: Consulta HLTB si falta principal O completista en Notion (soporte independiente)
+  if (hltbPrincipal === null || hltbCompletista === null) {
     const hltbEst = await fetchHltb(game.name);
-    if (hltbEst.mainHours) {
+    if (hltbPrincipal === null && hltbEst.mainHours) {
       payloadProps[hltbPrincipalPropKey] = { number: hltbEst.mainHours };
       hltbPrincipal = hltbEst.mainHours;
       needsUpdate = true;
     }
-    if (hltbEst.completionistHours) {
+    if (hltbCompletista === null && hltbEst.completionistHours) {
       payloadProps[hltbCompletistaPropKey] = { number: hltbEst.completionistHours };
+      hltbCompletista = hltbEst.completionistHours;
       needsUpdate = true;
     }
   }

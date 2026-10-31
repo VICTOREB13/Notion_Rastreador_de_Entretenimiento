@@ -40,6 +40,13 @@ export class GameRepository implements IGameRepository {
         hltbCompletionist: data.hltbCompletionist,
         coverUrl: data.coverUrl,
         genres: data.genres,
+        notionGenres: data.notionGenres,
+        rating: data.rating,
+        completedAt: data.completedAt ?? data.completionDate,
+        completionDate: data.completionDate ?? data.completedAt,
+        userNotes: data.userNotes ?? data.personalSummary ?? data.summary,
+        personalSummary: data.personalSummary ?? data.userNotes ?? data.summary,
+        summary: data.summary ?? data.personalSummary ?? data.userNotes,
         link: data.link,
         platform: data.platform,
         status: data.status,
@@ -60,11 +67,14 @@ export class GameRepository implements IGameRepository {
       where.title = { contains: filter.search };
     }
 
+    const take = filter.all ? undefined : (filter.limit ?? 50);
+    const skip = filter.all ? undefined : (filter.offset ?? 0);
+
     const [items, total] = await Promise.all([
       prisma.game.findMany({
         where,
-        take: filter.limit ?? 50,
-        skip: filter.offset ?? 0,
+        take,
+        skip,
         orderBy: { title: "asc" },
       }),
       prisma.game.count({ where }),

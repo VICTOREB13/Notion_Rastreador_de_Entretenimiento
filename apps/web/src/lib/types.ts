@@ -22,6 +22,13 @@ export interface GameItem {
   platform: string;
   status: string;
   startDate: string | null;
+  completedAt?: string | null;
+  completionDate?: string | null;
+  rating?: number | null;
+  userNotes?: string | null;
+  personalSummary?: string | null;
+  summary?: string | null;
+  notionGenres?: string[];
   lastSyncAt: Date | string | null;
   createdAt: Date | string;
   updatedAt: Date | string;
@@ -40,6 +47,9 @@ export interface MovieItem {
   wikiUrl: string | null;
   status: string;
   year: number | null;
+  completionDate?: string | null;
+  rating?: number | null;
+  summary?: string | null;
   lastSyncAt: Date | string | null;
   createdAt: Date | string;
   updatedAt: Date | string;

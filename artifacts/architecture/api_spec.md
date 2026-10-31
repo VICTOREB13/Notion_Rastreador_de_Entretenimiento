@@ -180,8 +180,8 @@ El sistema utiliza un monolito modular con persistencia embebida en **SQLite 3**
 | `Plataforma` | `select` | Plataforma de juego (`PC`, `Console`, etc.) |
 | `Estado` | `status` / `select` | `Por Jugar`, `Jugando`, `Jugado` |
 | `Fecha de Inicio` | `date` | Fecha en formato ISO `YYYY-MM-DD` del primer registro |
-| `Vibe IA` | `multi_select` | Etiquetas de ambientación generadas por IA |
-| `Pitch IA` | `rich_text` | Recomendación personalizada generada por IA |
+
+> **Directiva Arquitectónica (Exclusividad Local/Web):** Las propiedades generadas por IA (`vibeTags`, `personalizedPitch`, `thematicTropes`, `completionEstimateWeeks`) se almacenan **EXCLUSIVAMENTE en SQLite local** y se sirven a la interfaz web. Notion jamás es alterado ni contaminado con columnas de IA ("Vibe IA", "Pitch IA").
 
 ### 2. Base de Datos: Películas (`DB_ID_MOVIES`)
 | Propiedad Notion | Tipo Notion | Propósito / Formato |
@@ -308,13 +308,12 @@ El sistema utiliza un monolito modular con persistencia embebida en **SQLite 3**
 ```
 
 #### `POST /api/games/:id/enrich`
-- **Descripción:** Dispara el pipeline de enriquecimiento con Gemini 2.5 Flash para un juego. Si ya está cacheado en SQLite, retorna el caché a menos que se envíe `force: true`. Opcionalmente sincroniza con propiedades de Notion (`Vibe IA`, `Pitch IA`).
+- **Descripción:** Dispara el pipeline de enriquecimiento con Gemini 2.5 Flash para un juego. Si ya está cacheado en SQLite, retorna el caché a menos que se envíe `force: true`. Los datos se guardan exclusivamente en SQLite local y se sirven a la web (Notion no es alterado).
 - **Request Body (JSON, opcional):**
 ```json
 {
   "force": false,
-  "model": "gemini-2.5-flash",
-  "syncToNotion": true
+  "model": "gemini-2.5-flash"
 }
 ```
 - **Respuesta 200 OK:**
@@ -409,13 +408,12 @@ El sistema utiliza un monolito modular con persistencia embebida en **SQLite 3**
 ```
 
 #### `POST /api/movies/:id/enrich`
-- **Descripción:** Dispara el enriquecimiento con Gemini para una película específica por su ID/slug.
+- **Descripción:** Dispara el enriquecimiento con Gemini para una película específica por su ID/slug. Los datos se persisten exclusivamente en SQLite local y se sirven a la web (Notion no es alterado).
 - **Request Body (JSON, opcional):**
 ```json
 {
   "force": false,
-  "model": "gemini-2.5-flash",
-  "syncToNotion": true
+  "model": "gemini-2.5-flash"
 }
 ```
 - **Respuesta 200 OK:**

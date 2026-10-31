@@ -32,6 +32,13 @@ describe("Games Controller API (/api/games)", () => {
         status: "Jugando",
         platform: "PC",
         genres: JSON.stringify(["Action RPG", "Open World"]),
+        notionGenres: JSON.stringify(["Action RPG", "Open World"]),
+        rating: 4.9,
+        completedAt: "2024-06-25",
+        completionDate: "2024-06-25",
+        userNotes: "Excelente expansión, dificultad sublime.",
+        personalSummary: "Excelente expansión, dificultad sublime.",
+        summary: "Excelente expansión, dificultad sublime.",
       },
     });
     createdGameId = game.id;
@@ -83,8 +90,33 @@ describe("Games Controller API (/api/games)", () => {
     expect(testGame).toBeDefined();
     expect(testGame.title).toBe("Elden Ring: Shadow of the Erdtree");
     expect(testGame.genres).toEqual(["Action RPG", "Open World"]);
+    expect(testGame.notionGenres).toEqual(["Action RPG", "Open World"]);
+    expect(testGame.rating).toBe(4.9);
+    expect(testGame.completedAt).toBe("2024-06-25");
+    expect(testGame.userNotes).toBe("Excelente expansión, dificultad sublime.");
+    expect(testGame.personalSummary).toBe("Excelente expansión, dificultad sublime.");
     expect(testGame.aiEnrichment).toBeDefined();
     expect(testGame.aiEnrichment.vibeTags).toContain("Desafío Épico");
+  });
+
+  it("GET /api/games should support limit=200 for rendering 117+ titles without truncation", async () => {
+    const res = await app.request("/api/games?limit=200");
+    expect(res.status).toBe(200);
+
+    const body = (await res.json()) as any;
+    expect(body.success).toBe(true);
+    expect(body.pagination.limit).toBe(200);
+    expect(Array.isArray(body.data)).toBe(true);
+  });
+
+  it("GET /api/games should support all=true to fetch all titles without truncation", async () => {
+    const res = await app.request("/api/games?all=true");
+    expect(res.status).toBe(200);
+
+    const body = (await res.json()) as any;
+    expect(body.success).toBe(true);
+    expect(body.pagination.limit).toBe(body.pagination.total);
+    expect(body.data.length).toBe(body.pagination.total);
   });
 
   it("GET /api/games with filter by status should filter items correctly", async () => {
@@ -107,7 +139,7 @@ describe("Games Controller API (/api/games)", () => {
     expect(body.data.some((g: any) => g.id === createdGameId)).toBe(true);
   });
 
-  it("GET /api/games/:id should return game by ID", async () => {
+  it("GET /api/games/:id should return game by ID with rating, completedAt, userNotes, and notionGenres", async () => {
     const res = await app.request(`/api/games/${createdGameId}`);
     expect(res.status).toBe(200);
 
@@ -115,6 +147,11 @@ describe("Games Controller API (/api/games)", () => {
     expect(body.success).toBe(true);
     expect(body.data.id).toBe(createdGameId);
     expect(body.data.cleanTitle).toBe("elden ring shadow of the erdtree");
+    expect(body.data.rating).toBe(4.9);
+    expect(body.data.completedAt).toBe("2024-06-25");
+    expect(body.data.userNotes).toBe("Excelente expansión, dificultad sublime.");
+    expect(body.data.personalSummary).toBe("Excelente expansión, dificultad sublime.");
+    expect(body.data.notionGenres).toEqual(["Action RPG", "Open World"]);
   });
 
   it("GET /api/games/:id should return game by cleanTitle slug", async () => {

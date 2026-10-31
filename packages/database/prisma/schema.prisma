@@ -20,6 +20,13 @@ model Game {
   hltbCompletionist Float?
   coverUrl          String?
   genres            String          @default("[]")
+  notionGenres      String          @default("[]")
+  rating            Float?
+  completedAt       String?
+  completionDate    String?
+  userNotes         String?
+  personalSummary   String?
+  summary           String?
   link              String?
   platform          String          @default("PC")
   status            String          @default("Por Jugar")
@@ -37,20 +44,22 @@ model Game {
 }
 
 model Movie {
-  id           String    @id @default(cuid())
-  notionPageId String    @unique
-  title        String
-  cleanTitle   String
-  tmdbId       Int?
-  posterUrl    String?
-  overview     String?
-  genres       String    @default("[]")
-  wikiUrl      String?
-  status       String    @default("Por Ver")
-  year         Int?
-  lastSyncAt   DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id             String    @id @default(cuid())
+  notionPageId   String    @unique
+  title          String
+  cleanTitle     String
+  tmdbId         Int?
+  posterUrl      String?
+  overview       String?
+  genres         String    @default("[]")
+  wikiUrl        String?
+  status         String    @default("Por Ver")
+  year           Int?
+  completionDate String?
+  rating         Float?
+  lastSyncAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   @@index([status, cleanTitle])
   @@index([tmdbId])

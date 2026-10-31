@@ -35,6 +35,13 @@ tags: [tareas, refactorizacion, brand-components, telemetry, dark-mode, light-mo
 - [x] `TASK-311`: Incorporar sincronizacion inicial diferida (3s) en `DaemonScheduler` al arrancar el contenedor.
 - [x] `TASK-312`: Validar con la suite completa (`bun test`, `bun run lint:contracts`, `bun run typecheck`, `bun run validate`, `bun run web:build`).
 
+### Fase 6: Enriquecimiento de Propiedades Notion, Calificacion 1-5, Fechas de Culminacion y Pulido UI (v2.2.0)
+- [x] `TASK-313`: Actualizar esquema SQLite y repositorios para admitir `rating`, `completionDate` y `summary`.
+- [x] `TASK-314`: Implementar extractores resilientes en `notion-sync.service.ts` para calificacion (estrellas/fraccion/numero), fecha de culminacion y pensamientos/opinion personal.
+- [x] `TASK-315`: Redisenar `ItemDetailModal.tsx` eliminando la barra divisoria inferior y 'Sincronizado con Notion', ocultando Steam ID, y desplegando estrellas 1-5, fecha de finalizacion, generos de Notion y resumen personal.
+- [x] `TASK-316`: Ajustar contraste de `LiveGamingBadge.tsx` en descanso para modo claro, soporte HLTB independiente (principal/completista), carga de hasta 500 titulos y micro-animacion fading.
+- [x] `TASK-317`: Bump de version a `v2.2.0`, tagging anotado en git y push a origin/main.
+
 ---
 
 ## Referencias

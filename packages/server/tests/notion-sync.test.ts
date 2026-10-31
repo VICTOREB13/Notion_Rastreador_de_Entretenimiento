@@ -232,4 +232,76 @@ describe("NotionSyncService (Intelligent Delta Polling & Anti-Loop Guard)", () =
     expect(savedMovie?.status).toBe("Vista");
     expect(savedMovie?.overview).toContain("Miles Morales");
   });
+
+  it("should extract rating, completion date, and user summary/opinion from Notion", async () => {
+    const customGamePageId = "notion-game-custom-props";
+    mockNotion.allPagesResponse = [
+      {
+        id: customGamePageId,
+        lastEditedTime: "2026-10-25T15:00:00.000Z",
+        properties: {
+          Título: { title: [{ text: { content: "Elden Ring" } }] },
+          Calificación: { select: { name: "⭐⭐⭐⭐⭐" } },
+          "Fecha de Culminación (primera campaña)": { date: { start: "2024-03-15" } },
+          Pensamiento: { rich_text: [{ text: { content: "Una obra maestra absoluta de diseño de mundo abierto." } }] },
+          Géneros: { multi_select: [{ name: "Soulslike" }, { name: "RPG" }] },
+          Estado: { status: { name: "Jugado" } },
+        },
+      },
+    ];
+
+    await syncService.syncGames(true);
+
+    const savedGame = await gameRepo.findByNotionPageId(customGamePageId);
+    expect(savedGame).not.toBeNull();
+    expect(savedGame?.title).toBe("Elden Ring");
+    expect(savedGame?.rating).toBe(5);
+    expect(savedGame?.completionDate).toBe("2024-03-15");
+    expect(savedGame?.completedAt).toBe("2024-03-15");
+    expect(savedGame?.summary).toBe("Una obra maestra absoluta de diseño de mundo abierto.");
+    expect(savedGame?.userNotes).toBe("Una obra maestra absoluta de diseño de mundo abierto.");
+    expect(savedGame?.personalSummary).toBe("Una obra maestra absoluta de diseño de mundo abierto.");
+    expect(JSON.parse((savedGame as any)?.notionGenres || "[]")).toEqual(["Soulslike", "RPG"]);
+
+    // Limpieza
+    await gameRepo.delete(savedGame!.id);
+  });
+
+  it("should extract numeric ratings, Fecha de Finalización, and ignore external Sinopsis", async () => {
+    const customGamePageId2 = "notion-game-custom-props-2";
+    mockNotion.allPagesResponse = [
+      {
+        id: customGamePageId2,
+        lastEditedTime: "2026-10-25T16:00:00.000Z",
+        properties: {
+          Título: { title: [{ text: { content: "Hades II" } }] },
+          "Calificación Personal": { number: 4.5 },
+          "Fecha de Finalización": { date: { start: "2024-05-10" } },
+          Sinopsis: { rich_text: [{ text: { content: "Sinopsis externa oficial del juego sobre Melinoë." } }] },
+          Notas: { rich_text: [{ text: { content: "Excelente combate roguelike y banda sonora." } }] },
+          Genres: { multi_select: [{ name: "Roguelike" }, { name: "Action" }] },
+          Estado: { status: { name: "Jugado" } },
+        },
+      },
+    ];
+
+    await syncService.syncGames(true);
+
+    const savedGame = await gameRepo.findByNotionPageId(customGamePageId2);
+    expect(savedGame).not.toBeNull();
+    expect(savedGame?.title).toBe("Hades II");
+    expect(savedGame?.rating).toBe(4.5);
+    expect(savedGame?.completedAt).toBe("2024-05-10");
+    expect(savedGame?.completionDate).toBe("2024-05-10");
+    // Verificar que extrajo las notas personales y NO la sinopsis externa
+    expect(savedGame?.userNotes).toBe("Excelente combate roguelike y banda sonora.");
+    expect(savedGame?.personalSummary).toBe("Excelente combate roguelike y banda sonora.");
+    expect(savedGame?.summary).toBe("Excelente combate roguelike y banda sonora.");
+    expect(savedGame?.summary).not.toContain("Sinopsis externa");
+    expect(JSON.parse((savedGame as any)?.notionGenres || "[]")).toEqual(["Roguelike", "Action"]);
+
+    // Limpieza
+    await gameRepo.delete(savedGame!.id);
+  });
 });
+

@@ -439,5 +439,65 @@ describe("Frontend Web Utilities (@repo/web)", () => {
     const customSelectContent = fs.readFileSync(customSelectPath, "utf-8");
     expect(customSelectContent).toContain("data-lenis-prevent");
   });
+
+  test("v2.2.0 UI Updates: ItemDetailModal removes divider and Steam ID, displays rating, completionDate, genres, and user summary", async () => {
+    const fs = await import("fs");
+    const path = await import("path");
+    const modalPath = path.resolve(__dirname, "../src/components/detail/ItemDetailModal.tsx");
+    const modalContent = fs.readFileSync(modalPath, "utf-8");
+
+    // 1. Elimina barra divisoria y texto "Sincronizado con Notion"
+    expect(modalContent).not.toContain("Sincronizado con Notion");
+    expect(modalContent).not.toContain("border-t border-zinc-200 dark:border-white/10 flex items-center justify-between text-xs text-zinc-500");
+
+    // 2. Oculta Steam ID
+    expect(modalContent).not.toContain("Steam ID:");
+
+    // 3. Muestra calificación con estrellas de 1 a 5
+    expect(modalContent).toContain("currentItem.rating");
+    expect(modalContent).toContain("/5");
+
+    // 4. Muestra fecha de culminación
+    expect(modalContent).toContain("completionDate");
+    expect(modalContent).toContain("Culminado:");
+
+    // 5. Muestra géneros provenientes de Notion
+    expect(modalContent).toContain("currentItem.genres");
+
+    // 6. Muestra resumen / opinión personal del usuario
+    expect(modalContent).toContain("Mi Resumen & Opinión Personal");
+    expect(modalContent).toContain("game?.summary || movie?.summary");
+  });
+
+  test("v2.2.0 UI Updates: LiveGamingBadge resting contrast, GameCard independent HLTB, and MovieCard aspect video", async () => {
+    const fs = await import("fs");
+    const path = await import("path");
+
+    // LiveGamingBadge resting state light contrast
+    const badgePath = path.resolve(__dirname, "../src/components/live/LiveGamingBadge.tsx");
+    const badgeContent = fs.readFileSync(badgePath, "utf-8");
+    expect(badgeContent).toContain("bg-zinc-100 dark:bg-zinc-900/80");
+    expect(badgeContent).toContain("text-zinc-600 dark:text-zinc-400");
+    expect(badgeContent).toContain("Steam: En descanso");
+
+    // GameCard independent HLTB & rating badge
+    const cardPath = path.resolve(__dirname, "../src/components/catalog/GameCard.tsx");
+    const cardContent = fs.readFileSync(cardPath, "utf-8");
+    expect(cardContent).toContain("game.hltbMain || game.hltbCompletionist");
+    expect(cardContent).toContain("game.rating");
+
+    // MovieCard aspectRatio video support for Colección tab
+    const moviePath = path.resolve(__dirname, "../src/components/catalog/MovieCard.tsx");
+    const movieContent = fs.readFileSync(moviePath, "utf-8");
+    expect(movieContent).toContain("aspectRatio");
+    expect(movieContent).toContain("aspect-video");
+
+    // BentoCatalogGrid passes aspectRatio video in ALL category
+    const gridPath = path.resolve(__dirname, "../src/components/catalog/BentoCatalogGrid.tsx");
+    const gridContent = fs.readFileSync(gridPath, "utf-8");
+    expect(gridContent).toContain('category === "ALL" ? "video" : "poster"');
+    expect(gridContent).toContain("animate-in fade-in duration-300");
+  });
 });
+
 

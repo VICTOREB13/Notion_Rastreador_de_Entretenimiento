@@ -12,8 +12,9 @@ import { broadcastEvent } from "./events.controller";
 const listQuerySchema = z.object({
   status: z.string().optional(),
   search: z.string().optional(),
-  limit: z.coerce.number().min(1).max(100).default(50),
+  limit: z.coerce.number().min(1).max(500).default(200),
   offset: z.coerce.number().min(0).default(0),
+  all: z.coerce.boolean().optional(),
 });
 
 const syncBodySchema = z.object({
@@ -28,13 +29,14 @@ const enrichGameSchema = z.object({
 
 export const gamesController = new Hono()
   .get("/", zValidator("query", listQuerySchema), async (c) => {
-    const { status, search, limit, offset } = c.req.valid("query");
+    const { status, search, limit, offset, all } = c.req.valid("query");
 
     const { items, total } = await gameRepository.list({
       status,
       search,
       limit,
       offset,
+      all,
     });
 
     const gameIds = items.map((game) => game.id);
@@ -48,11 +50,28 @@ export const gamesController = new Hono()
         parsedGenres = [];
       }
 
+      let parsedNotionGenres: string[] = [];
+      try {
+        parsedNotionGenres = JSON.parse((game as any).notionGenres || "[]");
+      } catch {
+        parsedNotionGenres = [];
+      }
+      if (parsedNotionGenres.length === 0 && parsedGenres.length > 0) {
+        parsedNotionGenres = parsedGenres;
+      }
+
       const enrichment = enrichmentMap.get(game.id) || null;
 
       return {
         ...game,
         genres: parsedGenres,
+        notionGenres: parsedNotionGenres,
+        rating: game.rating ?? null,
+        completedAt: (game as any).completedAt ?? (game as any).completionDate ?? null,
+        completionDate: (game as any).completionDate ?? (game as any).completedAt ?? null,
+        userNotes: (game as any).userNotes ?? (game as any).personalSummary ?? (game as any).summary ?? null,
+        personalSummary: (game as any).personalSummary ?? (game as any).userNotes ?? (game as any).summary ?? null,
+        summary: (game as any).summary ?? (game as any).personalSummary ?? (game as any).userNotes ?? null,
         aiEnrichment: enrichment,
       };
     });
@@ -62,8 +81,8 @@ export const gamesController = new Hono()
       data: itemsWithEnrichment,
       pagination: {
         total,
-        limit,
-        offset,
+        limit: all ? total : limit,
+        offset: all ? 0 : offset,
       },
     });
   })
@@ -154,11 +173,28 @@ export const gamesController = new Hono()
       parsedGenres = [];
     }
 
+    let parsedNotionGenres: string[] = [];
+    try {
+      parsedNotionGenres = JSON.parse((game as any).notionGenres || "[]");
+    } catch {
+      parsedNotionGenres = [];
+    }
+    if (parsedNotionGenres.length === 0 && parsedGenres.length > 0) {
+      parsedNotionGenres = parsedGenres;
+    }
+
     return c.json({
       success: true,
       data: {
         ...game,
         genres: parsedGenres,
+        notionGenres: parsedNotionGenres,
+        rating: game.rating ?? null,
+        completedAt: (game as any).completedAt ?? (game as any).completionDate ?? null,
+        completionDate: (game as any).completionDate ?? (game as any).completedAt ?? null,
+        userNotes: (game as any).userNotes ?? (game as any).personalSummary ?? (game as any).summary ?? null,
+        personalSummary: (game as any).personalSummary ?? (game as any).userNotes ?? (game as any).summary ?? null,
+        summary: (game as any).summary ?? (game as any).personalSummary ?? (game as any).userNotes ?? null,
         aiEnrichment: enrichment,
       },
     });

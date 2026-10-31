@@ -211,8 +211,9 @@ describe("Gemini Enricher Service & Hono Endpoints (Fase 4)", () => {
   });
 
   describe("GeminiEnricherService Integration Tests", () => {
-    it("should enrich a game, save to SQLite, and update Notion properties", async () => {
+    it("should enrich a game, save to SQLite, and NOT update Notion properties (local-first AI)", async () => {
       mockNotionUpdated = false;
+      mockNotionProps = {};
       const initialCallCount = mockCallCount;
 
       const result = await enricherService.enrichGame(gameId, {
@@ -236,10 +237,10 @@ describe("Gemini Enricher Service & Hono Endpoints (Fase 4)", () => {
       expect(inDb?.modelUsed).toBe("gemini-2.5-flash");
       expect(JSON.parse(inDb?.vibeTags || "[]")).toContain("Distopía Neón");
 
-      // Verificar que se invocó la sincronización con Notion
-      expect(mockNotionUpdated).toBe(true);
-      expect(mockNotionProps["Vibe IA"]).toBeDefined();
-      expect(mockNotionProps["Pitch IA"]).toBeDefined();
+      // Directiva arquitectónica estricta: Notion JAMÁS debe ser alterado ni contaminado con datos de IA
+      expect(mockNotionUpdated).toBe(false);
+      expect(mockNotionProps["Vibe IA"]).toBeUndefined();
+      expect(mockNotionProps["Pitch IA"]).toBeUndefined();
     });
 
     it("should return cached enrichment on subsequent calls without force", async () => {
@@ -268,18 +269,43 @@ describe("Gemini Enricher Service & Hono Endpoints (Fase 4)", () => {
       expect(lastModelUsed).toBe("gemini-1.5-flash");
     });
 
-    it("should enrich a movie and cache the result", async () => {
+    it("should enrich a movie and cache the result without updating Notion even with syncToNotion=true", async () => {
+      mockNotionUpdated = false;
+      mockNotionProps = {};
+
       const result = await enricherService.enrichMovie(movieId, {
         force: true,
+        syncToNotion: true,
       });
 
       expect(result.cached).toBe(false);
       expect(result.movie.id).toBe(movieId);
       expect(result.enrichment.vibeTags).toContain("Tensión Histórica");
+      expect(mockNotionUpdated).toBe(false);
+      expect(mockNotionProps["Vibe IA"]).toBeUndefined();
+      expect(mockNotionProps["Pitch IA"]).toBeUndefined();
 
       // Verificar caché
-      const cachedResult = await enricherService.enrichMovie(movieId, { force: false });
+      const cachedResult = await enricherService.enrichMovie(movieId, { force: false, syncToNotion: true });
       expect(cachedResult.cached).toBe(true);
+      expect(mockNotionUpdated).toBe(false);
+    });
+
+    it("should safely no-op when calling syncEnrichmentToNotion or syncToNotion directly", async () => {
+      mockNotionUpdated = false;
+      mockNotionProps = {};
+
+      await enricherService.syncEnrichmentToNotion("dummy-notion-page-id", {
+        vibeTags: ["Distopía"],
+        personalizedPitch: "Test Pitch",
+      });
+      await enricherService.syncToNotion("dummy-notion-page-id", {
+        vibeTags: ["Distopía"],
+        personalizedPitch: "Test Pitch",
+      });
+
+      expect(mockNotionUpdated).toBe(false);
+      expect(Object.keys(mockNotionProps).length).toBe(0);
     });
 
     it("should throw error when target game or movie does not exist", async () => {
@@ -289,11 +315,11 @@ describe("Gemini Enricher Service & Hono Endpoints (Fase 4)", () => {
   });
 
   describe("Hono Enrichment Endpoints (/api/games & /api/movies)", () => {
-    it("POST /api/games/:id/enrich should enrich game via HTTP and return result", async () => {
+    it("POST /api/games/:id/enrich should enrich game via HTTP and return result even with syncToNotion=true", async () => {
       const res = await app.request(`/api/games/${gameId}/enrich`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ force: false }),
+        body: JSON.stringify({ force: false, syncToNotion: true }),
       });
 
       expect(res.status).toBe(200);
@@ -321,11 +347,11 @@ describe("Gemini Enricher Service & Hono Endpoints (Fase 4)", () => {
       expect(body.success).toBe(false);
     });
 
-    it("POST /api/movies/:id/enrich should enrich movie via HTTP", async () => {
+    it("POST /api/movies/:id/enrich should enrich movie via HTTP with syncToNotion=true", async () => {
       const res = await app.request(`/api/movies/${movieId}/enrich`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ force: false }),
+        body: JSON.stringify({ force: false, syncToNotion: true }),
       });
 
       expect(res.status).toBe(200);
