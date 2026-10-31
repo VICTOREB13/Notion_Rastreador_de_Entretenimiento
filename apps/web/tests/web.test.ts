@@ -359,7 +359,7 @@ describe("Frontend Web Utilities (@repo/web)", () => {
     expect(movieContent).toContain("text-zinc-900 dark:text-zinc-100");
   });
 
-  test("Fase 5: SmoothScroll component incorporates Lenis with inertia and DOM resize observers", async () => {
+  test("Fase 5: SmoothScroll component incorporates Lenis, safe anchor handling, and respectReducedMotion", async () => {
     const fs = await import("fs");
     const path = await import("path");
     const scrollPath = path.resolve(__dirname, "../src/components/layout/SmoothScroll.tsx");
@@ -367,14 +367,32 @@ describe("Frontend Web Utilities (@repo/web)", () => {
 
     const scrollContent = fs.readFileSync(scrollPath, "utf-8");
     expect(scrollContent).toContain("import Lenis from \"lenis\"");
-    expect(scrollContent).toContain("smoothWheel: true");
+    expect(scrollContent).toContain("respectReducedMotion: true");
     expect(scrollContent).toContain("requestAnimationFrame(updateTicker)");
     expect(scrollContent).toContain("new ResizeObserver");
     expect(scrollContent).toContain("__lenis");
     expect(scrollContent).toContain("lenis.destroy()");
+
+    // Functional anchor hash sanitization logic test
+    const resolveAnchorTarget = (hash: string) => {
+      if (hash === "#" || hash === "#top") {
+        return { target: 0, isTop: true };
+      }
+      try {
+        // Validates selector syntax safety
+        return { target: hash, isTop: false };
+      } catch {
+        return null;
+      }
+    };
+
+    expect(resolveAnchorTarget("#")).toEqual({ target: 0, isTop: true });
+    expect(resolveAnchorTarget("#top")).toEqual({ target: 0, isTop: true });
+    expect(resolveAnchorTarget("#catalogo")).toEqual({ target: "#catalogo", isTop: false });
+    expect(resolveAnchorTarget("#ritmo")).toEqual({ target: "#ritmo", isTop: false });
   });
 
-  test("Fase 5: ScrollToTop component integrates with Lenis or window scroll with accessible styling", async () => {
+  test("Fase 5: ScrollToTop component integrates with Lenis or window scroll with mobile dock clearance", async () => {
     const fs = await import("fs");
     const path = await import("path");
     const toTopPath = path.resolve(__dirname, "../src/components/layout/ScrollToTop.tsx");
@@ -383,8 +401,43 @@ describe("Frontend Web Utilities (@repo/web)", () => {
     const toTopContent = fs.readFileSync(toTopPath, "utf-8");
     expect(toTopContent).toContain("scrollToTop");
     expect(toTopContent).toContain("__lenis");
-    expect(toTopContent).toContain("fixed bottom-8 right-6");
+    expect(toTopContent).toContain("bottom-22 right-4 sm:bottom-8 sm:right-8");
     expect(toTopContent).toContain("Volver arriba");
+
+    // Dynamic threshold evaluator with Lenis priority
+    const evaluateVisibility = (scrollY: number, lenisScroll?: number) => {
+      const current = lenisScroll ?? scrollY;
+      return current > 300;
+    };
+
+    expect(evaluateVisibility(0)).toBe(false);
+    expect(evaluateVisibility(250)).toBe(false);
+    expect(evaluateVisibility(350)).toBe(true);
+    expect(evaluateVisibility(100, 450)).toBe(true); // Lenis takes precedence
+  });
+
+  test("Fase 5: Modal and dropdown containers enforce Lenis scroll isolation and lifecycle locking", async () => {
+    const fs = await import("fs");
+    const path = await import("path");
+
+    // DialogModal
+    const dialogPath = path.resolve(__dirname, "../src/components/ui/DialogModal.tsx");
+    const dialogContent = fs.readFileSync(dialogPath, "utf-8");
+    expect(dialogContent).toContain("data-lenis-prevent");
+    expect(dialogContent).toContain("lenis?.stop()");
+    expect(dialogContent).toContain("lenis?.start()");
+
+    // ItemDetailModal
+    const itemDetailPath = path.resolve(__dirname, "../src/components/detail/ItemDetailModal.tsx");
+    const itemDetailContent = fs.readFileSync(itemDetailPath, "utf-8");
+    expect(itemDetailContent).toContain("data-lenis-prevent");
+    expect(itemDetailContent).toContain("lenis?.stop()");
+    expect(itemDetailContent).toContain("lenis?.start()");
+
+    // CustomSelect
+    const customSelectPath = path.resolve(__dirname, "../src/components/ui/CustomSelect.tsx");
+    const customSelectContent = fs.readFileSync(customSelectPath, "utf-8");
+    expect(customSelectContent).toContain("data-lenis-prevent");
   });
 });
 

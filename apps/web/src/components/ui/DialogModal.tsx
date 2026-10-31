@@ -11,12 +11,16 @@ const modalStack: number[] = [];
 function lockBodyScroll() {
   if (modalStack.length === 1 && typeof document !== "undefined") {
     document.body.style.overflow = "hidden";
+    const lenis = (window as unknown as { __lenis?: { stop: () => void } }).__lenis;
+    lenis?.stop();
   }
 }
 
 function unlockBodyScroll() {
   if (modalStack.length === 0 && typeof document !== "undefined") {
     document.body.style.overflow = "";
+    const lenis = (window as unknown as { __lenis?: { start: () => void } }).__lenis;
+    lenis?.start();
   }
 }
 

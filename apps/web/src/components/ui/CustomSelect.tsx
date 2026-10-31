@@ -267,6 +267,7 @@ export function CustomSelect<T = string>({
           role="listbox"
           tabIndex={-1}
           aria-activedescendant={activeOptionId}
+          data-lenis-prevent
           className={cn(
             "absolute top-full mt-1.5 w-full min-w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-2xl shadow-xl p-1.5 z-50 max-h-60 overflow-y-auto animate-in fade-in zoom-in-95 duration-150",
             align === "right" ? "right-0 origin-top-right" : "left-0 origin-top-left",

@@ -46,6 +46,18 @@ export function ItemDetailModal({ item, type, onClose }: ItemDetailModalProps) {
     setImageError(false);
   }, [item?.id]);
 
+  useEffect(() => {
+    if (!item || !type || typeof document === "undefined") return;
+    document.body.style.overflow = "hidden";
+    const lenis = (window as unknown as { __lenis?: { stop: () => void; start: () => void } }).__lenis;
+    lenis?.stop();
+
+    return () => {
+      document.body.style.overflow = "";
+      lenis?.start();
+    };
+  }, [item, type]);
+
   const isGame = type === "GAME";
   const { data: freshGame } = useGameDetailQuery(isGame && item ? item.id : null);
   const { data: freshMovie } = useMovieDetailQuery(!isGame && item ? item.id : null);
@@ -90,6 +102,7 @@ export function ItemDetailModal({ item, type, onClose }: ItemDetailModalProps) {
       onClick={onClose}
     >
       <div
+        data-lenis-prevent
         className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white dark:bg-[#111113] border border-zinc-200 dark:border-white/10 rounded-2xl shadow-floating text-zinc-900 dark:text-zinc-100 p-6 sm:p-8"
         onClick={(e) => e.stopPropagation()}
       >
