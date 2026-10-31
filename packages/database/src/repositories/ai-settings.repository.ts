@@ -15,7 +15,7 @@ export class AiSettingsRepository implements IAiSettingsRepository {
         id: "default",
         activeProvider: "gemini",
         selectedModel: defaultModel,
-        temperature: 0.7,
+        temperature: 0.35,
       },
     });
   }
@@ -34,7 +34,7 @@ export class AiSettingsRepository implements IAiSettingsRepository {
         id: "default",
         activeProvider: (data.activeProvider as string) ?? "gemini",
         selectedModel: selectedModel ?? "gemini-2.5-flash",
-        temperature: (data.temperature as number) ?? 0.7,
+        temperature: (data.temperature as number) ?? 0.35,
         geminiApiKey: data.geminiApiKey as string | undefined,
         deepseekApiKey: data.deepseekApiKey as string | undefined,
         groqApiKey: data.groqApiKey as string | undefined,

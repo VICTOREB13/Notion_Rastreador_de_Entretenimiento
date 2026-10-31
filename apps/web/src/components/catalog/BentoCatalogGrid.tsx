@@ -6,18 +6,21 @@ import { GameCard } from "./GameCard";
 import { MovieCard } from "./MovieCard";
 import { cn } from "@/lib/utils";
 import type { GameItem, MovieItem } from "@/lib/types";
-import type { CategoryFilter, StatusFilter } from "./CatalogHeader";
+import type { CategoryFilter, StatusFilter, SortOption } from "./CatalogHeader";
 
 export interface BentoCatalogGridProps {
   category: CategoryFilter;
   status: StatusFilter;
   search: string;
+  sortBy?: SortOption;
+  selectedGenre?: string | null;
   games: GameItem[];
   movies: MovieItem[];
   isLoading?: boolean;
   onSelectGame: (game: GameItem) => void;
   onSelectMovie: (movie: MovieItem) => void;
   onClearSearch?: () => void;
+  onClearGenre?: () => void;
   className?: string;
 }
 
@@ -73,12 +76,15 @@ export function BentoCatalogGrid({
   category,
   status,
   search,
+  sortBy = "recent",
+  selectedGenre = null,
   games,
   movies,
   isLoading = false,
   onSelectGame,
   onSelectMovie,
   onClearSearch,
+  onClearGenre,
   className,
 }: BentoCatalogGridProps) {
   const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
@@ -86,10 +92,11 @@ export function BentoCatalogGrid({
   // Resetear paginación al cambiar filtros o búsqueda para proteger presupuesto de DOM (< 800 nodos)
   React.useEffect(() => {
     setVisibleCount(ITEMS_PER_PAGE);
-  }, [category, status, search]);
+  }, [category, status, search, sortBy, selectedGenre]);
 
   // Filtro de búsqueda enriquecido multi-campo (título, plataforma, géneros, vibe)
   const query = search.trim().toLowerCase();
+  const genreQuery = selectedGenre?.trim().toLowerCase();
 
   const filteredGames = games.filter((g) => {
     if (query) {
@@ -98,6 +105,10 @@ export function BentoCatalogGrid({
       const matchGenres = g.genres?.some((genre) => genre.toLowerCase().includes(query));
       const matchVibe = g.aiEnrichment?.vibeTags?.some((v) => v.toLowerCase().includes(query));
       if (!matchTitle && !matchPlatform && !matchGenres && !matchVibe) return false;
+    }
+    if (genreQuery) {
+      const matchGenre = g.genres?.some((genre) => genre.toLowerCase() === genreQuery);
+      if (!matchGenre) return false;
     }
     if (status === "PLAYING" && g.status !== "Jugando") return false;
     if (status === "TODO" && g.status !== "Por Jugar") return false;
@@ -114,29 +125,81 @@ export function BentoCatalogGrid({
       const matchVibe = m.aiEnrichment?.vibeTags?.some((v) => v.toLowerCase().includes(query));
       if (!matchTitle && !matchYear && !matchGenres && !matchOverview && !matchVibe) return false;
     }
+    if (genreQuery) {
+      const matchGenre = m.genres?.some((genre) => genre.toLowerCase() === genreQuery);
+      if (!matchGenre) return false;
+    }
     if (status === "PLAYING" && m.status !== "Viendo") return false;
     if (status === "TODO" && m.status !== "Por Ver") return false;
     if (status === "COMPLETED" && m.status !== "Vista") return false;
     return true;
   });
 
-  // Combinar según categoría
+  // Combinar y ordenar según selección
   type CombinedItem =
     | { type: "GAME"; data: GameItem }
     | { type: "MOVIE"; data: MovieItem };
 
+  const getRecentTimestamp = (item: GameItem | MovieItem): number => {
+    const isPlaying = item.status === "Jugando" || item.status === "Viendo";
+    const dateStr =
+      item.lastPlayedAt ||
+      item.completedAt ||
+      item.completionDate ||
+      item.lastSyncAt ||
+      item.updatedAt ||
+      item.createdAt;
+    const time = dateStr ? new Date(dateStr).getTime() : 0;
+    return isPlaying && time === 0 ? Date.now() : time;
+  };
+
+  const getPlaytime = (item: GameItem | MovieItem): number => {
+    return "playtimeForever" in item ? (item.playtimeForever || 0) : 0;
+  };
+
+  const getRating = (item: GameItem | MovieItem): number => {
+    return item.rating || 0;
+  };
+
+  const sortItems = (a: CombinedItem, b: CombinedItem): number => {
+    switch (sortBy) {
+      case "recent": {
+        const timeA = getRecentTimestamp(a.data);
+        const timeB = getRecentTimestamp(b.data);
+        if (timeB !== timeA) return timeB - timeA;
+        return a.data.title.localeCompare(b.data.title, "es", { sensitivity: "base" });
+      }
+      case "playtime": {
+        const ptA = getPlaytime(a.data);
+        const ptB = getPlaytime(b.data);
+        if (ptB !== ptA) return ptB - ptA;
+        return a.data.title.localeCompare(b.data.title, "es", { sensitivity: "base" });
+      }
+      case "rating": {
+        const rA = getRating(a.data);
+        const rB = getRating(b.data);
+        if (rB !== rA) return rB - rA;
+        return a.data.title.localeCompare(b.data.title, "es", { sensitivity: "base" });
+      }
+      case "alphabetical":
+      default: {
+        return a.data.title.localeCompare(b.data.title, "es", { sensitivity: "base" });
+      }
+    }
+  };
+
   const combinedItems: CombinedItem[] = [];
 
   if (category === "ALL") {
-    const maxLen = Math.max(filteredGames.length, filteredMovies.length);
-    for (let i = 0; i < maxLen; i++) {
-      if (i < filteredGames.length) combinedItems.push({ type: "GAME", data: filteredGames[i] });
-      if (i < filteredMovies.length) combinedItems.push({ type: "MOVIE", data: filteredMovies[i] });
-    }
+    filteredGames.forEach((g) => combinedItems.push({ type: "GAME", data: g }));
+    filteredMovies.forEach((m) => combinedItems.push({ type: "MOVIE", data: m }));
+    combinedItems.sort(sortItems);
   } else if (category === "GAMES") {
     filteredGames.forEach((g) => combinedItems.push({ type: "GAME", data: g }));
+    combinedItems.sort(sortItems);
   } else {
     filteredMovies.forEach((m) => combinedItems.push({ type: "MOVIE", data: m }));
+    combinedItems.sort(sortItems);
   }
 
   const visibleItems = combinedItems.slice(0, visibleCount);
@@ -151,17 +214,34 @@ export function BentoCatalogGrid({
       <div className="py-16 text-center rounded-2xl border border-zinc-200 dark:border-white/5 bg-zinc-100/80 dark:bg-[#111113]/50 text-zinc-600 dark:text-zinc-300 animate-in fade-in zoom-in-[0.98] duration-200">
         <Gamepad2 className="w-10 h-10 text-zinc-400 dark:text-zinc-600 mx-auto mb-2" />
         <h4 className="text-sm font-semibold text-zinc-800 dark:text-zinc-300">No se encontraron títulos</h4>
-        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-          {search ? `Ningún resultado coincide con "${search}".` : "No hay elementos en esta vista."}
+        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 max-w-sm mx-auto">
+          {search
+            ? `Ningún resultado coincide con "${search}".`
+            : selectedGenre
+            ? `No hay títulos para el género "${selectedGenre}".`
+            : "No hay elementos en esta vista."}
         </p>
-        {search && onClearSearch && (
-          <button
-            type="button"
-            onClick={onClearSearch}
-            className="mt-4 inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 hover:border-rose-500/40 text-zinc-700 dark:text-zinc-300 hover:text-rose-600 dark:hover:text-rose-400 transition-all duration-200 hover:-translate-y-0.5 active:scale-95 shadow-xs cursor-pointer"
-          >
-            Restablecer búsqueda
-          </button>
+        {(search || selectedGenre) && (
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+            {search && onClearSearch && (
+              <button
+                type="button"
+                onClick={onClearSearch}
+                className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 hover:border-rose-500/40 text-zinc-700 dark:text-zinc-300 hover:text-rose-600 dark:hover:text-rose-400 transition-all duration-200 hover:-translate-y-0.5 active:scale-95 shadow-xs cursor-pointer"
+              >
+                Limpiar búsqueda
+              </button>
+            )}
+            {selectedGenre && onClearGenre && (
+              <button
+                type="button"
+                onClick={onClearGenre}
+                className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 hover:border-rose-500/40 text-zinc-700 dark:text-zinc-300 hover:text-rose-600 dark:hover:text-rose-400 transition-all duration-200 hover:-translate-y-0.5 active:scale-95 shadow-xs cursor-pointer"
+              >
+                Limpiar género ({selectedGenre})
+              </button>
+            )}
+          </div>
         )}
       </div>
     );

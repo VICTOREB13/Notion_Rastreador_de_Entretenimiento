@@ -8,7 +8,7 @@ import { DarkIslandSplineCard } from "@/components/brand/DarkIslandSplineCard";
 import { SegmentedProgressCard } from "@/components/brand/SegmentedProgressCard";
 import { FloatingIslandNavDock } from "@/components/brand/FloatingIslandNavDock";
 import { LiveGamingBadge } from "@/components/live/LiveGamingBadge";
-import { CatalogHeader, type CategoryFilter, type StatusFilter } from "@/components/catalog/CatalogHeader";
+import { CatalogHeader, type CategoryFilter, type StatusFilter, type SortOption } from "@/components/catalog/CatalogHeader";
 import { BentoCatalogGrid } from "@/components/catalog/BentoCatalogGrid";
 import { AiRecommendationHero } from "@/components/catalog/AiRecommendationHero";
 import { ItemDetailModal } from "@/components/detail/ItemDetailModal";
@@ -26,6 +26,8 @@ export default function EntertainmentShowcasePage() {
   const [timeRange, setTimeRange] = useState<"7D" | "30D" | "90D">("30D");
   const [category, setCategory] = useState<CategoryFilter>("ALL");
   const [status, setStatus] = useState<StatusFilter>("ALL");
+  const [sortBy, setSortBy] = useState<SortOption>("recent");
+  const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
   const [selectedItem, setSelectedItem] = useState<{
@@ -75,6 +77,30 @@ export default function EntertainmentShowcasePage() {
     })
   );
 
+  // Extraer dinámicamente los géneros existentes en la biblioteca
+  const availableGenres = React.useMemo(() => {
+    const genreMap = new Map<string, number>();
+    const sourceItems =
+      category === "GAMES"
+        ? games
+        : category === "MOVIES"
+        ? movies
+        : [...games, ...movies];
+
+    sourceItems.forEach((item) => {
+      (item.genres || []).forEach((g) => {
+        const clean = g.trim();
+        if (clean) {
+          genreMap.set(clean, (genreMap.get(clean) || 0) + 1);
+        }
+      });
+    });
+
+    return Array.from(genreMap.entries())
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "es"))
+      .map(([genre]) => genre);
+  }, [category, games, movies]);
+
   // Juego recomendado destacado para el hero
   const featuredGame =
     games.find((g) => g.status === "Jugando") ||
@@ -86,7 +112,7 @@ export default function EntertainmentShowcasePage() {
     <main className="min-h-screen bg-zinc-50 dark:bg-[#09090B] text-zinc-900 dark:text-zinc-100 pb-28 pt-6 sm:pt-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto transition-colors duration-200">
       {/* Brand Header with Authentic Vectors, Crimson Border & Version Badge */}
       <BrandHeader
-        version="v2.2.2"
+        version="v2.3.0"
         onOpenTelemetry={() => setIsTelemetryOpen(true)}
         actions={
           <div className="flex items-center gap-2">
@@ -181,9 +207,17 @@ export default function EntertainmentShowcasePage() {
       <section id="catalogo" className="mt-12 space-y-6">
         <CatalogHeader
           category={category}
-          onCategoryChange={setCategory}
+          onCategoryChange={(cat) => {
+            setCategory(cat);
+            setSelectedGenre(null);
+          }}
           status={status}
           onStatusChange={setStatus}
+          sortBy={sortBy}
+          onSortByChange={setSortBy}
+          selectedGenre={selectedGenre}
+          onGenreChange={setSelectedGenre}
+          availableGenres={availableGenres}
           search={search}
           onSearchChange={setSearch}
           totalGames={summary?.totalGames ?? games.length}
@@ -194,6 +228,8 @@ export default function EntertainmentShowcasePage() {
           category={category}
           status={status}
           search={search}
+          sortBy={sortBy}
+          selectedGenre={selectedGenre}
           games={games}
           movies={movies}
           isLoading={
@@ -204,6 +240,7 @@ export default function EntertainmentShowcasePage() {
               : isGamesLoading || isMoviesLoading
           }
           onClearSearch={() => setSearch("")}
+          onClearGenre={() => setSelectedGenre(null)}
           onSelectGame={(g) => setSelectedItem({ item: g, type: "GAME" })}
           onSelectMovie={(m) => setSelectedItem({ item: m, type: "MOVIE" })}
         />

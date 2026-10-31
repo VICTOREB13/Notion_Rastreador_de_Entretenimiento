@@ -530,10 +530,10 @@ describe("Frontend Web Utilities (@repo/web)", () => {
     expect(movieContent).toContain("hover:border-rose-500/40");
     expect(movieContent).toContain("group-hover:scale-106");
 
-    // BrandHeader version v2.2.2
+    // BrandHeader version v2.3.0
     const brandPath = path.resolve(__dirname, "../src/components/brand/BrandHeader.tsx");
     const brandContent = fs.readFileSync(brandPath, "utf-8");
-    expect(brandContent).toContain("v2.2.2");
+    expect(brandContent).toContain("v2.3.0");
 
     // ItemDetailModal microinteractions (close button, external link, re-enrich)
     const modalPath = path.resolve(__dirname, "../src/components/detail/ItemDetailModal.tsx");
@@ -556,6 +556,36 @@ describe("Frontend Web Utilities (@repo/web)", () => {
     const themeTogglePath = path.resolve(__dirname, "../src/components/ui/ThemeToggle.tsx");
     const themeToggleContent = fs.readFileSync(themeTogglePath, "utf-8");
     expect(themeToggleContent).toContain("group-hover:rotate-12");
+  });
+
+  test("v2.3.0: Catalog sorting by recent/playtime/rating/alphabetical and dynamic genre filtering", async () => {
+    const fs = await import("fs");
+    const path = await import("path");
+
+    // CatalogHeader Sort By options & dynamic Genre Filter bar
+    const catalogHeaderPath = path.resolve(__dirname, "../src/components/catalog/CatalogHeader.tsx");
+    const catalogHeaderContent = fs.readFileSync(catalogHeaderPath, "utf-8");
+    expect(catalogHeaderContent).toContain("Jugados recientemente");
+    expect(catalogHeaderContent).toContain("Más jugados");
+    expect(catalogHeaderContent).toContain("Mejor calificados");
+    expect(catalogHeaderContent).toContain("Alfabético (A-Z)");
+    expect(catalogHeaderContent).toContain("availableGenres");
+    expect(catalogHeaderContent).toContain("Limpiar filtro");
+
+    // BentoCatalogGrid sorting & dynamic genre filtering
+    const catalogGridPath = path.resolve(__dirname, "../src/components/catalog/BentoCatalogGrid.tsx");
+    const catalogGridContent = fs.readFileSync(catalogGridPath, "utf-8");
+    expect(catalogGridContent).toContain("getRecentTimestamp");
+    expect(catalogGridContent).toContain("getPlaytime");
+    expect(catalogGridContent).toContain("getRating");
+    expect(catalogGridContent).toContain("selectedGenre");
+
+    // page.tsx availableGenres extraction and wiring
+    const pagePath = path.resolve(__dirname, "../src/app/page.tsx");
+    const pageContent = fs.readFileSync(pagePath, "utf-8");
+    expect(pageContent).toContain("availableGenres");
+    expect(pageContent).toContain("sortBy");
+    expect(pageContent).toContain("selectedGenre");
   });
 });
 

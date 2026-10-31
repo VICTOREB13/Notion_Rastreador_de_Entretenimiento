@@ -54,6 +54,12 @@ tags: [tareas, refactorizacion, brand-components, telemetry, dark-mode, light-mo
 - [x] `TASK-324`: Perfeccionar calculo de `isLoading` por categoria y boton de restablecer busqueda en estado vacio en `BentoCatalogGrid.tsx`.
 - [x] `TASK-325`: Validacion integral (`bun test`, `bun run typecheck`, `bun run validate`, `bun run web:build`), bump a v2.2.2, git commit semantico y tag release.
 
+### Fase 9: Ordenamiento por Recientes/Playtime/Rating, Filtro Dinámico por Géneros, Prompt Anti-Slop y Release v2.3.0
+- [x] `TASK-326`: Implementar control de ordenamiento (*Sort by*) con opciones "Recientes / Jugados recientemente", "Más jugados", "Mejor calificados" y "Alfabético (A-Z)" en `CatalogHeader.tsx` y `BentoCatalogGrid.tsx`.
+- [x] `TASK-327`: Implementar filtro dinámico de géneros extraídos en vivo desde la biblioteca con selector de píldoras y botón de limpieza de filtro.
+- [x] `TASK-328`: Reducir temperatura por defecto de Gemini de 0.7 a 0.35 y fortalecer `buildPrompt` con directivas negativas estrictas anti-slop.
+- [x] `TASK-329`: Validación integral (`bun test`, `bun run typecheck`, `bun run validate`, `bun run web:build`), bump a v2.3.0, git commit semántico y tag release `v2.3.0`.
+
 ---
 
 ## Referencias

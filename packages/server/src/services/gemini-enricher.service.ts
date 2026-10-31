@@ -59,7 +59,7 @@ export class GeminiEnricherService {
     const settings = await this.settingsRepo.getSettings();
     const apiKey = settings.geminiApiKey || config.geminiApiKey || undefined;
     const model = modelOverride || settings.selectedModel || config.geminiDefaultModel || "gemini-2.5-flash";
-    const temperature = typeof settings.temperature === "number" ? settings.temperature : 0.7;
+    const temperature = typeof settings.temperature === "number" ? settings.temperature : 0.35;
 
     return { apiKey, model, temperature };
   }

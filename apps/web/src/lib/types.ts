@@ -22,6 +22,7 @@ export interface GameItem {
   platform: string;
   status: string;
   startDate: string | null;
+  lastPlayedAt?: string | null;
   completedAt?: string | null;
   completionDate?: string | null;
   rating?: number | null;
@@ -47,6 +48,8 @@ export interface MovieItem {
   wikiUrl: string | null;
   status: string;
   year: number | null;
+  lastPlayedAt?: string | null;
+  completedAt?: string | null;
   completionDate?: string | null;
   rating?: number | null;
   summary?: string | null;

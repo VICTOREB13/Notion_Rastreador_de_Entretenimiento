@@ -14,7 +14,7 @@ export const EntertainmentEnrichmentSchema = {
     personalizedPitch: {
       type: Type.STRING,
       description:
-        "2 frases concisas y persuasivas explicando por qué Victor debería jugar o ver este título hoy según sus puntos fuertes.",
+        "Máximo 2 frases sobrias, concisas y analíticas sobre mecánicas, ritmo o diseño, sin clichés publicitarios.",
     },
     thematicTropes: {
       type: Type.ARRAY,
@@ -90,7 +90,7 @@ export class GeminiClient implements IAiProvider {
     const isGame = payload.type === "GAME";
     return `Eres el curador personal de entretenimiento de Victor. Tu labor es analizar este ${
       isGame ? "videojuego" : "largometraje / película"
-    } y generar un enriquecimiento contextual y psicológico fascinante para su biblioteca personal de Notion.
+    } y generar un enriquecimiento contextual y psicológico conciso y analítico para su biblioteca personal de Notion.
 
 Título: ${payload.title}
 Tipo: ${payload.type}
@@ -101,9 +101,10 @@ ${payload.userContext ? `Contexto del usuario: ${payload.userContext}` : ""}
 
 Instrucciones clave:
 1. vibeTags: 3 a 4 etiquetas concisas de ambientación, estado de ánimo o momento idóneo en español (ej: "Lluvia & Café", "Adrenalina Pura", "Cerebral", "Nostalgia").
-2. personalizedPitch: 2 frases directas, elegantes y apasionadas explicando por qué Victor debería ${
-      isGame ? "jugarlo" : "verla"
-    } hoy, resaltando sus puntos fuertes distintivos.
+2. personalizedPitch: Tono de crítica sobria, concisa y analítica (máximo 2 frases aterrizadas sobre mecánicas reales, ritmo de juego o diseño, sin lenguaje de folleto de relaciones públicas).
+   Directivas estrictas anti-slop:
+   - Queda ESTRICTAMENTE PROHIBIDO usar lugares comunes publicitarios y clichés de marketing (ej: "auténtica carta de amor", "sumérgete en", "obra maestra", "excusa perfecta", "esencia pura", "combates milimétricos", "delicia", "experiencia imprescindible", "joya oculta").
+   - Enfócate con precisión quirúrgica en el bucle de juego, la fricción mecánica, la ambientación tangible o el tono narrativo real.
 3. thematicTropes: 3 a 5 tropos narrativos, mecánicas o estéticas destacadas (ej: "Time-Loop", "Cyberpunk Noir", "Pixel Art Atmosférico").
 4. completionEstimateWeeks: Semanas estimadas para completarlo a un ritmo personal de 5-7 horas semanales. ${
       isGame ? "Calculado en base a su duración." : "Para películas, debe ser null o 0."
@@ -124,7 +125,7 @@ Instrucciones clave:
       model,
       contents: prompt,
       config: {
-        temperature: typeof temperature === "number" ? temperature : 0.7,
+        temperature: typeof temperature === "number" ? temperature : 0.35,
         responseMimeType: "application/json",
         responseJsonSchema: EntertainmentEnrichmentSchema,
       },

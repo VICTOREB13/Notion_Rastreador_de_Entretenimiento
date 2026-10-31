@@ -13,6 +13,7 @@ describe("Gemini Enricher Service & Hono Endpoints (Fase 4)", () => {
   let mockCallCount = 0;
   let lastModelUsed = "";
   let lastPrompt = "";
+  let lastTemperature: number | undefined;
 
   const mockGenAiClient: GenAiClientLike = {
     models: {
@@ -20,6 +21,7 @@ describe("Gemini Enricher Service & Hono Endpoints (Fase 4)", () => {
         mockCallCount++;
         lastModelUsed = params.model;
         lastPrompt = params.contents;
+        lastTemperature = params.config?.temperature;
 
         if (params.contents.includes("OK")) {
           return { text: "OK" };
@@ -160,6 +162,34 @@ describe("Gemini Enricher Service & Hono Endpoints (Fase 4)", () => {
       expect(prompt).toContain("personalizedPitch");
       expect(prompt).toContain("thematicTropes");
       expect(prompt).toContain("completionEstimateWeeks");
+      expect(prompt).toContain("ESTRICTAMENTE PROHIBIDO");
+      expect(prompt).toContain("auténtica carta de amor");
+      expect(prompt).toContain("combates milimétricos");
+    });
+
+    it("should use default temperature 0.35 and support gemini-2.5-flash / gemini-2.5-pro", async () => {
+      await testGeminiClient.generateEnrichment(
+        {
+          title: "Celeste",
+          type: "GAME",
+          genres: ["Platformer"],
+        },
+        "gemini-2.5-flash",
+        "mock-key"
+      );
+      expect(lastTemperature).toBe(0.35);
+      expect(lastModelUsed).toBe("gemini-2.5-flash");
+
+      await testGeminiClient.generateEnrichment(
+        {
+          title: "Celeste Pro",
+          type: "GAME",
+          genres: ["Platformer"],
+        },
+        "gemini-2.5-pro",
+        "mock-key"
+      );
+      expect(lastModelUsed).toBe("gemini-2.5-pro");
     });
 
     it("should generate enrichment matching schema with custom model override", async () => {

@@ -124,7 +124,7 @@ model AiSettings {
   groqApiKey     String?
   ollamaBaseUrl  String?  @default("http://localhost:11434")
   selectedModel  String   @default("gemini-2.5-flash")
-  temperature    Float    @default(0.7)
+  temperature    Float    @default(0.35)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 

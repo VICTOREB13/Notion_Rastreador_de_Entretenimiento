@@ -94,7 +94,7 @@ export const settingsController = new Hono()
         data: {
           activeProvider: "gemini",
           selectedModel: fallbackModel,
-          temperature: 0.7,
+          temperature: 0.35,
           geminiConfigured: Boolean(config.geminiApiKey),
           deepseekConfigured: false,
           groqConfigured: false,

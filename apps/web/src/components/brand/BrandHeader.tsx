@@ -16,7 +16,7 @@ export interface BrandHeaderProps {
 }
 
 export function BrandHeader({
-  version = "v2.2.2",
+  version = "v2.3.0",
   onOpenTelemetry,
   onOpenSettings,
   actions,
