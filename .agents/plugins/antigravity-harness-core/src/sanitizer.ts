@@ -1,3 +1,4 @@
+import { homedir } from "node:os";
 import { isAbsolute, resolve, normalize } from "node:path";
 
 export interface SanitizeResult {
@@ -8,6 +9,7 @@ export interface SanitizeResult {
 
 const PATH_ARG_KEYS = new Set<string>([
   "AbsolutePath",
+  "Path",
   "TargetFile",
   "DirectoryPath",
   "SearchPath",
@@ -30,18 +32,30 @@ function cleanPath(val: string, baseWorkspace: string): { cleaned: string; chang
     cleaned = cleaned.slice(1, -1).trim();
   }
 
+  // Una URL no es una ruta local: resolverla contra el workspace la corrompe
+  if (/^[a-z][a-z0-9+.-]+:\/\//i.test(cleaned) && !/^file:\/\//i.test(cleaned)) {
+    return { cleaned: val, changed: false };
+  }
+
   // Strip file URI protocol (e.g., file:///C:/... or file:///home/...)
   if (/^file:\/\//i.test(cleaned)) {
     cleaned = cleaned.replace(/^file:\/\/(?:localhost)?/i, "");
+    try { cleaned = decodeURI(cleaned); } catch {}
     if (/^\/[a-zA-Z]:/i.test(cleaned)) {
       cleaned = cleaned.slice(1);
     }
   }
 
-  // Normalize slashes
+  if (/^~(?:[/\\]|$)/.test(cleaned)) {
+    cleaned = `${homedir()}${cleaned.slice(1)}`;
+  }
+
+  // Normalize slashes (preservando el prefijo de rutas UNC //servidor/recurso)
+  const isUnc = /^(?:\\\\|\/\/)[^/\\]/.test(cleaned);
   cleaned = cleaned.replace(/\\/g, "/");
   cleaned = cleaned.replace(/^([a-zA-Z]:)\/{2,}/g, "$1/");
   cleaned = cleaned.replace(/(?<!:)\/{2,}/g, "/");
+  if (isUnc) cleaned = `/${cleaned}`;
 
   // Convert relative to absolute
   const isAbs = /^[a-zA-Z]:\//i.test(cleaned) || cleaned.startsWith("//") || isAbsolute(cleaned);
@@ -58,6 +72,10 @@ function cleanPath(val: string, baseWorkspace: string): { cleaned: string; chang
 
   return { cleaned, changed: cleaned !== val };
 }
+
+// Coincidencia exacta a propósito: buscar "file" o "path" dentro del nombre reescribe
+// parámetros de MCP que no son rutas ('profile', 'pathname', 'file_type', 'filePattern').
+const NESTED_PATH_KEY_REGEX = /^(?:file|(?:source|dest|destination|target|input|output)[_-]?(?:file|path))$/i;
 
 /**
  * Sanitiza argumentos de herramientas para PreToolUse.
@@ -93,7 +111,7 @@ export function sanitizeToolArgs(
   if (args.Arguments && typeof args.Arguments === "object") {
     const nestedOverwrites: Record<string, any> = {};
     for (const [nestedKey, nestedValue] of Object.entries(args.Arguments)) {
-      if (typeof nestedValue === "string" && (PATH_ARG_KEYS.has(nestedKey) || nestedKey.toLowerCase().includes("path") || nestedKey.toLowerCase().includes("file"))) {
+      if (typeof nestedValue === "string" && (PATH_ARG_KEYS.has(nestedKey) || NESTED_PATH_KEY_REGEX.test(nestedKey))) {
         const { cleaned, changed } = cleanPath(nestedValue, baseWorkspace);
         if (changed) {
           nestedOverwrites[nestedKey] = cleaned;

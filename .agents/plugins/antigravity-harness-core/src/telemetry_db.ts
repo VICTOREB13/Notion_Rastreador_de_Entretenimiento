@@ -2,6 +2,18 @@ import { Database } from "bun:sqlite";
 import { existsSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { createHash } from "node:crypto";
+import { redactSecrets } from "../../../scripts/harness_io";
+
+const MAX_ERROR_LENGTH = 1000;
+const RETENTION_DAYS = 90;
+
+export interface HeuristicLinkRecord {
+  ruleKey: string;
+  skill: string;
+  ruleText: string;
+  tool: string;
+  workspacePath: string;
+}
 
 export interface ToolExecutionRecord {
   conversationId?: string;
@@ -51,11 +63,12 @@ export class TelemetryDB {
   }
 
   private initSchema(): void {
-    // Configuración pragmas WAL para alta concurrencia
+    // busy_timeout primero: cambiar a WAL también puede encontrar la base bloqueada. Se mantiene
+    // corto porque esta llamada es síncrona dentro de un hook que bloquea al agente.
     if (this.dbPath !== ":memory:") {
       try {
+        this.db.run("PRAGMA busy_timeout = 1000;");
         this.db.run("PRAGMA journal_mode = WAL;");
-        this.db.run("PRAGMA busy_timeout = 5000;");
       } catch {}
     }
 
@@ -110,6 +123,41 @@ export class TelemetryDB {
         promoted_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
     `);
+
+    this.db.run(`
+      CREATE TABLE IF NOT EXISTS heuristic_links (
+        rule_key TEXT NOT NULL,
+        workspace_path TEXT NOT NULL,
+        skill TEXT NOT NULL,
+        rule_text TEXT NOT NULL,
+        tool TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (rule_key, workspace_path)
+      );
+    `);
+  }
+
+  /** Vincula una regla autogenerada con la herramienta que la originó para poder medir si funciona. */
+  public linkHeuristic(link: HeuristicLinkRecord): void {
+    this.db.prepare(`
+      INSERT OR IGNORE INTO heuristic_links (rule_key, workspace_path, skill, rule_text, tool)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(link.ruleKey, link.workspacePath, link.skill, link.ruleText, link.tool);
+  }
+
+  public getLinkedHeuristics(workspacePath: string): Array<{ rule_key: string; skill: string; rule_text: string; tool: string }> {
+    return this.db.query(`SELECT rule_key, skill, rule_text, tool FROM heuristic_links WHERE workspace_path = ?`).all(workspacePath) as any[];
+  }
+
+  public getPromotedHeuristics(limit: number): Array<{ rule_id: string; skill: string; rule_text: string }> {
+    return this.db.query(`
+      SELECT rule_id, skill, rule_text FROM promoted_heuristics
+      WHERE status = 'promoted' ORDER BY promotion_score DESC LIMIT ?
+    `).all(limit) as any[];
+  }
+
+  public prune(maxAgeDays = RETENTION_DAYS): void {
+    this.db.prepare(`DELETE FROM tool_executions WHERE created_at < datetime('now', ?)`).run(`-${maxAgeDays} days`);
   }
 
   public recordToolExecution(exec: ToolExecutionRecord): number {
@@ -122,7 +170,7 @@ export class TelemetryDB {
       exec.stepIdx || 0,
       exec.toolName,
       exec.isSuccess ? 1 : 0,
-      exec.errorMessage || null,
+      exec.errorMessage ? redactSecrets(exec.errorMessage).slice(0, MAX_ERROR_LENGTH) : null,
       exec.sanitized ? 1 : 0,
       exec.executionTimeMs || 0
     );
@@ -131,7 +179,12 @@ export class TelemetryDB {
 
   public recordErrorSignature(toolName: string, errorSnippet: string): void {
     if (!errorSnippet) return;
-    const normalized = errorSnippet.replace(/\d+/g, "N").replace(/(['"]).*?\1/g, "STRING").trim().slice(0, 300);
+    const normalized = redactSecrets(errorSnippet)
+      .replace(/(?:[a-zA-Z]:)?[/\\][^\s'"]+/g, "PATH")
+      .replace(/\d+/g, "N")
+      .replace(/(['"]).*?\1/g, "STRING")
+      .trim()
+      .slice(0, 300);
     const hash = createHash("sha256").update(`${toolName}:${normalized}`).digest("hex").slice(0, 16);
 
     const stmt = this.db.prepare(`

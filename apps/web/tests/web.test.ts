@@ -278,4 +278,84 @@ describe("Frontend Web Utilities (@repo/web)", () => {
 
     expect(targetUrl("http://daemon-api:3001/", ["sync", "trigger"])).toBe("http://daemon-api:3001/api/sync/trigger");
   });
+
+  test("Fase 3: TelemetryModal adheres to read-only public showcase requirements", async () => {
+    const fs = await import("fs");
+    const path = await import("path");
+    const modalPath = path.resolve(__dirname, "../src/components/settings/TelemetryModal.tsx");
+    const modalContent = fs.readFileSync(modalPath, "utf-8");
+
+    // Zero API Key inputs, Zero temperature sliders, Zero custom model forms
+    expect(modalContent).not.toContain("AiModelConfigForm");
+    expect(modalContent).not.toContain("onChangeApiKey");
+    expect(modalContent).not.toContain("setTemperature");
+    expect(modalContent).not.toContain("Guardar Cambios");
+    expect(modalContent).not.toContain("Probar Conexión");
+
+    // Must contain read-only AI card with Google Gemini & activeModel fallback to gemini-2.5-flash
+    expect(modalContent).toContain("telemetry?.activeModel || \"gemini-2.5-flash\"");
+    expect(modalContent).toContain("Google Gemini");
+    expect(modalContent).toContain("Cerrar");
+  });
+
+  test("Fase 4: BrandHeader horizontal logo selector resolves theme-specific SVGs with error fallback", () => {
+    const resolveLogoSrc = (mounted: boolean, resolvedTheme: "dark" | "light", imgError: boolean) => {
+      if (imgError) return "/brand/ve-isotipo-red.svg";
+      if (mounted && resolvedTheme === "light") return "/brand/ve-logo-horizontal-light-mode.svg";
+      return "/brand/ve-logo-horizontal-dark-mode.svg";
+    };
+
+    // SSR or unmounted defaults safely to dark mode logo
+    expect(resolveLogoSrc(false, "dark", false)).toBe("/brand/ve-logo-horizontal-dark-mode.svg");
+    expect(resolveLogoSrc(false, "light", false)).toBe("/brand/ve-logo-horizontal-dark-mode.svg");
+
+    // Mounted client uses resolvedTheme
+    expect(resolveLogoSrc(true, "dark", false)).toBe("/brand/ve-logo-horizontal-dark-mode.svg");
+    expect(resolveLogoSrc(true, "light", false)).toBe("/brand/ve-logo-horizontal-light-mode.svg");
+
+    // Fallback to isotipo if SVG fails
+    expect(resolveLogoSrc(true, "light", true)).toBe("/brand/ve-isotipo-red.svg");
+    expect(resolveLogoSrc(true, "dark", true)).toBe("/brand/ve-isotipo-red.svg");
+  });
+
+  test("Fase 4: FloatingIslandNavDock uses Telemetría label and adaptive classes", async () => {
+    const fs = await import("fs");
+    const path = await import("path");
+    const dockPath = path.resolve(__dirname, "../src/components/brand/FloatingIslandNavDock.tsx");
+    const dockContent = fs.readFileSync(dockPath, "utf-8");
+
+    expect(dockContent).toContain("title=\"Telemetría\"");
+    expect(dockContent).toContain("Telemetría</span>");
+    expect(dockContent).not.toContain("Ajustes IA");
+    expect(dockContent).toContain("bg-white/90 dark:bg-zinc-950/85");
+  });
+
+  test("Fase 4: Brand and Catalog cards enforce adaptive dual-theme high contrast tokens", async () => {
+    const fs = await import("fs");
+    const path = await import("path");
+
+    // DarkIslandSplineCard
+    const splineContent = fs.readFileSync(path.resolve(__dirname, "../src/components/brand/DarkIslandSplineCard.tsx"), "utf-8");
+    expect(splineContent).toContain("bg-white dark:bg-[#111113]");
+    expect(splineContent).toContain("SpringSegmentedControl");
+
+    // SegmentedProgressCard
+    const progressContent = fs.readFileSync(path.resolve(__dirname, "../src/components/brand/SegmentedProgressCard.tsx"), "utf-8");
+    expect(progressContent).toContain("bg-white dark:bg-[#111113]");
+
+    // SpotlightCard
+    const spotlightContent = fs.readFileSync(path.resolve(__dirname, "../src/components/brand/SpotlightCard.tsx"), "utf-8");
+    expect(spotlightContent).toContain("bg-white dark:bg-[#111113]");
+
+    // BentoCatalogGrid empty state
+    const bentoContent = fs.readFileSync(path.resolve(__dirname, "../src/components/catalog/BentoCatalogGrid.tsx"), "utf-8");
+    expect(bentoContent).toContain("bg-zinc-100/80 dark:bg-[#111113]/50");
+
+    // GameCard & MovieCard high-contrast text
+    const gameContent = fs.readFileSync(path.resolve(__dirname, "../src/components/catalog/GameCard.tsx"), "utf-8");
+    expect(gameContent).toContain("text-zinc-900 dark:text-zinc-100");
+
+    const movieContent = fs.readFileSync(path.resolve(__dirname, "../src/components/catalog/MovieCard.tsx"), "utf-8");
+    expect(movieContent).toContain("text-zinc-900 dark:text-zinc-100");
+  });
 });

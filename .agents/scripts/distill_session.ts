@@ -2,6 +2,8 @@
 import { Database } from "bun:sqlite";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, resolve } from "node:path";
+import { classifyRootCause } from "../../scripts/verify_recursive_loop";
+import { BACKGROUND_FAILURE_REGEX } from "./circuit_breaker";
 
 export interface DistillOptions {
   uuid?: string;
@@ -32,6 +34,9 @@ export const RESET_READ_STREAK_TOOLS = new Set<string>([
   "write_file", "edit_file", "write_to_file", "replace_file_content", "generate_image",
 ]);
 
+// Pasos del transcript de agy que nunca son el resultado de una herramienta.
+const NON_RESULT_STEP_TYPES = new Set<string>(["USER_INPUT", "PLANNER_RESPONSE", "SYSTEM_MESSAGE", "CHECKPOINT", "ERROR_MESSAGE"]);
+
 const getHome = () => process.env.USERPROFILE || process.env.HOME || "";
 export const getDefaultDbPath = (): string => resolve(getHome(), ".gemini", "antigravity-cli", "conversation_summaries.db");
 export const getTranscriptPathForUUID = (uuid: string): string => resolve(getHome(), ".gemini", "antigravity-cli", "brain", uuid, ".system_generated", "logs", "transcript.jsonl");
@@ -52,8 +57,12 @@ export function resolveLatestConversation(dbPath: string, workspacePath: string)
     stmt.finalize();
     if (!rows?.length) return null;
     const target = normalizePath(workspacePath);
-    const matched = rows.find(r => r.workspace_uris && normalizePath(r.workspace_uris).includes(target));
-    return (matched || rows[0]).conversation_id;
+    const matchesWorkspace = (uris: string) => {
+      const haystack = normalizePath(uris), at = haystack.indexOf(target);
+      return at !== -1 && !/[\w./-]/.test(haystack[at + target.length] ?? "");
+    };
+    // Sin coincidencia no hay sesión de este workspace: auditar otra daría un diagnóstico falso
+    return rows.find(r => r.workspace_uris && matchesWorkspace(r.workspace_uris))?.conversation_id ?? null;
   } catch { return null; } finally { try { db?.close(); } catch {} }
 }
 
@@ -71,6 +80,7 @@ export function parseTranscriptContent(content: string, conversationId = "unknow
   const queue: string[] = [];
   let lastTool: string | null = null;
   const consecutiveFails: Record<string, number> = {};
+  let harnessFailures = 0;
 
   for (const rawLine of lines) {
     let step: any;
@@ -113,13 +123,32 @@ export function parseTranscriptContent(content: string, conversationId = "unknow
       continue;
     }
 
-    const targetTool = queue.length > 0 ? queue.shift()! : lastTool;
-    const text = typeof step.content === "string" ? step.content : "";
+    const text = [step.content, step.error].filter((v) => typeof v === "string").join("\n");
+
+    if (text.includes("[HARNESS AUTO-HEAL]")) {
+      metrics.auto_heals_triggered++;
+    }
+
+    // Prosa del usuario o del modelo no es el resultado de una herramienta
+    const systemBreaker = src === "SYSTEM" && text.includes("CIRCUIT_BREAKER_BLOCKED");
+    if (NON_RESULT_STEP_TYPES.has(typ) && !systemBreaker) continue;
+
+    let targetTool = queue.length > 0 ? queue.shift()! : lastTool;
+
+    // Comando enviado a segundo plano: su resultado llegará por manage_task, no por este paso
+    if (step.status === "RUNNING") continue;
+
     let isFailure = false;
+
+    if (targetTool === "manage_task" && BACKGROUND_FAILURE_REGEX.test(text)) {
+      targetTool = "run_command";
+      isFailure = true;
+    }
 
     const hasBreaker = text.includes('"decision":"block"') || text.includes('"decision": "block"') ||
       text.includes('"allowed":false') || text.includes('"allowed": false') ||
-      /^\s*CIRCUIT_BREAKER_BLOCKED:/m.test(text) || (src === "SYSTEM" && text.includes("CIRCUIT_BREAKER_BLOCKED"));
+      /^\s*CIRCUIT_BREAKER_BLOCKED:/m.test(text) || systemBreaker ||
+      /denied by pre-tool hook:\s*CIRCUIT_BREAKER_BLOCKED/.test(text);
     const isNormalRead = targetTool && READ_TOOLS.has(targetTool) && step.status === "DONE" && src !== "SYSTEM" && !text.includes("Encountered error in step execution:");
 
     if (hasBreaker && !isNormalRead) {
@@ -137,23 +166,20 @@ export function parseTranscriptContent(content: string, conversationId = "unknow
       }
     }
 
-    if (text.includes("[HARNESS AUTO-HEAL]")) {
-      metrics.auto_heals_triggered++;
-    }
-
     if (targetTool) {
       if (isFailure) {
         metrics.total_tool_failures++;
         metrics.tool_failures[targetTool] = (metrics.tool_failures[targetTool] || 0) + 1;
         consecutiveFails[targetTool] = (consecutiveFails[targetTool] || 0) + 1;
         if (consecutiveFails[targetTool] >= 2) metrics.anti_loop_triggers++;
+        if (classifyRootCause({ error: text, consecutiveFails: consecutiveFails[targetTool] }) === "Harness Defect") harnessFailures++;
       } else if (step.status === "DONE" || text.length > 0) {
         consecutiveFails[targetTool] = 0;
       }
     }
   }
 
-  if (metrics.circuit_breaker_blocks > 0 || metrics.anti_loop_triggers > 0 || metrics.read_streaks_above_limit > 0 || metrics.repetitive_loops.length > 0) {
+  if (metrics.circuit_breaker_blocks > 0 || harnessFailures > 0 || metrics.read_streaks_above_limit > 0 || metrics.repetitive_loops.length > 0) {
     metrics.root_cause_signal = "Defecto de Arnés";
     metrics.auditor_directive = metrics.auto_heals_triggered > 0
       ? "Fricción de arnés interceptada y auto-sanada en caliente. Certificar validez y presupuesto FIFO con 'validate_artifact.ts --heuristics'."

@@ -15,7 +15,7 @@ export * from "./lint_contracts_extractors";
 export function lintContracts(options: LintContractsOptions = {}): LintContractsResult {
   const repoRoot = process.cwd();
   const specFile = options.specFile ? resolve(options.specFile) : join(repoRoot, "artifacts", "architecture", "api_spec.md");
-  const defaultDirs = ["src", "lib", "routes", "app", "features"];
+  const defaultDirs = ["src", "lib", "routes", "app", "features", "packages/server/src"];
   const candidateDirs = options.srcDirs && options.srcDirs.length > 0 ? options.srcDirs : defaultDirs;
   if (!options.srcDirs || options.srcDirs.length === 0) {
     for (const d of ["packages", "apps"]) {
@@ -129,7 +129,7 @@ Uso: bun scripts/lint_contracts.ts [--spec <api_spec.md>] [--src <dir>] [--stack
 
 Opciones:
   --spec <ruta>       Ruta al archivo api_spec.md (default: artifacts/architecture/api_spec.md)
-  --src, -s <dir>     Directorio(s) de código a escanear (default: src, lib, routes, app, features)
+  --src, -s <dir>     Directorio(s) de código a escanear (default: src, lib, routes, app, features, packages/server/src)
   --stack <nombre>    Stack tecnológico a auditar (node, flutter, laravel, python, auto)
   --slice <nombre>    Filtrar contratos y rutas por Vertical Slice
   --json              Salida en formato JSON estructurado

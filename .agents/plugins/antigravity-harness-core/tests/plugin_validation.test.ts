@@ -46,28 +46,59 @@ describe("Harness³ Plugin Validation (Antigravity CLI Compliance)", () => {
   });
 
   test.skipIf(!hasAgy)("3. Local workspace plugin passes strict validation via 'agy plugin validate'", () => {
-    const proc = spawnSync("agy", ["plugin", "validate", JSON.stringify(localPluginPath), "--strict", "--json"], {
+    const proc = spawnSync("agy", ["plugin", "validate", `"${localPluginPath}"`, "--strict", "--json"], {
       encoding: "utf-8",
       shell: true,
     });
 
     expect(proc.status).toBe(0);
-    const parsed = JSON.parse(proc.stdout);
+    // agy 1.3.1 emite el reporte --json por stderr
+    const parsed = JSON.parse(proc.stdout || proc.stderr);
     expect(parsed.components.hooks).toBeGreaterThanOrEqual(1);
-    const errors = (parsed.findings || []).filter((f: { severity?: string }) => f.severity === "error");
-    expect(errors.length).toBe(0);
+    expect(parsed.findings.length).toBe(0);
   });
 
   test.skipIf(!hasAgy || !existsSync(globalPluginPath))("4. Global config plugin passes strict validation via 'agy plugin validate'", () => {
-    const proc = spawnSync("agy", ["plugin", "validate", JSON.stringify(globalPluginPath), "--strict", "--json"], {
+    const proc = spawnSync("agy", ["plugin", "validate", globalPluginPath, "--strict", "--json"], {
       encoding: "utf-8",
       shell: true,
     });
 
     expect(proc.status).toBe(0);
-    const parsed = JSON.parse(proc.stdout);
+    const parsed = JSON.parse(proc.stdout || proc.stderr);
     expect(parsed.components.hooks).toBeGreaterThanOrEqual(1);
-    const errors = (parsed.findings || []).filter((f: { severity?: string }) => f.severity === "error");
-    expect(errors.length).toBe(0);
+    expect(parsed.findings.length).toBe(0);
+  });
+
+  test("5. All lifecycle hook commands avoid shell chaining operators ('||', '&&') for Windows PowerShell 5.1 compatibility", () => {
+    const hooksPath = resolve(localPluginPath, "hooks.json");
+    const hooksConfig = JSON.parse(readFileSync(hooksPath, "utf-8"));
+    const harnessHook = hooksConfig["antigravity-harness-core"];
+
+    const commands: string[] = [];
+    for (const hookList of Object.values(harnessHook)) {
+      if (Array.isArray(hookList)) {
+        for (const item of hookList as any[]) {
+          if (item.command) commands.push(item.command);
+          if (Array.isArray(item.hooks)) {
+            for (const subItem of item.hooks) {
+              if (subItem.command) commands.push(subItem.command);
+            }
+          }
+        }
+      }
+    }
+
+    expect(commands.length).toBe(6);
+    for (const cmd of commands) {
+      expect(cmd).not.toContain("||");
+      expect(cmd).not.toContain("&&");
+      if (process.platform === "win32") {
+        const psCheck = spawnSync("powershell.exe", ["-NoProfile", "-Command", `[scriptblock]::Create('${cmd}')`], {
+          encoding: "utf-8",
+        });
+        expect(psCheck.status).toBe(0);
+      }
+    }
   });
 });

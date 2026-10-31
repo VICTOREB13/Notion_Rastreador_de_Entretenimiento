@@ -107,7 +107,7 @@ Para evitar que el agente cargue definiciones completas de artefactos en su vent
 Conforme a la **Regla 9 de AGENTS.md**, cualquier tarea que demande más de 6 operaciones mecánicas idénticas debe ser transferida a un script determinista.
 
 - **Herramienta:** `.agents/skills/artifact-standards/scripts/validate_artifact.ts`
-- **Motor:** Bun Runtime (tiempo de ejecución: **< 15 ms**)
+- **Motor:** Bun Runtime (tiempo de ejecución: **< 15 ms** dentro del proceso; cada hook completo tarda 130-180 ms)
 - **Validaciones Deterministas:**
   1. **Inicio de Frontmatter:** Debe comenzar estrictamente en la Línea 1 con `---`.
   2. **Delimitador de Cierre:** Cierre estricto con `---`.
@@ -125,13 +125,16 @@ Conforme a la **Regla 9 de AGENTS.md**, cualquier tarea que demande más de 6 op
 El Circuit Breaker es el escudo activo que previene desbordamientos de tokens y bucles destructivos en caliente durante la ejecución de cualquier herramienta.
 
 - **Ubicación:** `.agents/scripts/circuit_breaker.ts`
-- **Persistencia de Estado:** `_workspace/tool_counter.json` (escritura atómica).
+- **Persistencia de Estado:** `_workspace/tool_counters/<conversationId>.json` (escritura atómica, aislado por conversación). `TOOL_COUNTER_FILE` tiene prioridad.
+- **Contrato Real de `agy`:** Observado en la versión 1.3.1 y documentado en [[DOC_Auditoria_Harness_V9|Auditoría del Arnés V9]]. Difiere de la documentación oficial en puntos que afectan a este arnés.
 
 ### 4.1 Garantía de Salida Inmutable (Zero-Lockout Guarantee)
-Las herramientas de comunicación y persistencia crítica están en una lista blanca protegida incondicionalmente:
-- Herramientas nativas de Antigravity CLI: `send_message`, `write_to_file`, `replace_file_content`.
-- Alias de compatibilidad defensiva: `read_file`, `write_file`, `edit_file`, `ask_question`, `ask_permission`.
+Las herramientas de comunicación, persistencia y orquestación están en una lista blanca protegida incondicionalmente:
+- Comunicación: `send_message`, `ask_question`, `ask_permission`.
+- Escritura: `write_to_file`, `replace_file_content`, `write_file`, `edit_file`.
+- Orquestación: `manage_task`, `schedule`, `manage_subagents`, `invoke_subagent`, `define_subagent`.
 - **Comportamiento:** Estas herramientas **NUNCA** se bloquean. Esto asegura que el agente siempre conserve los canales de comunicación abiertos con el usuario y otros agentes, y mantenga su capacidad de guardar trabajo.
+- **Bootstrap a Prueba de Fallos (`src/hook_entry.ts`):** En `agy`, un hook que termina con exit != 0 bloquea la herramienta, incluidas las de esta lista. Por eso los hooks entran por un bootstrap sin imports estáticos: si el arnés no carga, responde en modo seguro y avisa con `[HARNESS DEGRADED]`, de modo que el agente conserva las herramientas para repararlo.
 
 ### 4.2 Límite de Lecturas Secuenciales Ciegas (Blind Sequential Reads)
 - **Umbral Duro:** Máximo **12 lecturas consecutivas** con la herramienta nativa `view_file` (o el alias `read_file`) sin alternar con herramientas de búsqueda estructurada (`grep_search`, `find_by_name`, `list_dir`) o escritura.
@@ -146,24 +149,39 @@ Las herramientas de comunicación y persistencia crítica están en una lista bl
 - **Instrucción al Agente:** Se instruye al agente a abandonar la lectura ciega y ejecutar búsquedas específicas con `grep_search` o forjar un script de escaneo por lotes en `scripts/`.
 
 ### 4.3 Detección de Fallos Repetitivos en Herramientas (Anti-Loop Breaker)
-- **Umbral Duro:** Máximo **3 fallos consecutivos** en cualquier herramienta o MCP.
-- **Acción:** Al tercer fallo consecutivo, la herramienta específica queda bloqueada preventivamente, forzando la pausa obligatoria del Protocolo Anti-Loop para auditar el origen real del fallo.
+- **Umbral Duro:** Máximo **3 fallos consecutivos** en cualquier herramienta o MCP. En `run_command` se cuenta por programa y subcomando (`run_command:git status`).
+- **Acción:** Al tercer fallo consecutivo, esa clave queda bloqueada preventivamente, forzando la pausa obligatoria del Protocolo Anti-Loop para auditar el origen real del fallo.
+- **Half-Open:** `agy` no dispara `PostToolUse` tras un `deny`, así que un circuito abierto no podría cerrarse solo. Tras 3 denegaciones se deja pasar un intento: si falla se reabre y si funciona se cierra. Un nuevo mensaje del usuario (`invocationNum` 0) también levanta los bloqueos.
+- **Bucles de Pruebas:** Un test rojo no es un fallo de herramienta, pero `consecutive_test_failures` lo acumula. A los 3 fallos se notifica `[HARNESS ANTI-LOOP]` y se bloquea reejecutar la suite sin cambios de código.
 
 ### 4.4 Normalización y Reseteo
 - El breaker normaliza prefijos y espacios de nombres (ej. `default_api:view_file` → `view_file`, `Server__Tool` → `tool`).
-- Se resetea automáticamente o mediante invocación explícita con el argumento `--reset` al iniciar un nuevo slice.
+- Se resetea mediante invocación explícita con el argumento `--reset`. Cada conversación parte de un estado limpio.
+
+### 4.4.1 Resultado Real de los Comandos
+`PostToolUse` recibe `error: ""` y ninguna salida aunque un comando termine con exit != 0. El resultado se resuelve después:
+1. `PostToolUse` deja el comando en `pending_outcomes`.
+2. `PostInvocation` lee el exit code del transcript (`post_invocation.ts`).
+3. Si el comando pasó a segundo plano, el paso queda en `RUNNING` sin exit code y se usa la evidencia de su log.
+4. Sin evidencia clara no se afirma éxito ni fallo: tras 6 invocaciones el paso se descarta sin registrarlo.
 
 ### 4.5 Auto-Sanación Determinista en Caliente (`--auto-heal` & `autoHealFromFailure()`) [Opción A]
-- **Mecanismo Silencioso:** Activado automáticamente vía flag `--auto-heal` en los hooks del IDE (`pre-tool-use.cmd` y `post-tool-use.cmd`).
+- **Mecanismo Silencioso:** Activado por los hooks del plugin: `PostToolUse` y `PostInvocation` ante fallos, `PreToolUse` ante bloqueos.
 - **Condición de Disparo:** Se activa cuando:
   1. Una herramienta acumula **≥ 2 fallos consecutivos**.
   2. Ocurre un bloqueo directo por el Circuit Breaker (`CIRCUIT_BREAKER_BLOCKED`).
 - **Flujo de Ejecución:**
   1. Invoca `autoHealFromFailure()` en `scripts/verify_recursive_loop.ts`.
-  2. Clasifica determinísticamente la causa raíz mediante `classifyRootCause()`.
-  3. Si es un **Harness Defect** (ej. bloqueos de lecturas, enforcer TDD, `sqlite_busy`, contract drift o fallos repetitivos), infiere la skill activa (`inferSkillFromContext`) y sintetiza una regla preventiva concisa (`synthesizeHeuristicRule`).
-  4. Inyecta la regla usando `FIFOHeuristicsManager` en `.agents/skills/<skill>/rules/learned_heuristics.md`, manteniendo el límite duro de **≤10 reglas** y **≤30 líneas** bajo política FIFO estricta.
-  5. Emite la notificación `[HARNESS AUTO-HEAL]` en el stdout del hook, permitiendo que el subagente asimile la heurística en el Turno 2 sin requerir intervención del usuario humano.
+  2. Clasifica determinísticamente la causa raíz mediante `classifyRootCause()`. La evidencia de código (`TypeError`, tests fallidos) prevalece sobre la repetición: un bug repetido sigue siendo un Code Defect y no genera regla.
+  3. Si es un **Harness Defect** (ej. bloqueos de lecturas, enforcer TDD, `sqlite_busy`, contract drift, comando inexistente o ruta errónea), infiere la skill activa (`inferSkillFromContext`) y sintetiza una regla preventiva concisa (`synthesizeHeuristicRule`). Si no hay patrón accionable no se inyecta nada: una regla genérica expulsaría reglas reales del FIFO.
+  4. Inyecta la regla usando `FIFOHeuristicsManager` en `<workspace>/.agents/skills/<skill>/rules/learned_heuristics.md`, validando antes de escribir y manteniendo el límite duro de **≤10 reglas** y **≤30 líneas**. Una regla que vuelve a dispararse pasa al final de la cola y no se desaloja antes de tiempo.
+  5. Encola la notificación `[HARNESS AUTO-HEAL]`, que `PreInvocation` entrega al agente en el turno siguiente: `PostToolUse` no puede devolver contenido.
+
+### 4.6 Medición de Efectividad y Promoción (Cierre del Bucle)
+- **Medición:** Cada regla autogenerada queda vinculada a la herramienta que la originó. Si el fallo reaparece con la regla activa, cuenta como fallo de la regla. Si una conversación usa esa herramienta sin que reaparezca, cuenta como éxito.
+- **Identidad:** La telemetría usa una clave derivada del contenido (`heuristicKey`), porque los ids `H-NN` se repiten entre skills y workspaces.
+- **Promoción:** `Stop` evalúa la promoción al final de cada turno. Exige score ≥ 0.80, ≥ 3 éxitos y evidencia en ≥ 2 workspaces. Una regla promovida que deja de cumplirlo pasa a `demoted`, y una con `status = 'revoked'` no vuelve a promoverse.
+- **Destilación Automática:** `Stop` genera `_workspace/friction_report.md` sin intervención del auditor.
 
 ---
 
@@ -269,6 +287,7 @@ Harness³ expande la auto-mejora bidimensional (Hooks locales + Auditoría en fr
 ---
 
 ## 🔗 Referencias y Artefactos Relacionados
+- [[DOC_Auditoria_Harness_V9|Auditoría del Bucle de Auto-Mejora Harness³ V9]]
 - [[DOC_Arquitectura_Agentes|01. Arquitectura General de Agentes V9 (SDLC Git-Native & Harness³)]]
 - [[DOC_Metodologia_Prototipado_Evolutivo|02. Metodología de Prototipado Evolutivo V9]]
 - [[DOC_Guia_Inicio_Rapido_y_Portabilidad_V9|03. Guía de Inicio Rápido, Portabilidad e Instalación Multi-Entorno V9]]

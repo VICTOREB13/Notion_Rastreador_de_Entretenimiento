@@ -1,134 +1,49 @@
 "use client";
-
 import React, { useState, useEffect } from "react";
-import { Sun, Moon, Monitor } from "lucide-react";
+import { Sun, Moon, Monitor, Cpu, Sparkles } from "lucide-react";
 import { DialogModal } from "@/components/ui/DialogModal";
 import { useTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
-import {
-  useSystemSettingsQuery,
-  useAiSettingsQuery,
-  useUpdateAiSettingsMutation,
-  useTestAiConnectionMutation,
-  useTriggerSyncMutation,
-} from "@/lib/hooks";
+import { useSystemSettingsQuery, useTriggerSyncMutation } from "@/lib/hooks";
 import { ServicesTelemetryGrid } from "./ServicesTelemetryGrid";
 import { KineticManualSyncCard } from "./KineticManualSyncCard";
-import { AiModelConfigForm } from "./AiModelConfigForm";
 
 export interface TelemetryModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-const MODEL_OPTIONS = [
-  { value: "gemini-2.0-flash", label: "gemini-2.0-flash", description: "Predeterminado / Ultra rápido multimodal", badge: "2.0 Flash" },
-  { value: "gemini-2.0-flash-lite", label: "gemini-2.0-flash-lite", description: "Ligero y económico", badge: "2.0 Lite" },
-  { value: "gemini-2.0-pro-exp-02-05", label: "gemini-2.0-pro-exp-02-05", description: "Razonamiento profundo", badge: "2.0 Pro" },
-  { value: "gemini-1.5-flash", label: "gemini-1.5-flash", description: "Versión previa de alta estabilidad", badge: "1.5 Flash" },
-  { value: "gemini-1.5-pro", label: "gemini-1.5-pro", description: "Contexto masivo de 2M tokens", badge: "1.5 Pro" },
-  { value: "custom", label: "Personalizado / Serie Argon", description: "Ingreso libre para modelos experimentales", badge: "Custom" },
-];
-
 export function TelemetryModal({ isOpen, onClose }: TelemetryModalProps) {
   const { theme, setTheme } = useTheme();
   const { data: telemetry } = useSystemSettingsQuery();
-  const { data: aiSettings } = useAiSettingsQuery();
-  const updateAiMutation = useUpdateAiSettingsMutation();
-  const testAiMutation = useTestAiConnectionMutation();
   const syncMutation = useTriggerSyncMutation();
 
-  const [provider, setProvider] = useState("gemini");
-  const [selectedPreset, setSelectedPreset] = useState("gemini-2.0-flash");
-  const [customModelName, setCustomModelName] = useState("");
-  const [apiKey, setApiKey] = useState("");
-  const [temperature, setTemperature] = useState(0.4);
-  const [showApiKey, setShowApiKey] = useState(false);
-  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
-  const [saveError, setSaveError] = useState<string | null>(null);
   const [syncSuccessMsg, setSyncSuccessMsg] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (aiSettings) {
-      setProvider(aiSettings.activeProvider || "gemini");
-      const currentModel = aiSettings.selectedModel || "gemini-2.0-flash";
-      const isKnown = MODEL_OPTIONS.some((m) => m.value === currentModel && m.value !== "custom");
-      if (isKnown) {
-        setSelectedPreset(currentModel);
-        setCustomModelName("");
-      } else {
-        setSelectedPreset("custom");
-        setCustomModelName(currentModel);
-      }
-      setTemperature(aiSettings.temperature ?? 0.4);
-    }
-  }, [aiSettings]);
+  const [syncErrorMsg, setSyncErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
-      setSaveError(null);
-      setTestResult(null);
       setSyncSuccessMsg(null);
+      setSyncErrorMsg(null);
     }
   }, [isOpen]);
 
-  const activeModel =
-    selectedPreset === "custom"
-      ? customModelName.trim() || "gemini-2.0-flash"
-      : selectedPreset;
-
-  const handleTestConnection = async () => {
-    setTestResult(null);
-    try {
-      const res = await testAiMutation.mutateAsync({
-        apiKey: apiKey || undefined,
-        model: activeModel,
-      });
-      if (res.connected) {
-        setTestResult({
-          success: true,
-          message: `Conexión exitosa con ${activeModel} vía Gemini API.`,
-        });
-      } else {
-        setTestResult({
-          success: false,
-          message: "No se pudo conectar con el modelo. Verifica tu API Key.",
-        });
-      }
-    } catch (err: any) {
-      setTestResult({
-        success: false,
-        message: err.message || "Error al verificar conexión con la API.",
-      });
-    }
-  };
-
-  const handleSaveSettings = async () => {
-    setSaveError(null);
-    try {
-      await updateAiMutation.mutateAsync({
-        activeProvider: provider as any,
-        selectedModel: activeModel,
-        temperature,
-        geminiApiKey: apiKey || undefined,
-      });
-      onClose();
-    } catch (err: any) {
-      setSaveError(err.message || "Error al guardar la configuración de IA.");
-    }
-  };
-
   const handleTriggerSync = async () => {
     setSyncSuccessMsg(null);
+    setSyncErrorMsg(null);
     try {
       const res = await syncMutation.mutateAsync();
-      const gamesCount = (res?.data?.games?.updatedNotion ?? 0) + (res?.data?.games?.createdNotion ?? 0);
+      const gamesCount =
+        (res?.data?.games?.updatedNotion ?? 0) + (res?.data?.games?.createdNotion ?? 0);
       const moviesCount = res?.data?.movies?.moviesEnriched ?? 0;
       setSyncSuccessMsg(`¡Sincronizado! (${gamesCount} juegos, ${moviesCount} películas)`);
     } catch (err: any) {
-      setSaveError(err.message || "Error al sincronizar con Notion y Steam.");
+      setSyncErrorMsg(err.message || "Error al sincronizar con Notion y Steam.");
     }
   };
+
+  const activeModel = telemetry?.activeModel || "gemini-2.5-flash";
+  const isAiConnected = Boolean(telemetry?.isGeminiConnected);
 
   return (
     <DialogModal
@@ -142,31 +57,73 @@ export function TelemetryModal({ isOpen, onClose }: TelemetryModalProps) {
         {/* SECTION 1: Service Telemetry Grid */}
         <ServicesTelemetryGrid telemetry={telemetry} />
 
-        {/* SECTION 2: Kinetic Manual Sync Bar */}
-        <KineticManualSyncCard
-          isPending={syncMutation.isPending}
-          successMsg={syncSuccessMsg}
-          onTriggerSync={handleTriggerSync}
-        />
+        {/* SECTION 2: Kinetic Manual Sync Card */}
+        <div className="space-y-1.5">
+          <KineticManualSyncCard
+            isPending={syncMutation.isPending}
+            successMsg={syncSuccessMsg}
+            onTriggerSync={handleTriggerSync}
+          />
+          {syncErrorMsg && (
+            <p className="text-[11px] font-mono text-rose-500 px-2">{syncErrorMsg}</p>
+          )}
+        </div>
 
-        {/* SECTION 3: Dynamic Model Selection */}
-        <AiModelConfigForm
-          selectedPreset={selectedPreset}
-          onSelectPreset={setSelectedPreset}
-          customModelName={customModelName}
-          onChangeCustomModelName={setCustomModelName}
-          activeModel={activeModel}
-          apiKey={apiKey}
-          onChangeApiKey={setApiKey}
-          showApiKey={showApiKey}
-          onToggleShowApiKey={() => setShowApiKey(!showApiKey)}
-          isConfigured={aiSettings?.geminiConfigured}
-          temperature={temperature}
-          onChangeTemperature={setTemperature}
-          testResult={testResult}
-          saveError={saveError}
-          modelOptions={MODEL_OPTIONS}
-        />
+        {/* SECTION 3: Motor de IA Soberano (Showcase Público de Solo Lectura) */}
+        <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800/80 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-rose-500/10 text-rose-500">
+                <Cpu className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="font-semibold text-zinc-900 dark:text-zinc-100 text-xs">
+                  Motor de Inteligencia Artificial
+                </h4>
+                <p className="text-[10px] text-zinc-500 dark:text-zinc-400">
+                  Configuración soberana administrada desde variables de entorno del servidor (.env)
+                </p>
+              </div>
+            </div>
+            <span
+              className={cn(
+                "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono font-semibold border",
+                isAiConnected
+                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                  : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
+              )}
+            >
+              <span
+                className={cn(
+                  "w-1.5 h-1.5 rounded-full shrink-0",
+                  isAiConnected ? "bg-emerald-500" : "bg-amber-500"
+                )}
+              />
+              {isAiConnected ? "Operativo" : "En Espera"}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 font-mono text-[11px]">
+            <div className="p-2.5 rounded-xl bg-white dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800/80">
+              <span className="text-[10px] uppercase tracking-wider text-zinc-400 block mb-0.5">
+                Proveedor de Inferencia
+              </span>
+              <span className="font-bold text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-rose-500" />
+                Google Gemini
+              </span>
+            </div>
+
+            <div className="p-2.5 rounded-xl bg-white dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800/80">
+              <span className="text-[10px] uppercase tracking-wider text-zinc-400 block mb-0.5">
+                Modelo Activo en Servidor
+              </span>
+              <span className="font-bold text-rose-600 dark:text-rose-400 truncate block">
+                {activeModel}
+              </span>
+            </div>
+          </div>
+        </div>
 
         {/* SECTION 4: Apariencia & Modo (Dark, Light, System) */}
         <div className="pt-2 border-t border-zinc-200 dark:border-zinc-800/80">
@@ -205,34 +162,15 @@ export function TelemetryModal({ isOpen, onClose }: TelemetryModalProps) {
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800/80 flex items-center justify-between gap-3">
+        {/* Action Buttons: Botón limpio y elegante de Cerrar */}
+        <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800/80 flex items-center justify-end">
           <button
             type="button"
-            onClick={handleTestConnection}
-            disabled={testAiMutation.isPending}
-            className="px-4 py-2 rounded-xl text-xs font-semibold bg-zinc-100 hover:bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-200 transition-colors cursor-pointer disabled:opacity-50"
+            onClick={onClose}
+            className="px-5 py-2 rounded-xl text-xs font-semibold bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-100 dark:hover:bg-white dark:text-zinc-900 shadow-xs transition-colors cursor-pointer"
           >
-            {testAiMutation.isPending ? "Verificando..." : "Probar Conexión"}
+            Cerrar
           </button>
-
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 rounded-xl text-xs font-semibold text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors cursor-pointer"
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              onClick={handleSaveSettings}
-              disabled={updateAiMutation.isPending}
-              className="px-5 py-2 rounded-xl text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white shadow-xs transition-colors cursor-pointer disabled:opacity-50"
-            >
-              {updateAiMutation.isPending ? "Guardando..." : "Guardar Cambios"}
-            </button>
-          </div>
         </div>
       </div>
     </DialogModal>

@@ -1,4 +1,5 @@
 import { CircuitBreaker } from "../../../scripts/circuit_breaker";
+import { pushNotice, resolveCounterPath, resolveWorkspaceRoot } from "../../../scripts/harness_io";
 import { sanitizeToolArgs } from "./sanitizer";
 import { TelemetryDB } from "./telemetry_db";
 
@@ -20,13 +21,47 @@ export interface PreToolUseResponse {
   permissionOverrides?: string[];
 }
 
+function recordDenial(
+  breaker: CircuitBreaker,
+  payload: PreToolUsePayload,
+  toolName: string,
+  args: Record<string, any>,
+  reason: string,
+  workspaceRoot: string,
+  options?: { customTelemetryPath?: string }
+): string {
+  breaker.recordDenial(toolName, args);
+
+  // Tras un "deny" agy no dispara PostToolUse: este es el único punto donde aprender del bloqueo
+  const heal = breaker.autoHeal({ tool: toolName, breakerBlocked: true, breakerReason: reason, workspaceRoot });
+  let telemetry: TelemetryDB | null = null;
+  try {
+    telemetry = new TelemetryDB(options?.customTelemetryPath);
+    telemetry.recordToolExecution({
+      conversationId: payload.conversationId,
+      stepIdx: payload.stepIdx,
+      toolName,
+      isSuccess: false,
+      errorMessage: reason,
+    });
+    telemetry.recordErrorSignature(toolName, reason);
+  } catch (err: any) {
+    pushNotice(workspaceRoot, `[HARNESS DEGRADED] Telemetría no disponible en PreToolUse: ${err?.message}`);
+  } finally {
+    telemetry?.close();
+  }
+
+  return heal.healed && heal.injectedRule ? `${reason}\n${heal.feedbackMessage}` : reason;
+}
+
 export function handlePreToolUse(
   payload: PreToolUsePayload,
   options?: { customCounterPath?: string; customTelemetryPath?: string }
 ): PreToolUseResponse {
   const toolName = payload.toolCall?.name || "";
   const rawArgs = payload.toolCall?.args || {};
-  const workspacePaths = payload.workspacePaths || [];
+  const workspaceRoot = resolveWorkspaceRoot(payload);
+  const workspacePaths = payload.workspacePaths || [workspaceRoot];
 
   if (!toolName) {
     return { decision: "allow" };
@@ -36,7 +71,7 @@ export function handlePreToolUse(
   const sanitizeRes = sanitizeToolArgs(toolName, rawArgs, workspacePaths);
 
   // 2. Circuit Breaker V9 Verification
-  const breaker = new CircuitBreaker(options?.customCounterPath);
+  const breaker = new CircuitBreaker(options?.customCounterPath || resolveCounterPath(workspaceRoot, payload.conversationId));
   const effectiveArgs = sanitizeRes.sanitized
     ? { ...rawArgs, ...sanitizeRes.overwrittenArgs }
     : rawArgs;
@@ -45,9 +80,10 @@ export function handlePreToolUse(
 
   // 3. Taxative Decision ("deny" on failure, never "block")
   if (!breakerCheck.allowed) {
+    const reason = breakerCheck.reason || "CIRCUIT_BREAKER_BLOCKED: Tool execution denied by Harness³ Anti-Loop Policy.";
     return {
       decision: "deny",
-      reason: breakerCheck.reason || "CIRCUIT_BREAKER_BLOCKED: Tool execution denied by Harness³ Anti-Loop Policy.",
+      reason: recordDenial(breaker, payload, toolName, effectiveArgs, reason, workspaceRoot, options),
     };
   }
 
@@ -55,6 +91,7 @@ export function handlePreToolUse(
   const response: PreToolUseResponse = { decision: "allow" };
   if (sanitizeRes.sanitized && Object.keys(sanitizeRes.overwrittenArgs).length > 0) {
     response.overwrite = sanitizeRes.overwrittenArgs;
+    breaker.markSanitized(payload.stepIdx);
   }
 
   return response;

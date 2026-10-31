@@ -3,14 +3,14 @@
     "SessionStart": [
       {
         "type": "command",
-        "command": "bun run ./src/session_start.ts",
+        "command": "bun run ./src/hook_entry.ts session_start",
         "timeout": 15
       }
     ],
     "PreInvocation": [
       {
         "type": "command",
-        "command": "bun run ./src/pre_invocation.ts",
+        "command": "bun run ./src/hook_entry.ts pre_invocation",
         "timeout": 15
       }
     ],
@@ -20,7 +20,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun run ./src/pre_tool_use.ts",
+            "command": "bun run ./src/hook_entry.ts pre_tool_use",
             "timeout": 15
           }
         ]
@@ -32,7 +32,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun run ./src/post_tool_use.ts",
+            "command": "bun run ./src/hook_entry.ts post_tool_use",
             "timeout": 15
           }
         ]
@@ -41,14 +41,14 @@
     "PostInvocation": [
       {
         "type": "command",
-        "command": "bun run ./src/post_invocation.ts",
+        "command": "bun run ./src/hook_entry.ts post_invocation",
         "timeout": 15
       }
     ],
     "Stop": [
       {
         "type": "command",
-        "command": "bun run ./src/stop_guardian.ts",
+        "command": "bun run ./src/hook_entry.ts stop_guardian",
         "timeout": 20
       }
     ]

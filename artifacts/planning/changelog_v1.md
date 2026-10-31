@@ -1,10 +1,10 @@
 ---
 tipo: changelog
 proyecto: Notion_Rastreador_de_Entretenimiento
-version: v2.0.0
+version: v2.0.1
 estado: activo
-fecha: 2026-10-28
-tags: [proyecto, changelog, versiones, release, quality-gate, v2, docker, nextjs16, hono]
+fecha: 2026-10-31
+tags: [proyecto, changelog, versiones, release, quality-gate, v2, docker, nextjs16, hono, fix]
 ---
 
 # Registro de Cambios (Changelog) - Notion Rastreador de Entretenimiento
@@ -15,6 +15,30 @@ Todos los cambios notables de este proyecto se documentarán en este archivo sig
 > 1. Este archivo es la **fuente única de verdad** para los cortes de versión y las notas oficiales de **GitHub Releases** (`gh release create`).
 > 2. Mantén un estándar técnico riguroso (Anti-Slop): incluye métricas cuantitativas, rutas exactas de archivos, clases y justificación de la causa raíz.
 > 3. Queda prohibido el uso de viñetas genéricas como "mejoras varias" o "bugs corregidos".
+
+---
+
+## [2.0.1] - 2026-10-31 (Estabilización Producción: Concurrencia SQLite, Proxy Runtime, Dark/Light Mode y Telemetría Soberana)
+
+### Fixed & Architecture Hardening
+- **Eliminación de Condición de Carrera en Repositorio de Ajustes SQLite (`ai-settings.repository.ts`):**
+  - Sustituida la consulta secuencial `findUnique` + `create` por `prisma.aiSettings.upsert({ where: { id: "default" } })`, erradicando el error fatal `Unique constraint failed on the fields: (id)` y las respuestas 500 no controladas ante llamadas concurrentes de inicio.
+  - Sincronización soberana con `process.env.GEMINI_MODEL`: el modelo activo en servidor prevalece sobre valores estáticos en SQLite.
+- **Robustecimiento del Proxy en Runtime de Next.js (`apps/web/src/app/api/[...path]/route.ts`):**
+  - Implementada bufferización completa con `await upstreamRes.arrayBuffer()` para peticiones no-SSE, erradicando los errores de socket `UND_ERR_SOCKET` y `failed to pipe response`.
+  - Vinculación de `request.signal` para cancelación limpia de streams y manejo de desconexión del cliente con código HTTP 499 en lugar de falsos errores 502 de gateway.
+- **Reconstrucción del Sistema de Diseño Dual (Dark / Light Mode):**
+  - Añadida directiva `@custom-variant dark (&:where(.dark, .dark *));` en `apps/web/src/app/globals.css` para compatibilidad estricta con Tailwind CSS v4.
+  - Erradicadas clases oscuras fijas (`bg-[#111113]`) en `DarkIslandSplineCard`, `SegmentedProgressCard`, `SpotlightCard`, `BentoCatalogGrid`, `GameCard`, `MovieCard` e `ItemDetailModal`. Ahora responden dinámicamente con tokens Obsidian Zinc & Crimson Crisp en modo oscuro y claro con ratio WCAG AAA (>12:1).
+- **Copia de Assets Estáticos en Imagen Docker (`apps/web/Dockerfile`):**
+  - Añadida la capa `COPY --from=builder /app/apps/web/public ./public` en la etapa de producción `runner`, resolviendo el error 404 y la imagen rota del logotipo en el header.
+- **Purificación del Modal de Telemetría (Showcase Público de Solo Lectura):**
+  - Eliminado `AiModelConfigForm.tsx` (removidos inputs de API Keys, selectores de modelos y sliders de temperatura).
+  - Diseñada tarjeta informativa de solo lectura con modelo activo en servidor, proveedor, selector de apariencia (Oscuro / Claro / Sistema) y botón de acción única "Sincronizar Steam hacia Notion" con `MorphButton`.
+- **Integración de `SpringSegmentedControl` en Gráfica de Series de Tiempo:**
+  - Sustituidos botones HTML planos por la píldora animada con física de resortes elástica y compresión squash para rangos 7D / 30D / 90D en `DarkIslandSplineCard.tsx`.
+- **Sincronización Bootstrap en `DaemonScheduler`:**
+  - Añadido disparo inicial diferido a los 3 segundos de iniciado el servidor para hidratar el catálogo de Notion en SQLite sin esperar el ciclo de 120 segundos.
 
 ---
 

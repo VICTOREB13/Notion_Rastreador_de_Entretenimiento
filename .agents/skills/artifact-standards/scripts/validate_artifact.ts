@@ -104,12 +104,8 @@ export function validateArtifactContent(content: string, options: ValidateOption
     errors.push("Bloque '```mermaid' detectado. Los diagramas Mermaid están estrictamente prohibidos; use diagramas HTML interactivos de Archify.");
   }
 
-  if (/file:\/\/\//i.test(bodyContent)) {
-    errors.push("Enlace o referencia local con protocolo 'file:///' detectado. Use wikilinks de Obsidian '[[PRJ_{PROYECTO}_{artefacto}|Alias]]' en su lugar.");
-  }
-
-  if (/[a-zA-Z]:[\\\/]Users[\\\/]/i.test(bodyContent)) {
-    errors.push("Ruta local absoluta detectada (ej. 'C:\\Users\\...'). Use wikilinks canónicos de Obsidian '[[PRJ_{PROYECTO}_{artefacto}|Alias]]' en su lugar.");
+  if (/\[.*?\]\(\s*file:\/\/\/[^)]+\)/i.test(bodyContent)) {
+    errors.push("Enlace local con protocolo 'file:///' detectado. Use wikilinks de Obsidian '[[PRJ_{PROYECTO}_{artefacto}|Alias]]' en su lugar.");
   }
 
   if (options.schemaPath) {

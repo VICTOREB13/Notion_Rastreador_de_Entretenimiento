@@ -34,9 +34,11 @@ export class PromotionEngine {
 
   /**
    * Evalúa las heurísticas registradas en la telemetría y promueve aquellas
-   * con alta tasa de éxito empírico (≥ 80%) y volumen representativo (≥ 3 éxitos).
+   * con alta tasa de éxito empírico (≥ 80%), volumen representativo (≥ 3 éxitos) y evidencia
+   * en más de un workspace. Una regla promovida que deja de cumplir se degrada, y una revocada
+   * a mano (status = 'revoked') no vuelve a promoverse.
    */
-  public evaluateAndPromote(minSuccesses = 3, minScore = 0.8): PromotionEvaluationResult {
+  public evaluateAndPromote(minSuccesses = 3, minScore = 0.8, minWorkspaces = 2): PromotionEvaluationResult {
     const rawHeuristics = (this.telemetry as any).db.query(`
       SELECT
         rule_id,
@@ -56,17 +58,26 @@ export class PromotionEngine {
       const succeeded = Number(h.total_succeeded || 0);
       const failed = Number(h.total_failed || 0);
       const total = succeeded + failed;
-      if (total === 0 || succeeded < minSuccesses) continue;
+      if (total === 0) continue;
 
       const successRate = succeeded / total;
       const volumeFactor = Math.min(1.0, succeeded / minSuccesses);
       const score = Math.round(successRate * volumeFactor * 100) / 100;
+      const qualifies = succeeded >= minSuccesses && score >= minScore && Number(h.workspace_count) >= minWorkspaces;
 
-      if (score >= minScore) {
+      if (!qualifies) {
+        (this.telemetry as any).db.prepare(`
+          UPDATE promoted_heuristics SET status = 'demoted' WHERE rule_id = ? AND status = 'promoted'
+        `).run(h.rule_id);
+        continue;
+      }
+
+      {
         // Verificar si ya fue promovida
         const existing = (this.telemetry as any).db.query(`
           SELECT * FROM promoted_heuristics WHERE rule_id = ?
         `).get(h.rule_id) as any;
+        if (existing?.status === "revoked") continue;
 
         const stmt = (this.telemetry as any).db.prepare(`
           INSERT INTO promoted_heuristics (rule_id, skill, rule_text, promotion_score, status)

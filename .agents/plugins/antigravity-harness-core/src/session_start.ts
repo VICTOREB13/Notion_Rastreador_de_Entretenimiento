@@ -1,4 +1,8 @@
+import { join } from "node:path";
+import { pruneOldFiles, resolveWorkspaceRoot } from "../../../scripts/harness_io";
 import { TelemetryDB } from "./telemetry_db";
+
+const COUNTER_RETENTION_DAYS = 7;
 
 export interface SessionStartPayload {
   conversationId?: string;
@@ -11,7 +15,9 @@ export interface SessionStartPayload {
 
 export function handleSessionStart(payload: SessionStartPayload): Record<string, any> {
   try {
+    pruneOldFiles(join(resolveWorkspaceRoot(payload), "_workspace", "tool_counters"), COUNTER_RETENTION_DAYS);
     const telemetry = new TelemetryDB();
+    telemetry.prune();
     telemetry.close();
   } catch {}
 

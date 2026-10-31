@@ -1,14 +1,18 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, unlinkSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { existsSync, mkdirSync, readFileSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
+import { join, resolve } from "node:path";
+import { tmpdir } from "node:os";
 import {
   CircuitBreaker,
   DEFAULT_COUNTER_PATH,
   IMMUTABLE_WHITELIST,
   isTestRunner,
+  isToolFailurePayload,
   MAX_CONSECUTIVE_FAILURES,
   MAX_CONSECUTIVE_READS,
   MAX_TOOLS_WITHOUT_TESTS,
+  PROBE_AFTER_DENIALS,
+  runCLI,
   TEST_RUNNER_REGEX,
 } from "./circuit_breaker";
 
@@ -21,8 +25,13 @@ function cleanup() {
 }
 
 describe("CircuitBreaker Unit Tests", () => {
-  beforeEach(cleanup);
-  afterEach(cleanup);
+  beforeEach(() => {
+    cleanup();
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
 
   test("1. Initializes with empty state and creates file on save", () => {
     const breaker = new CircuitBreaker(TEST_COUNTER_PATH);
@@ -246,8 +255,11 @@ describe("CircuitBreaker Unit Tests", () => {
   test("12. In-Flight TDD Enforcer: tracks tools_since_last_test_runner and blocks at 14 consecutive non-test calls", () => {
     const breaker = new CircuitBreaker(TEST_COUNTER_PATH);
 
-    // Execute 14 non-test tools (alternating read and search to avoid read streak breaker)
-    for (let i = 1; i <= MAX_TOOLS_WITHOUT_TESTS; i++) {
+    // The budget only applies once there is unvalidated code
+    breaker.recordInvocation("write_to_file", { TargetFile: "src/app.ts" });
+
+    // Execute 13 more non-test tools (alternating read and search to avoid read streak breaker)
+    for (let i = 2; i <= MAX_TOOLS_WITHOUT_TESTS; i++) {
       const toolName = i % 2 === 0 ? "grep_search" : "find_by_name";
       const res = breaker.checkAndRecord(toolName);
       expect(res.allowed).toBe(true);
@@ -304,8 +316,9 @@ describe("CircuitBreaker Unit Tests", () => {
   test("14. Whitelist tools are NEVER blocked by TDD Enforcer even when budget is exhausted (>14 calls)", () => {
     const breaker = new CircuitBreaker(TEST_COUNTER_PATH);
 
-    // Saturate counter to 20
-    for (let i = 0; i < 20; i++) {
+    // Saturate counter to 20 with unvalidated code
+    breaker.recordInvocation("write_to_file", { TargetFile: "src/app.ts" });
+    for (let i = 0; i < 19; i++) {
       breaker.recordInvocation("grep_search");
     }
     expect(breaker.getState().tools_since_last_test_runner).toBe(20);
@@ -324,7 +337,8 @@ describe("CircuitBreaker Unit Tests", () => {
   test("15. run_command with CommandLine payload is recognized as test runner and resets counter", () => {
     const breaker = new CircuitBreaker(TEST_COUNTER_PATH);
 
-    for (let i = 0; i < 14; i++) {
+    breaker.recordInvocation("write_to_file", { TargetFile: "src/app.ts" });
+    for (let i = 0; i < 13; i++) {
       breaker.recordInvocation("grep_search");
     }
     expect(breaker.getState().tools_since_last_test_runner).toBe(14);
@@ -341,5 +355,336 @@ describe("CircuitBreaker Unit Tests", () => {
     // Invoking it resets counter to 0
     breaker.recordInvocation("run_command", { CommandLine: "bun test" });
     expect(breaker.getState().tools_since_last_test_runner).toBe(0);
+  });
+
+  test("16. TDD Enforcer does not block read-only sessions (exploration or planning)", () => {
+    const breaker = new CircuitBreaker(TEST_COUNTER_PATH);
+    for (let i = 0; i < 30; i++) breaker.recordInvocation("grep_search");
+    expect(breaker.check("grep_search").allowed).toBe(true);
+
+    // Documentation edits are not code either
+    breaker.recordInvocation("write_to_file", { TargetFile: "artifacts/planning/task.md" });
+    expect(breaker.check("grep_search").allowed).toBe(true);
+  });
+
+  test("17. Orchestration tools stay available and do not consume the TDD budget", () => {
+    const breaker = new CircuitBreaker(TEST_COUNTER_PATH);
+    for (const tool of ["invoke_subagent", "manage_task", "schedule", "manage_subagents", "define_subagent"]) {
+      breaker.recordInvocation(tool);
+      expect(breaker.isWhitelisted(tool)).toBe(true);
+    }
+    expect(breaker.getState().tools_since_last_test_runner).toBe(0);
+  });
+
+  test("18. Test runner detection requires command position and covers project scripts", () => {
+    for (const command of ["bun run test:harness", "bun test ./src", "cd api && pytest -q", "npx vitest run", "php artisan test", "dart test", "python -m pytest", "cmd /c bun test"]) {
+      expect(isTestRunner("run_command", { CommandLine: command })).toBe(true);
+    }
+    for (const command of ["echo bun test", "git commit -m 'run bun test'", "grep -r pytest ."]) {
+      expect(isTestRunner("run_command", { CommandLine: command })).toBe(false);
+    }
+  });
+
+  test("19. Failures are tracked per command family: rustc failing does not block git", () => {
+    const breaker = new CircuitBreaker(TEST_COUNTER_PATH);
+    for (let i = 0; i < 3; i++) breaker.recordFailure("run_command", { CommandLine: "rustc --version" });
+
+    expect(breaker.check("run_command", { CommandLine: "rustc main.rs" }).allowed).toBe(false);
+    expect(breaker.check("run_command", { CommandLine: "git status" }).allowed).toBe(true);
+    expect(breaker.check("run_command", { CommandLine: "bun install" }).allowed).toBe(true);
+  });
+
+  test("20. Half-open: an open circuit lets one probe through after repeated denials", () => {
+    const breaker = new CircuitBreaker(TEST_COUNTER_PATH);
+    for (let i = 0; i < 3; i++) breaker.recordFailure("grep_search");
+
+    for (let i = 0; i < PROBE_AFTER_DENIALS; i++) {
+      expect(breaker.check("grep_search").allowed).toBe(false);
+      breaker.recordDenial("grep_search");
+    }
+    expect(breaker.check("grep_search").allowed).toBe(true);
+
+    // A failed probe re-opens the circuit; a successful one closes it
+    breaker.recordFailure("grep_search");
+    expect(breaker.check("grep_search").allowed).toBe(false);
+    breaker.recordSuccess("grep_search");
+    expect(breaker.check("grep_search").allowed).toBe(true);
+  });
+
+  test("21. Re-running a failing suite with no code change is blocked until something changes", () => {
+    const breaker = new CircuitBreaker(TEST_COUNTER_PATH);
+    const args = { CommandLine: "bun test" };
+    for (let i = 0; i < 3; i++) {
+      breaker.recordInvocation("run_command", args);
+      breaker.recordTestResult(false);
+    }
+    expect(breaker.check("run_command", args).allowed).toBe(false);
+
+    breaker.recordInvocation("replace_file_content", { TargetFile: "src/app.ts" });
+    expect(breaker.check("run_command", args).allowed).toBe(true);
+  });
+
+  test("22. A new human turn lifts the blocks of the previous one", () => {
+    const breaker = new CircuitBreaker(TEST_COUNTER_PATH);
+    for (let i = 0; i < 3; i++) breaker.recordFailure("grep_search");
+    breaker.clearTransientBlocks();
+    expect(breaker.check("grep_search").allowed).toBe(true);
+  });
+
+  test("23. Normalizes server__tool names as documented", () => {
+    const breaker = new CircuitBreaker(TEST_COUNTER_PATH);
+    expect(breaker.normalizeToolName("Server__View_File")).toBe("view_file");
+  });
+});
+
+describe("CircuitBreaker CLI Execution Tests", () => {
+  beforeEach(() => cleanup());
+  afterEach(() => cleanup());
+
+  test("CLI: allows normal tool calls with exit code 0", async () => {
+    const exitCode = await runCLI(["--counter-file", TEST_COUNTER_PATH, "--tool", "find_by_name"]);
+    expect(exitCode).toBe(0);
+  });
+
+  test("CLI: blocks when exceeding consecutive reads with exit code 1", async () => {
+    // Perform 12 reads
+    for (let i = 0; i < 12; i++) {
+      const code = await runCLI(["--counter-file", TEST_COUNTER_PATH, "--tool", "read_file"]);
+      expect(code).toBe(0);
+    }
+    // 13th call must return 1
+    const blockedCode = await runCLI(["--counter-file", TEST_COUNTER_PATH, "--tool", "read_file"]);
+    expect(blockedCode).toBe(1);
+  });
+
+  test("CLI: resets counters with --reset", async () => {
+    const resetCode = await runCLI(["--counter-file", TEST_COUNTER_PATH, "--reset"]);
+    expect(resetCode).toBe(0);
+
+    const statusCode = await runCLI(["--counter-file", TEST_COUNTER_PATH, "--status"]);
+    expect(statusCode).toBe(0);
+  });
+
+  test("CLI: records failures and blocks on 3rd failure", async () => {
+    const tool = "unstable_tool";
+    const f1 = await runCLI(["--counter-file", TEST_COUNTER_PATH, "--fail", tool]);
+    expect(f1).toBe(0); // 1st failure: retries remain
+    const f2 = await runCLI(["--counter-file", TEST_COUNTER_PATH, "--fail", tool]);
+    expect(f2).toBe(0); // 2nd failure: retries remain
+    const f3 = await runCLI(["--counter-file", TEST_COUNTER_PATH, "--fail", tool]);
+    expect(f3).toBe(1); // 3rd failure: trips breaker
+
+    const code = await runCLI(["--counter-file", TEST_COUNTER_PATH, "--tool", tool]);
+    expect(code).toBe(1);
+
+    // Record success
+    const successCode = await runCLI(["--counter-file", TEST_COUNTER_PATH, "--success", tool]);
+    expect(successCode).toBe(0);
+
+    // Now allowed
+    const unblockedCode = await runCLI(["--counter-file", TEST_COUNTER_PATH, "--tool", tool]);
+    expect(unblockedCode).toBe(0);
+  });
+
+  test("CLI: Whitelist tool failure recording maintains allowed: true", async () => {
+    const code = await runCLI(["--counter-file", TEST_COUNTER_PATH, "--fail", "send_message"]);
+    expect(code).toBe(0);
+
+    const checkCode = await runCLI(["--counter-file", TEST_COUNTER_PATH, "--tool", "send_message"]);
+    expect(checkCode).toBe(0);
+  });
+
+  test("CLI: PostToolUse mode handles success and failure payloads correctly", async () => {
+    const tool = "post_test_tool";
+    // Success via post-tool
+    const sCode = await runCLI(["--counter-file", TEST_COUNTER_PATH, "--post-tool", "--tool", tool]);
+    expect(sCode).toBe(0);
+
+    // Fail via direct fail CLI mode
+    await runCLI(["--counter-file", TEST_COUNTER_PATH, "--fail", tool]);
+    await runCLI(["--counter-file", TEST_COUNTER_PATH, "--fail", tool]);
+    const tripCode = await runCLI(["--counter-file", TEST_COUNTER_PATH, "--fail", tool]);
+    expect(tripCode).toBe(1);
+
+    // PreTool check is blocked
+    const checkBlocked = await runCLI(["--counter-file", TEST_COUNTER_PATH, "--tool", tool]);
+    expect(checkBlocked).toBe(1);
+
+    // Success resets
+    const resetSuccess = await runCLI(["--counter-file", TEST_COUNTER_PATH, "--success", tool]);
+    expect(resetSuccess).toBe(0);
+
+    const checkAllowed = await runCLI(["--counter-file", TEST_COUNTER_PATH, "--tool", tool]);
+    expect(checkAllowed).toBe(0);
+  });
+
+  test("CLI: TDD Enforcer blocks on 15th call without test runner and resets with test runner command", async () => {
+    // Budget only applies once there is unvalidated code
+    expect(await runCLI(["--counter-file", TEST_COUNTER_PATH, "--tool", "write_to_file"])).toBe(0);
+
+    // 13 more alternating calls allowed
+    for (let i = 2; i <= 14; i++) {
+      const tool = i % 2 === 0 ? "grep_search" : "find_by_name";
+      const code = await runCLI(["--counter-file", TEST_COUNTER_PATH, "--tool", tool]);
+      expect(code).toBe(0);
+    }
+
+    // 15th non-test tool is blocked (exit code 1)
+    const blockedCode = await runCLI(["--counter-file", TEST_COUNTER_PATH, "--tool", "grep_search"]);
+    expect(blockedCode).toBe(1);
+
+    // Whitelist tool is still allowed (exit code 0)
+    const whitelistCode = await runCLI(["--counter-file", TEST_COUNTER_PATH, "--tool", "send_message"]);
+    expect(whitelistCode).toBe(0);
+
+    // Running test runner via run_command with --command resets counter
+    const testRunnerCode = await runCLI(["--counter-file", TEST_COUNTER_PATH, "--tool", "run_command", "--command", "bun test"]);
+    expect(testRunnerCode).toBe(0);
+
+    // Non-test tool is unblocked again
+    const unblockedCode = await runCLI(["--counter-file", TEST_COUNTER_PATH, "--tool", "grep_search"]);
+    expect(unblockedCode).toBe(0);
+  });
+
+  test("CLI: --auto-heal triggers silent self-healing on >=2 consecutive failures and updates heuristics", async () => {
+    const testDir = join(tmpdir(), `cb-autoheal-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    mkdirSync(testDir, { recursive: true });
+    const heuristicsFile = join(testDir, "learned_heuristics.md");
+
+    try {
+      // 1st failure: retries remaining, no auto-heal triggered yet
+      const f1 = await runCLI([
+        "--counter-file", TEST_COUNTER_PATH,
+        "--fail", "run_command",
+        "--error", "sqlite_busy: database is locked",
+        "--auto-heal",
+        "--heuristics-file", heuristicsFile,
+        "--skill", "backend-architect",
+      ]);
+      expect(f1).toBe(0);
+      expect(existsSync(heuristicsFile)).toBe(false);
+
+      // 2nd failure: consecutive failures = 2 -> auto-heal is triggered!
+      const f2 = await runCLI([
+        "--counter-file", TEST_COUNTER_PATH,
+        "--fail", "run_command",
+        "--error", "sqlite_busy: database is locked",
+        "--auto-heal",
+        "--heuristics-file", heuristicsFile,
+        "--skill", "backend-architect",
+      ]);
+      expect(f2).toBe(0);
+      expect(existsSync(heuristicsFile)).toBe(true);
+
+      const content = readFileSync(heuristicsFile, "utf-8");
+      expect(content).toContain("tipo: learned_heuristics");
+      expect(content).toContain("backend-architect");
+      expect(content).toContain("reglas_count: 1");
+    } finally {
+      rmSync(testDir, { recursive: true, force: true });
+    }
+  });
+
+  test("CLI: --auto-heal in PreTool check injects heuristic when tool is blocked by breaker", async () => {
+    const testDir = join(tmpdir(), `cb-pretool-autoheal-${Date.now()}`);
+    mkdirSync(testDir, { recursive: true });
+    const heuristicsFile = join(testDir, "learned_heuristics.md");
+
+    try {
+      // Trip the breaker with 3 failures
+      await runCLI(["--counter-file", TEST_COUNTER_PATH, "--fail", "failing_mcp"]);
+      await runCLI(["--counter-file", TEST_COUNTER_PATH, "--fail", "failing_mcp"]);
+      await runCLI(["--counter-file", TEST_COUNTER_PATH, "--fail", "failing_mcp"]);
+
+      // Pre-tool check with --auto-heal
+      const checkCode = await runCLI([
+        "--counter-file", TEST_COUNTER_PATH,
+        "--tool", "failing_mcp",
+        "--auto-heal",
+        "--heuristics-file", heuristicsFile,
+        "--skill", "systems-auditor",
+      ]);
+      expect(checkCode).toBe(1); // Still blocked
+      expect(existsSync(heuristicsFile)).toBe(true);
+
+      const content = readFileSync(heuristicsFile, "utf-8");
+      expect(content).toContain("systems-auditor");
+      expect(content).toContain("failing_mcp");
+    } finally {
+      rmSync(testDir, { recursive: true, force: true });
+    }
+  });
+
+  test("isToolFailurePayload correctly identifies non-zero exit codes, nested errors, and error strings", () => {
+    // Top-level exit codes
+    expect(isToolFailurePayload({ exit_code: 1 })).toBe(true);
+    expect(isToolFailurePayload({ exitCode: 127 })).toBe(true);
+    expect(isToolFailurePayload({ exit_code: 0 })).toBe(false);
+    expect(isToolFailurePayload({ exitCode: 0 })).toBe(false);
+
+    // Nested tool_output / result
+    expect(isToolFailurePayload({ tool_output: { exit_code: 1 } })).toBe(true);
+    expect(isToolFailurePayload({ tool_output: { exitCode: 2 } })).toBe(true);
+    expect(isToolFailurePayload({ result: { exit_code: 1 } })).toBe(true);
+    expect(isToolFailurePayload({ result: { exitCode: 1 } })).toBe(true);
+    expect(isToolFailurePayload({ tool_output: { exit_code: 0 } })).toBe(false);
+
+    // String payloads
+    expect(isToolFailurePayload("Command exited with code 1.")).toBe(true);
+    expect(isToolFailurePayload("Encountered error in step execution: timeout")).toBe(true);
+    expect(isToolFailurePayload("Error invalid tool call: missing arg")).toBe(true);
+    expect(isToolFailurePayload("[ERROR] Database locked")).toBe(true);
+    expect(isToolFailurePayload("Command exited with code 0.")).toBe(false);
+
+    // Standard statuses and error flags
+    expect(isToolFailurePayload({ error: "some error" })).toBe(true);
+    expect(isToolFailurePayload({ is_error: true })).toBe(true);
+    expect(isToolFailurePayload({ status: "error" })).toBe(true);
+    expect(isToolFailurePayload({ status: "success" })).toBe(false);
+    expect(isToolFailurePayload(null)).toBe(false);
+    expect(isToolFailurePayload(undefined)).toBe(false);
+  });
+
+  test("CLI: --post-tool mode with non-zero exit code triggers failure and auto-healing at 2nd failure", async () => {
+    const testDir = join(tmpdir(), `cb-posttool-autoheal-${Date.now()}`);
+    mkdirSync(testDir, { recursive: true });
+    const heuristicsFile = join(testDir, "learned_heuristics.md");
+
+    try {
+      // 1st failure via post-tool with --exit-code 1
+      const p1 = await runCLI([
+        "--counter-file", TEST_COUNTER_PATH,
+        "--post-tool",
+        "--tool", "run_command",
+        "--exit-code", "1",
+        "--error", "sqlite_busy database is locked",
+        "--auto-heal",
+        "--heuristics-file", heuristicsFile,
+        "--skill", "backend-architect",
+      ]);
+      expect(p1).toBe(0); // Allowed since fails = 1 (threshold is 3 to block)
+      expect(existsSync(heuristicsFile)).toBe(false);
+
+      // 2nd failure via post-tool with --exit-code 1 -> triggers auto-heal!
+      const p2 = await runCLI([
+        "--counter-file", TEST_COUNTER_PATH,
+        "--post-tool",
+        "--tool", "run_command",
+        "--exit-code", "1",
+        "--error", "sqlite_busy database is locked",
+        "--auto-heal",
+        "--heuristics-file", heuristicsFile,
+        "--skill", "backend-architect",
+      ]);
+      expect(p2).toBe(0); // Allowed (fails = 2 < 3)
+      expect(existsSync(heuristicsFile)).toBe(true);
+
+      const content = readFileSync(heuristicsFile, "utf-8");
+      expect(content).toContain("backend-architect");
+      expect(content).toContain("busy_timeout");
+      expect(content).toContain("reglas_count: 1");
+    } finally {
+      rmSync(testDir, { recursive: true, force: true });
+    }
   });
 });

@@ -28,16 +28,16 @@ export function SegmentedProgressCard({
   return (
     <div
       className={cn(
-        "bg-[#111113] rounded-2xl border border-white/10 p-5 shadow-card hover:shadow-card-hover transition-all duration-300",
+        "bg-white dark:bg-[#111113] border-zinc-200 dark:border-white/10 text-zinc-900 dark:text-zinc-100 rounded-2xl border p-5 shadow-card hover:shadow-card-hover transition-all duration-300",
         className
       )}
     >
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
         <div className="min-w-0">
-          <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider block">
+          <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider block">
             {subtitle}
           </span>
-          <h4 className="text-base font-bold text-zinc-100 mt-0.5 leading-snug truncate">
+          <h4 className="text-base font-bold text-zinc-900 dark:text-zinc-100 mt-0.5 leading-snug truncate">
             {title}
           </h4>
         </div>
@@ -46,8 +46,8 @@ export function SegmentedProgressCard({
             className={cn(
               "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap border",
               isOptimal
-                ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                : "bg-rose-500/10 text-rose-400 border-rose-500/20"
+                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                : "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20"
             )}
           >
             <CheckCircle2 className="w-3.5 h-3.5" />
@@ -58,21 +58,21 @@ export function SegmentedProgressCard({
 
       <div className="mt-4 flex items-baseline justify-between gap-2">
         <div className="flex items-baseline gap-2">
-          <span className="text-3xl font-extrabold font-display tabular-nums text-zinc-100">
+          <span className="text-3xl font-extrabold font-display tabular-nums text-zinc-900 dark:text-zinc-100">
             {currentPercentage.toFixed(1)}%
           </span>
-          <span className="text-xs text-zinc-400 font-medium">completados</span>
+          <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">completados</span>
         </div>
         <div className="text-right shrink-0">
-          <span className="text-[11px] text-zinc-400 block leading-none mb-0.5">Meta Anual:</span>
-          <span className="text-xs font-mono font-bold text-rose-400">
+          <span className="text-[11px] text-zinc-500 dark:text-zinc-400 block leading-none mb-0.5">Meta Anual:</span>
+          <span className="text-xs font-mono font-bold text-rose-600 dark:text-rose-400">
             Target {targetPercentage}%
           </span>
         </div>
       </div>
 
-      {/* Segmented Hardware-Meter Track */}
-      <div className="mt-4 p-1.5 rounded-xl bg-zinc-950 border border-white/10 flex items-center gap-1">
+      {/* Segmented Hardware-Meter Track with high contrast in both dark and light mode */}
+      <div className="mt-4 p-1.5 rounded-xl bg-zinc-100 dark:bg-zinc-950 border border-zinc-200 dark:border-white/10 flex items-center gap-1">
         {Array.from({ length: 20 }).map((_, i) => {
           const activeSegments = Math.round((Math.max(0, Math.min(100, currentPercentage)) / 100) * 20);
           const isFilled = i < activeSegments;
@@ -83,16 +83,16 @@ export function SegmentedProgressCard({
                 "flex-1 h-3 rounded-xs transition-all duration-300",
                 isFilled
                   ? "bg-rose-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]"
-                  : "bg-zinc-850/60 border border-white/5"
+                  : "bg-zinc-200/80 dark:bg-zinc-800/80 border border-zinc-300/60 dark:border-white/5"
               )}
             />
           );
         })}
       </div>
 
-      <div className="mt-2.5 flex items-center justify-between text-[11px] font-mono text-zinc-500">
+      <div className="mt-2.5 flex items-center justify-between text-[11px] font-mono text-zinc-500 dark:text-zinc-400">
         <span>0%</span>
-        <span className="font-semibold text-zinc-300">
+        <span className="font-semibold text-zinc-700 dark:text-zinc-300">
           {count} de {total} completados
         </span>
         <span>100%</span>

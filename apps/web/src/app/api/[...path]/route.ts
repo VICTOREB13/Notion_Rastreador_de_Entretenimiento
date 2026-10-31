@@ -15,7 +15,7 @@ async function proxyRequest(
   const { path } = await context.params;
   const rawBase = process.env.INTERNAL_API_URL || "http://daemon-api:3001";
   const targetBase = rawBase.replace(/\/+$/, "");
-  const search = request.nextUrl.search;
+  const search = request.nextUrl ? request.nextUrl.search : new URL(request.url).search;
   const subPath = Array.isArray(path) ? path.join("/") : "";
   const targetUrl = `${targetBase}/api/${subPath}${search}`;
 
@@ -39,6 +39,7 @@ async function proxyRequest(
       // @ts-ignore - Node fetch duplex flag for streaming bodies
       duplex: "half",
       cache: "no-store",
+      signal: request.signal,
     });
 
     const contentType = upstreamRes.headers.get("content-type") || "";
@@ -47,7 +48,7 @@ async function proxyRequest(
     const responseHeaders = new Headers();
     upstreamRes.headers.forEach((val, key) => {
       const lower = key.toLowerCase();
-      if (lower !== "content-encoding") {
+      if (lower !== "content-encoding" && lower !== "content-length") {
         responseHeaders.set(key, val);
       }
     });
@@ -57,18 +58,86 @@ async function proxyRequest(
       responseHeaders.set("Cache-Control", "no-cache, no-transform");
       responseHeaders.set("Connection", "keep-alive");
       responseHeaders.set("X-Accel-Buffering", "no");
+
+      if (upstreamRes.body) {
+        const reader = upstreamRes.body.getReader();
+        const stream = new ReadableStream({
+          start(controller) {
+            const cleanup = () => {
+              request.signal.removeEventListener("abort", onAbort);
+            };
+
+            const onAbort = () => {
+              cleanup();
+              reader.cancel().catch(() => {});
+              try {
+                controller.close();
+              } catch {}
+            };
+
+            if (request.signal.aborted) {
+              onAbort();
+              return;
+            }
+
+            request.signal.addEventListener("abort", onAbort, { once: true });
+
+            function pump() {
+              reader
+                .read()
+                .then(({ done, value }) => {
+                  if (done) {
+                    cleanup();
+                    try {
+                      controller.close();
+                    } catch {}
+                    return;
+                  }
+                  controller.enqueue(value);
+                  pump();
+                })
+                .catch((err) => {
+                  cleanup();
+                  if (request.signal.aborted) {
+                    try {
+                      controller.close();
+                    } catch {}
+                  } else {
+                    try {
+                      controller.error(err);
+                    } catch {}
+                  }
+                });
+            }
+            pump();
+          },
+          cancel() {
+            reader.cancel().catch(() => {});
+          },
+        });
+
+        return new Response(stream, {
+          status: upstreamRes.status,
+          headers: responseHeaders,
+        });
+      }
+
       return new Response(upstreamRes.body, {
         status: upstreamRes.status,
         headers: responseHeaders,
       });
     }
 
-    return new Response(upstreamRes.body, {
+    const buffer = await upstreamRes.arrayBuffer();
+    return new Response(buffer, {
       status: upstreamRes.status,
       statusText: upstreamRes.statusText,
       headers: responseHeaders,
     });
   } catch (error: any) {
+    if (request.signal?.aborted) {
+      return new Response(null, { status: 499, statusText: "Client Closed Request" });
+    }
     return NextResponse.json(
       {
         success: false,

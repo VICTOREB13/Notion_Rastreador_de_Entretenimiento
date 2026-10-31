@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useId } from "react";
 import { TrendingUp, Clock, Flame } from "lucide-react";
+import { SpringSegmentedControl } from "@/components/ui/SpringSegmentedControl";
 import { cn } from "@/lib/utils";
 
 export interface SplineDataPoint {
@@ -34,10 +35,18 @@ export function DarkIslandSplineCard({
   totalHours = 22.5,
   streakDays = 5,
   dataPoints = defaultPoints,
-  timeRange = "30D",
+  timeRange: controlledTimeRange,
   onTimeRangeChange,
   className,
 }: DarkIslandSplineCardProps) {
+  const [internalTimeRange, setInternalTimeRange] = useState<"7D" | "30D" | "90D">("30D");
+  const currentTimeRange = controlledTimeRange ?? internalTimeRange;
+
+  const handleTimeRangeChange = (newRange: "7D" | "30D" | "90D") => {
+    setInternalTimeRange(newRange);
+    onTimeRangeChange?.(newRange);
+  };
+
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
   const rawId = useId();
   const uid = rawId.replace(/[^a-zA-Z0-9_-]/g, "");
@@ -124,7 +133,7 @@ export function DarkIslandSplineCard({
   return (
     <div
       className={cn(
-        "bg-[#111113] text-zinc-100 rounded-2xl p-5 sm:p-6 shadow-card hover:shadow-card-hover border border-white/10 relative overflow-hidden transition-all duration-300",
+        "bg-white dark:bg-[#111113] border-zinc-200 dark:border-white/10 text-zinc-900 dark:text-zinc-100 rounded-2xl p-5 sm:p-6 shadow-card hover:shadow-card-hover border relative overflow-hidden transition-all duration-300",
         className
       )}
     >
@@ -133,43 +142,33 @@ export function DarkIslandSplineCard({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 relative z-10">
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-xs font-mono uppercase tracking-wider text-zinc-400 block">
+            <span className="text-xs font-mono uppercase tracking-wider text-zinc-500 dark:text-zinc-400 block">
               {title}
             </span>
             {streakDays > 0 && (
-              <span className="inline-flex items-center gap-1 text-[11px] font-mono font-semibold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/20">
-                <Flame className="w-3 h-3 text-amber-400" />
+              <span className="inline-flex items-center gap-1 text-[11px] font-mono font-semibold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                <Flame className="w-3 h-3 text-amber-500 dark:text-amber-400" />
                 {streakDays} días racha
               </span>
             )}
           </div>
           <div className="flex items-baseline gap-2 mt-1">
-            <span className="text-3xl font-extrabold font-display tabular-nums text-zinc-100 tracking-tight">
+            <span className="text-3xl font-extrabold font-display tabular-nums text-zinc-900 dark:text-zinc-100 tracking-tight">
               {totalHours.toFixed(1)} hrs
             </span>
-            <span className="text-xs text-zinc-400 font-medium">en el periodo</span>
+            <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">en el periodo</span>
           </div>
         </div>
 
-        {onTimeRangeChange && (
-          <div className="flex items-center gap-1 bg-zinc-900 p-1 rounded-full border border-white/10 shrink-0 self-start sm:self-auto">
-            {(["7D", "30D", "90D"] as const).map((range) => (
-              <button
-                key={range}
-                type="button"
-                onClick={() => onTimeRangeChange(range)}
-                className={cn(
-                  "px-3 py-1 text-xs font-mono font-bold rounded-full transition-all cursor-pointer",
-                  timeRange === range
-                    ? "bg-white/10 text-white shadow-xs border border-white/10"
-                    : "text-zinc-400 hover:text-white hover:bg-white/5"
-                )}
-              >
-                {range}
-              </button>
-            ))}
-          </div>
-        )}
+        <div className="shrink-0 self-start sm:self-auto">
+          <SpringSegmentedControl
+            options={["7D", "30D", "90D"]}
+            value={currentTimeRange}
+            onChange={(val) => handleTimeRangeChange(val as "7D" | "30D" | "90D")}
+            size="sm"
+            ariaLabel="Rango temporal de ritmo de juego"
+          />
+        </div>
       </div>
 
       <div className="relative mt-4 select-none">
@@ -201,7 +200,7 @@ export function DarkIslandSplineCard({
             stroke="currentColor"
             strokeDasharray="3 3"
             strokeWidth="1"
-            className="text-zinc-800"
+            className="text-zinc-200 dark:text-zinc-800"
           />
           <line
             x1={padX}
@@ -211,7 +210,7 @@ export function DarkIslandSplineCard({
             stroke="currentColor"
             strokeDasharray="3 3"
             strokeWidth="1"
-            className="text-zinc-800"
+            className="text-zinc-200 dark:text-zinc-800"
           />
 
           <path d={areaPath} fill={`url(#${areaGradId})`} />
@@ -244,7 +243,7 @@ export function DarkIslandSplineCard({
                   strokeWidth="2"
                   className={cn(
                     "transition-all duration-200",
-                    isHovered ? "text-rose-600" : "text-[#09090B]"
+                    isHovered ? "text-rose-600" : "text-white dark:text-[#09090B]"
                   )}
                 />
               </g>
@@ -264,7 +263,7 @@ export function DarkIslandSplineCard({
         )}
       </div>
 
-      <div className="flex items-center justify-between text-xs font-mono text-zinc-400 mt-2 px-1">
+      <div className="flex items-center justify-between text-xs font-mono text-zinc-500 dark:text-zinc-400 mt-2 px-1">
         {points.filter((_, i) => i % Math.max(1, Math.floor(points.length / 7)) === 0).map((pt, i) => (
           <span key={i} className="truncate max-w-[60px] text-center">
             {pt.label}

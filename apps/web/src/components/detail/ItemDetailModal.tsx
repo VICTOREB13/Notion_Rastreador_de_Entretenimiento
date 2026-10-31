@@ -84,24 +84,24 @@ export function ItemDetailModal({ item, type, onClose }: ItemDetailModalProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 dark:bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-[#111113] border border-white/10 rounded-2xl shadow-floating text-zinc-100 p-6 sm:p-8"
+        className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white dark:bg-[#111113] border border-zinc-200 dark:border-white/10 rounded-2xl shadow-floating text-zinc-900 dark:text-zinc-100 p-6 sm:p-8"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}
         <button
           type="button"
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 rounded-full bg-zinc-900 border border-white/10 text-zinc-400 hover:text-white transition-colors cursor-pointer z-20"
+          className="absolute top-4 right-4 p-2 rounded-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white transition-colors cursor-pointer z-20"
         >
           <X className="w-4 h-4" />
         </button>
 
         {/* Media Header Banner */}
-        <div className="relative aspect-video w-full rounded-xl overflow-hidden bg-zinc-950 border border-white/10 mb-6">
+        <div className="relative aspect-video w-full rounded-xl overflow-hidden bg-zinc-100 dark:bg-zinc-950 border border-zinc-200 dark:border-white/10 mb-6">
           {coverImage && !imageError ? (
             <img
               src={coverImage}
@@ -110,11 +110,11 @@ export function ItemDetailModal({ item, type, onClose }: ItemDetailModalProps) {
               className="w-full h-full object-cover"
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-zinc-600 text-xs font-mono">
+            <div className="w-full h-full flex items-center justify-center text-zinc-400 dark:text-zinc-600 text-xs font-mono">
               Sin imagen oficial disponible
             </div>
           )}
-          <div className="absolute inset-0 bg-linear-to-t from-[#111113] via-transparent to-transparent" />
+          <div className="absolute inset-0 bg-linear-to-t from-white dark:from-[#111113] via-transparent to-transparent" />
           <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
             <span className="px-3 py-1 rounded-full text-xs font-semibold bg-zinc-950/80 border border-white/10 text-white backdrop-blur-md">
               {item.status}
@@ -130,11 +130,11 @@ export function ItemDetailModal({ item, type, onClose }: ItemDetailModalProps) {
 
         {/* Title & Metadata */}
         <div>
-          <h2 className="text-2xl font-bold font-display tracking-tight text-white">{item.title}</h2>
-          <div className="flex flex-wrap items-center gap-2 mt-2 text-xs text-zinc-400 font-mono">
+          <h2 className="text-2xl font-bold font-display tracking-tight text-zinc-900 dark:text-white">{item.title}</h2>
+          <div className="flex flex-wrap items-center gap-2 mt-2 text-xs text-zinc-500 dark:text-zinc-400 font-mono">
             {isGame ? (
               <>
-                <span className="text-rose-400 font-semibold">{game?.platform}</span>
+                <span className="text-rose-600 dark:text-rose-400 font-semibold">{game?.platform}</span>
                 {game?.steamAppId && <span>• Steam ID: {game.steamAppId}</span>}
                 <span>• Horas: {formatHours(game?.playtimeForever)}</span>
               </>
@@ -149,20 +149,20 @@ export function ItemDetailModal({ item, type, onClose }: ItemDetailModalProps) {
 
         {/* HLTB Breakdown for Games */}
         {isGame && (game?.hltbMain || game?.hltbCompletionist) && (
-          <div className="mt-5 p-4 rounded-xl bg-zinc-900/60 border border-white/5 grid grid-cols-2 gap-2 text-center">
+          <div className="mt-5 p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/5 grid grid-cols-2 gap-2 text-center">
             <div>
-              <span className="text-[10px] font-mono uppercase text-zinc-500 block">
+              <span className="text-[10px] font-mono uppercase text-zinc-400 dark:text-zinc-500 block">
                 Historia Principal
               </span>
-              <span className="text-base font-bold font-mono text-zinc-200">
+              <span className="text-base font-bold font-mono text-zinc-800 dark:text-zinc-200">
                 {game.hltbMain ? `${game.hltbMain}h` : "--"}
               </span>
             </div>
             <div>
-              <span className="text-[10px] font-mono uppercase text-zinc-500 block">
+              <span className="text-[10px] font-mono uppercase text-zinc-400 dark:text-zinc-500 block">
                 Completista 100%
               </span>
-              <span className="text-base font-bold font-mono text-zinc-200">
+              <span className="text-base font-bold font-mono text-zinc-800 dark:text-zinc-200">
                 {game.hltbCompletionist ? `${game.hltbCompletionist}h` : "--"}
               </span>
             </div>
@@ -172,19 +172,19 @@ export function ItemDetailModal({ item, type, onClose }: ItemDetailModalProps) {
         {/* Synopsis / Overview for Movies */}
         {movie?.overview && (
           <div className="mt-5">
-            <h4 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1.5">
+            <h4 className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-1.5">
               Sinopsis Oficial
             </h4>
-            <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed">{movie.overview}</p>
+            <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed">{movie.overview}</p>
           </div>
         )}
 
         {/* AI Analysis Section */}
-        <div className="mt-6 p-5 rounded-xl bg-zinc-900/80 border border-white/10">
+        <div className="mt-6 p-5 rounded-xl bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-white/10">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-rose-400" />
-              <h4 className="text-xs font-bold uppercase tracking-wider text-rose-300">
+              <Sparkles className="w-4 h-4 text-rose-500 dark:text-rose-400" />
+              <h4 className="text-xs font-bold uppercase tracking-wider text-rose-600 dark:text-rose-300">
                 Análisis Contextual de IA (Gemini 2.5 Flash)
               </h4>
             </div>
@@ -192,7 +192,7 @@ export function ItemDetailModal({ item, type, onClose }: ItemDetailModalProps) {
               type="button"
               onClick={handleReEnrich}
               disabled={isEnriching}
-              className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-white/10 transition-colors disabled:opacity-50 cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-zinc-100 hover:bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-white/10 transition-colors disabled:opacity-50 cursor-pointer"
             >
               <RefreshCw className={cn("w-3 h-3", isEnriching && "animate-spin")} />
               <span>{isEnriching ? "Analizando..." : "Re-analizar con IA"}</span>
@@ -200,33 +200,33 @@ export function ItemDetailModal({ item, type, onClose }: ItemDetailModalProps) {
           </div>
 
           {enrichmentError && (
-            <div className="mb-3 p-3 rounded-lg bg-red-950/40 border border-red-500/30 text-red-300 text-xs flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
+            <div className="mb-3 p-3 rounded-lg bg-rose-50 dark:bg-red-950/40 border border-rose-200 dark:border-red-500/30 text-rose-700 dark:text-red-300 text-xs flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-500 dark:text-red-400" />
               <span>{enrichmentError}</span>
             </div>
           )}
 
           {aiData ? (
             <div className="space-y-3 text-xs">
-              <div className="p-3 rounded-lg bg-zinc-950/60 border border-white/5">
-                <span className="text-[11px] font-mono text-rose-400 font-semibold block mb-1">
+              <div className="p-3 rounded-lg bg-white dark:bg-zinc-950/60 border border-zinc-200 dark:border-white/5">
+                <span className="text-[11px] font-mono text-rose-600 dark:text-rose-400 font-semibold block mb-1">
                   ¿Por qué experimentarlo hoy?
                 </span>
-                <p className="text-zinc-200 leading-relaxed italic">
+                <p className="text-zinc-700 dark:text-zinc-200 leading-relaxed italic">
                   "{aiData.personalizedPitch}"
                 </p>
               </div>
 
               {aiData.vibeTags && aiData.vibeTags.length > 0 && (
                 <div>
-                  <span className="text-[10px] font-mono uppercase text-zinc-500 block mb-1.5">
+                  <span className="text-[10px] font-mono uppercase text-zinc-400 dark:text-zinc-500 block mb-1.5">
                     Vibe Tags
                   </span>
                   <div className="flex flex-wrap gap-1.5">
                     {aiData.vibeTags.map((vibe, idx) => (
                       <span
                         key={idx}
-                        className="px-2.5 py-0.5 rounded-full bg-rose-950/40 border border-rose-500/20 text-rose-300 text-[11px]"
+                        className="px-2.5 py-0.5 rounded-full bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-500/20 text-rose-600 dark:text-rose-300 text-[11px]"
                       >
                         {vibe}
                       </span>
@@ -237,14 +237,14 @@ export function ItemDetailModal({ item, type, onClose }: ItemDetailModalProps) {
 
               {aiData.thematicTropes && aiData.thematicTropes.length > 0 && (
                 <div>
-                  <span className="text-[10px] font-mono uppercase text-zinc-500 block mb-1.5">
+                  <span className="text-[10px] font-mono uppercase text-zinc-400 dark:text-zinc-500 block mb-1.5">
                     Tropos y Elementos Narrativos
                   </span>
                   <div className="flex flex-wrap gap-1.5">
                     {aiData.thematicTropes.map((trope, idx) => (
                       <span
                         key={idx}
-                        className="px-2 py-0.5 rounded-md bg-zinc-950 text-zinc-300 border border-white/5 text-[11px]"
+                        className="px-2 py-0.5 rounded-md bg-white dark:bg-zinc-950 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/5 text-[11px]"
                       >
                         {trope}
                       </span>
@@ -254,9 +254,9 @@ export function ItemDetailModal({ item, type, onClose }: ItemDetailModalProps) {
               )}
             </div>
           ) : (
-            <div className="text-center py-4 text-xs text-zinc-500">
+            <div className="text-center py-4 text-xs text-zinc-500 dark:text-zinc-400">
               <p>Este título aún no cuenta con análisis estructurado de Gemini.</p>
-              <p className="mt-1 text-zinc-400">
+              <p className="mt-1 text-zinc-400 dark:text-zinc-500">
                 Haz clic en "Re-analizar con IA" para generar pitch, vibe y tropos.
               </p>
             </div>
@@ -264,14 +264,14 @@ export function ItemDetailModal({ item, type, onClose }: ItemDetailModalProps) {
         </div>
 
         {/* Footer Actions */}
-        <div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-between text-xs text-zinc-500">
+        <div className="mt-6 pt-4 border-t border-zinc-200 dark:border-white/10 flex items-center justify-between text-xs text-zinc-500">
           <span>Sincronizado con Notion</span>
           {movie?.wikiUrl && (
             <a
               href={movie.wikiUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-rose-400 hover:text-rose-300 font-medium"
+              className="inline-flex items-center gap-1 text-rose-600 dark:text-rose-400 hover:text-rose-500 dark:hover:text-rose-300 font-medium"
             >
               <span>Wikipedia</span>
               <ExternalLink className="w-3 h-3" />

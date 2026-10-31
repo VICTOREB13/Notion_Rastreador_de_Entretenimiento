@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { homedir } from "node:os";
 import { sanitizeToolArgs } from "../src/sanitizer";
 
 describe("Harness³ Sanitizer (In-Flight Overwrite)", () => {
@@ -129,5 +130,40 @@ describe("Harness³ Sanitizer (In-Flight Overwrite)", () => {
 
     expect(res.sanitized).toBe(true);
     expect(res.overwrittenArgs.AbsolutePath).toBe("C:/folder/subfolder/file.txt");
+  });
+
+  test("12. Does not rewrite MCP arguments that merely contain 'file' or 'path' in their name", () => {
+    const res = sanitizeToolArgs("call_mcp_tool", {
+      ServerName: "api",
+      ToolName: "lookup",
+      Arguments: { profile: "admin", pathname: "/api/users", file_type: "ts", filePattern: "*.ts" },
+    }, [workspaceRoot]);
+
+    expect(res.sanitized).toBe(false);
+  });
+
+  test("13. Leaves URLs untouched", () => {
+    const res = sanitizeToolArgs("read_url_content", { path: "https://example.com/docs//guide" }, [workspaceRoot]);
+    expect(res.sanitized).toBe(false);
+  });
+
+  test("14. Preserves UNC network paths", () => {
+    const res = sanitizeToolArgs("view_file", { AbsolutePath: "\\\\server\\share\\file.txt" }, [workspaceRoot]);
+    expect(res.overwrittenArgs.AbsolutePath).toBe("//server/share/file.txt");
+  });
+
+  test("15. Expands the home directory instead of nesting it inside the workspace", () => {
+    const res = sanitizeToolArgs("view_file", { AbsolutePath: "~/notes.txt" }, [workspaceRoot]);
+    expect(res.overwrittenArgs.AbsolutePath).toBe(`${homedir().replace(/\\/g, "/")}/notes.txt`);
+  });
+
+  test("16. Decodes percent-encoded file URIs", () => {
+    const res = sanitizeToolArgs("view_file", { AbsolutePath: "file:///C:/My%20Project/a.txt" }, [workspaceRoot]);
+    expect(res.overwrittenArgs.AbsolutePath).toBe("C:/My Project/a.txt");
+  });
+
+  test("17. Covers the 'Path' argument used by read_file in agy", () => {
+    const res = sanitizeToolArgs("read_file", { Path: "src/index.ts" }, [workspaceRoot]);
+    expect(res.overwrittenArgs.Path).toBe(`${workspaceRoot}/src/index.ts`);
   });
 });

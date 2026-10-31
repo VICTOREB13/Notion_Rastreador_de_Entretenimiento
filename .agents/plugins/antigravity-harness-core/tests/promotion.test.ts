@@ -93,7 +93,7 @@ describe("Harness³ Heuristic Promotion Engine (Cross-Workspace)", () => {
         ruleId: "H-STABLE-01",
         skill: "systems-auditor",
         ruleText: "Verify DOM node budget < 800",
-        workspacePath: "C:/Projects/Web",
+        workspacePath: `C:/Projects/Web${i}`,
         success: true,
       });
     }
@@ -104,5 +104,29 @@ describe("Harness³ Heuristic Promotion Engine (Cross-Workspace)", () => {
     const secondEval = engine.evaluateAndPromote(3, 0.8);
     expect(secondEval.newlyPromoted.length).toBe(0);
     expect(secondEval.allPromoted.length).toBe(1);
+  });
+
+  const recordUsage = (ruleId: string, workspace: string, success: boolean) =>
+    db.recordHeuristicUsage({ ruleId, skill: "backend-architect", ruleText: `Rule ${ruleId}`, workspacePath: workspace, success });
+
+  test("5. Does not promote a rule proven in a single workspace", () => {
+    for (let i = 0; i < 5; i++) recordUsage("H-LOCAL-01", "C:/Projects/Solo", true);
+    expect(engine.evaluateAndPromote().allPromoted.length).toBe(0);
+  });
+
+  test("6. Demotes a promoted rule when its success rate drops", () => {
+    for (let i = 0; i < 3; i++) recordUsage("H-DECAY-01", `C:/Projects/App${i}`, true);
+    expect(engine.evaluateAndPromote().allPromoted.length).toBe(1);
+
+    for (let i = 0; i < 5; i++) recordUsage("H-DECAY-01", "C:/Projects/App0", false);
+    expect(engine.evaluateAndPromote().allPromoted.length).toBe(0);
+  });
+
+  test("7. Never re-promotes a manually revoked rule", () => {
+    for (let i = 0; i < 3; i++) recordUsage("H-BAD-01", `C:/Projects/App${i}`, true);
+    engine.evaluateAndPromote();
+    (db as any).db.run(`UPDATE promoted_heuristics SET status = 'revoked' WHERE rule_id = 'H-BAD-01'`);
+
+    expect(engine.evaluateAndPromote().allPromoted.length).toBe(0);
   });
 });

@@ -84,7 +84,7 @@ describe("distill_session.ts - Trace Distillation & Friction Metrics", () => {
       expect(resolved).toBe("uuid-encoded-1");
     });
 
-    it("hace fallback a la conversación más reciente si ningún workspace coincide", () => {
+    it("no audita la sesión de otro workspace si ninguno coincide", () => {
       const dbPath = resolve(TEST_DIR, "test_summaries_fallback.db");
       if (existsSync(dbPath)) {
         try { unlinkSync(dbPath); } catch {}
@@ -105,12 +105,67 @@ describe("distill_session.ts - Trace Distillation & Friction Metrics", () => {
       `);
       db.close();
 
-      const resolved = resolveLatestConversation(dbPath, "C:/completely/different/path");
-      expect(resolved).toBe("uuid-fallback-2");
+      expect(resolveLatestConversation(dbPath, "C:/completely/different/path")).toBeNull();
+      // Un prefijo tampoco es el mismo workspace
+      expect(resolveLatestConversation(dbPath, "C:/unrelated")).toBeNull();
+      expect(resolveLatestConversation(dbPath, "C:/unrelated/b")).toBe("uuid-fallback-2");
     });
   });
 
   describe("parseTranscriptContent", () => {
+    // Forma real observada en transcript_full.jsonl de agy 1.3.1
+    const call = (step: number, name: string, args = {}) =>
+      JSON.stringify({ step_index: step, source: "MODEL", type: "PLANNER_RESPONSE", status: "DONE", tool_calls: [{ name, args }] });
+    const generic = (step: number, status: string, content: string, error?: string) =>
+      JSON.stringify({ step_index: step, source: "MODEL", type: "GENERIC", status, content, ...(error ? { error } : {}) });
+
+    it("cuenta los bloqueos del breaker tal como agy los registra tras un deny", () => {
+      const reason = "tool call denied by pre-tool hook: CIRCUIT_BREAKER_BLOCKED: Se superó el límite";
+      const metrics = parseTranscriptContent([
+        call(1, "view_file"),
+        generic(2, "ERROR", `Created At: x\nEncountered error in step execution: ${reason}`, reason),
+      ].join("\n"));
+
+      expect(metrics.circuit_breaker_blocks).toBe(1);
+      expect(metrics.root_cause_signal).toBe("Defecto de Arnés");
+    });
+
+    it("no atribuye a herramientas la prosa del usuario o del modelo", () => {
+      const metrics = parseTranscriptContent([
+        call(1, "run_command"),
+        generic(2, "DONE", "Command exited with code 0."),
+        JSON.stringify({ step_index: 3, source: "USER_EXPLICIT", type: "USER_INPUT", status: "DONE", content: "error: esto falla\nCIRCUIT_BREAKER_BLOCKED: ¿qué es esto?" }),
+        JSON.stringify({ step_index: 4, source: "MODEL", type: "PLANNER_RESPONSE", status: "DONE", content: "error: lo reviso" }),
+      ].join("\n"));
+
+      expect(metrics.total_tool_failures).toBe(0);
+      expect(metrics.circuit_breaker_blocks).toBe(0);
+    });
+
+    it("mantiene el emparejamiento con comandos en segundo plano y ve su fallo vía manage_task", () => {
+      const metrics = parseTranscriptContent([
+        call(1, "run_command"),
+        generic(2, "RUNNING", "Tool is running as a background task with task id: conv/task-2"),
+        call(3, "manage_task"),
+        generic(4, "DONE", "Task: conv/task-2\nStatus: DONE\nrustc : El termino 'rustc' no se reconoce como nombre de un cmdlet"),
+        call(5, "view_file"),
+        generic(6, "ERROR", "Encountered error in step execution: file does not exist", "file does not exist"),
+      ].join("\n"));
+
+      expect(metrics.tool_failures).toEqual({ run_command: 1, view_file: 1 });
+    });
+
+    it("un fallo de código repetido no se diagnostica como Defecto de Arnés", () => {
+      const failing = "The command exited with code 1.\nOutput:\nTypeError: x is not a function";
+      const metrics = parseTranscriptContent([
+        call(1, "run_command"), generic(2, "DONE", failing),
+        call(3, "run_command"), generic(4, "DONE", failing),
+      ].join("\n"));
+
+      expect(metrics.anti_loop_triggers).toBe(1);
+      expect(metrics.root_cause_signal).toBe("Defecto de Código");
+    });
+
     it("maneja contenido vacío o corrupto con gracia", () => {
       const emptyMetrics = parseTranscriptContent("");
       expect(emptyMetrics.total_steps).toBe(0);

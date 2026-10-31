@@ -24,13 +24,13 @@ export function MovieCard({ movie, onClick, className }: MovieCardProps) {
     <SpotlightCard
       onClick={onClick}
       className={cn(
-        "group flex flex-col justify-between cursor-pointer transition-transform duration-200 hover:-translate-y-1 hover:border-white/20",
+        "group flex flex-col justify-between cursor-pointer transition-transform duration-200 hover:-translate-y-1 hover:border-zinc-300 dark:hover:border-white/20",
         className
       )}
     >
       <div>
         {/* Poster Container */}
-        <div className="relative aspect-[2/3] w-full bg-zinc-950 overflow-hidden">
+        <div className="relative aspect-[2/3] w-full bg-zinc-100 dark:bg-zinc-950 overflow-hidden">
           {movie.posterUrl && !imageError ? (
             <img
               src={movie.posterUrl}
@@ -40,7 +40,7 @@ export function MovieCard({ movie, onClick, className }: MovieCardProps) {
               className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
             />
           ) : (
-            <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-900 text-zinc-600">
+            <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-100 dark:bg-zinc-900 text-zinc-400 dark:text-zinc-600">
               <Film className="w-10 h-10 mb-1" />
               <span className="text-[11px] font-mono">Sin póster</span>
             </div>
@@ -81,21 +81,21 @@ export function MovieCard({ movie, onClick, className }: MovieCardProps) {
 
         {/* Content Details */}
         <div className="p-4">
-          <h3 className="font-display font-bold text-sm text-zinc-100 group-hover:text-rose-400 transition-colors line-clamp-1 tracking-tight">
+          <h3 className="font-display font-bold text-sm text-zinc-900 dark:text-zinc-100 group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors line-clamp-1 tracking-tight">
             {movie.title}
           </h3>
 
-          <div className="flex items-center gap-2 mt-1 text-xs text-zinc-400 font-medium">
+          <div className="flex items-center gap-2 mt-1 text-xs text-zinc-500 dark:text-zinc-400 font-medium">
             {movie.year && (
               <span className="inline-flex items-center gap-1 font-mono">
-                <Calendar className="w-3 h-3 text-zinc-500" />
+                <Calendar className="w-3 h-3 text-zinc-400 dark:text-zinc-500" />
                 {movie.year}
               </span>
             )}
             {movie.tmdbId && (
               <>
                 <span>•</span>
-                <span className="font-mono text-[11px] text-zinc-500">TMDB {movie.tmdbId}</span>
+                <span className="font-mono text-[11px] text-zinc-500 dark:text-zinc-400">TMDB {movie.tmdbId}</span>
               </>
             )}
           </div>
@@ -106,13 +106,13 @@ export function MovieCard({ movie, onClick, className }: MovieCardProps) {
               {movie.genres.slice(0, 2).map((genre, idx) => (
                 <span
                   key={idx}
-                  className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-zinc-900 text-zinc-400 border border-white/5 truncate"
+                  className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-white/5 truncate"
                 >
                   {genre}
                 </span>
               ))}
               {movie.genres.length > 2 && (
-                <span className="text-[10px] text-zinc-500 font-mono">
+                <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-mono">
                   +{movie.genres.length - 2}
                 </span>
               )}
@@ -123,7 +123,7 @@ export function MovieCard({ movie, onClick, className }: MovieCardProps) {
 
       {/* Footer Synopsis Preview */}
       <div className="p-4 pt-0">
-        <p className="text-xs text-zinc-400 line-clamp-2 leading-relaxed">
+        <p className="text-xs text-zinc-600 dark:text-zinc-400 line-clamp-2 leading-relaxed">
           {aiData?.personalizedPitch || movie.overview || "Sin sinopsis registrada."}
         </p>
       </div>

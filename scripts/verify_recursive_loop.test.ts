@@ -8,6 +8,7 @@ import {
   classifyRootCause,
   executeSimulatedTask,
   FIFOHeuristicsManager,
+  heuristicKey,
   inferSkillFromContext,
   runRecursiveSelfImprovementCycle,
   synthesizeHeuristicRule,
@@ -270,6 +271,83 @@ describe("Demostración Aislada: Bucle de Auto-Mejora Recursiva (Harness² Loop)
       } finally {
         rmSync(testDir, { recursive: true, force: true });
       }
+    });
+
+    it("la evidencia de código prevalece sobre la repetición del fallo", () => {
+      expect(classifyRootCause({ error: "TypeError: x is not a function", consecutiveFails: 5 })).toBe("Code Defect");
+      expect(classifyRootCause({ error: "12 tests failed", consecutiveFails: 2 })).toBe("Code Defect");
+      expect(classifyRootCause({ error: "exit 1", consecutiveFails: 2 })).toBe("Harness Defect");
+      expect(classifyRootCause({ error: "rustc: command not found", consecutiveFails: 1 })).toBe("Harness Defect");
+    });
+
+    it("no infiere skills por subcadenas accidentales", () => {
+      expect(inferSkillFromContext("run_command", "digit overflow while explaining the plant")).toBe("systems-auditor");
+    });
+
+    it("sintetiza reglas concretas y rechaza las genéricas", () => {
+      expect(synthesizeHeuristicRule("run_command", "rustc : El término 'rustc' no se reconoce como nombre")).toContain("'rustc'");
+      expect(synthesizeHeuristicRule("view_file", "file does not exist")).toContain("find_by_name");
+      expect(synthesizeHeuristicRule("run_command", "exit 1:")).toBeNull();
+    });
+
+    it("no inyecta nada ante un fallo repetido sin patrón accionable", () => {
+      const testDir = join(tmpdir(), `auto-heal-generic-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+      const file = join(testDir, "learned_heuristics.md");
+      try {
+        const result = autoHealFromFailure({ tool: "run_command", error: "exit 1:", consecutiveFails: 3, customPath: file, skill: "systems-auditor" });
+        expect(result.defectType).toBe("Harness Defect");
+        expect(result.healed).toBe(false);
+        expect(existsSync(file)).toBe(false);
+      } finally {
+        rmSync(testDir, { recursive: true, force: true });
+      }
+    });
+
+    it("una regla que se repite sobrevive al FIFO y los ids no colisionan tras desalojar", () => {
+      const testDir = join(tmpdir(), `auto-heal-lru-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+      const file = join(testDir, "learned_heuristics.md");
+      const heal = (ruleSuggestion: string) =>
+        autoHealFromFailure({ tool: "t", error: "sqlite_busy", consecutiveFails: 2, customPath: file, skill: "systems-auditor", ruleSuggestion });
+
+      try {
+        for (let i = 1; i <= 10; i++) heal(`Regla número ${i} del presupuesto`);
+        heal("Regla número 1 del presupuesto");
+        heal("Regla nueva que fuerza un desalojo");
+
+        const rules = FIFOHeuristicsManager.fromFile(file).getRules();
+        expect(rules.length).toBe(10);
+        expect(rules.some((r) => r.includes("Regla número 1 del presupuesto"))).toBe(true);
+        expect(rules.some((r) => r.includes("Regla número 2 del presupuesto"))).toBe(false);
+
+        const ids = rules.map((r) => r.match(/\[H-(\d+)\]/)![1]);
+        expect(new Set(ids).size).toBe(ids.length);
+      } finally {
+        rmSync(testDir, { recursive: true, force: true });
+      }
+    });
+
+    it("no escribe en disco una regla que rompería el esquema", () => {
+      const testDir = join(tmpdir(), `auto-heal-invalid-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+      const file = join(testDir, "learned_heuristics.md");
+      try {
+        const manager = new FIFOHeuristicsManager("backend-architect", [], file);
+        const res = manager.injectRule("Regla\n```mermaid\ngraph TD\n```", "fecha-invalida");
+        expect(res.valid).toBe(false);
+        expect(existsSync(file)).toBe(false);
+        expect(manager.getRules().length).toBe(0);
+      } finally {
+        rmSync(testDir, { recursive: true, force: true });
+      }
+    });
+
+    it("conserva reglas escritas después de un separador en el cuerpo", () => {
+      const content = "---\ntipo: learned_heuristics\nskill: backend-architect\n---\n\n- [H-01] Primera\n\n---\n\n- [H-02] Segunda\n";
+      expect(FIFOHeuristicsManager.fromContent(content).getRules().length).toBe(2);
+    });
+
+    it("la clave de una regla es estable entre archivos y skills distintas", () => {
+      expect(heuristicKey("backend-architect", "- [H-01] Usar WAL")).toBe(heuristicKey("backend-architect", "1. [H-07]: Usar WAL"));
+      expect(heuristicKey("backend-architect", "Usar WAL")).not.toBe(heuristicKey("frontend-ui", "Usar WAL"));
     });
   });
 });

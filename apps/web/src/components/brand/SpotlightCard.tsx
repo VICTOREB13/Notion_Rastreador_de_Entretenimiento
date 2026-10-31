@@ -63,7 +63,7 @@ export function SpotlightCard({
       onPointerCancel={handlePointerLeave}
       onClick={onClick}
       className={cn(
-        "relative overflow-hidden rounded-2xl border border-white/10 bg-[#111113] text-zinc-100 shadow-card hover:shadow-card-hover transition-all duration-300",
+        "relative overflow-hidden rounded-2xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-[#111113] text-zinc-900 dark:text-zinc-100 shadow-card hover:shadow-card-hover transition-all duration-300",
         className
       )}
       {...props}

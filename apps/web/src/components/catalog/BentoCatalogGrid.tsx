@@ -93,10 +93,10 @@ export function BentoCatalogGrid({
 
   if (combinedItems.length === 0) {
     return (
-      <div className="py-16 text-center rounded-2xl border border-white/5 bg-[#111113]/50">
-        <Gamepad2 className="w-10 h-10 text-zinc-600 mx-auto mb-2" />
-        <h4 className="text-sm font-semibold text-zinc-300">No se encontraron títulos</h4>
-        <p className="text-xs text-zinc-500 mt-1">
+      <div className="py-16 text-center rounded-2xl border border-zinc-200 dark:border-white/5 bg-zinc-100/80 dark:bg-[#111113]/50 text-zinc-600 dark:text-zinc-300">
+        <Gamepad2 className="w-10 h-10 text-zinc-400 dark:text-zinc-600 mx-auto mb-2" />
+        <h4 className="text-sm font-semibold text-zinc-800 dark:text-zinc-300">No se encontraron títulos</h4>
+        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
           {search ? `Ningún resultado coincide con "${search}".` : "No hay elementos en esta vista."}
         </p>
       </div>
@@ -131,7 +131,7 @@ export function BentoCatalogGrid({
           <button
             type="button"
             onClick={() => setVisibleCount((prev) => prev + ITEMS_PER_PAGE)}
-            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-xs font-semibold text-zinc-300 hover:text-white transition-all cursor-pointer active:scale-95 shadow-xs"
+            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-white/10 text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-all cursor-pointer active:scale-95 shadow-xs"
           >
             <span>Mostrar más títulos ({combinedItems.length - visibleCount} restantes)</span>
             <ChevronDown className="w-3.5 h-3.5" />

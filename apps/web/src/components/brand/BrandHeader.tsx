@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 export interface BrandHeaderProps {
   version?: string;
   onOpenTelemetry?: () => void;
+  onOpenSettings?: () => void;
   actions?: React.ReactNode;
   className?: string;
 }
@@ -17,20 +18,29 @@ export interface BrandHeaderProps {
 export function BrandHeader({
   version = "v2.0.0",
   onOpenTelemetry,
+  onOpenSettings,
   actions,
   className,
 }: BrandHeaderProps) {
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const [imgError, setImgError] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  const logoSrc =
-    mounted && resolvedTheme === "light"
-      ? "/brand/ve-logo-horizontal-light-mode.svg"
-      : "/brand/ve-logo-horizontal-dark-mode.svg";
+  useEffect(() => {
+    setImgError(false);
+  }, [resolvedTheme]);
+
+  const handleOpenTelemetry = onOpenTelemetry || onOpenSettings;
+
+  const logoSrc = imgError
+    ? "/brand/ve-isotipo-red.svg"
+    : mounted && resolvedTheme === "light"
+    ? "/brand/ve-logo-horizontal-light-mode.svg"
+    : "/brand/ve-logo-horizontal-dark-mode.svg";
 
   return (
     <header
@@ -49,6 +59,8 @@ export function BrandHeader({
               width={160}
               height={38}
               priority
+              unoptimized
+              onError={() => setImgError(true)}
               className="h-7 sm:h-8 w-auto object-contain select-none"
             />
           </div>
@@ -84,10 +96,10 @@ export function BrandHeader({
         <ThemeToggle />
 
         {/* Telemetry & System Button */}
-        {onOpenTelemetry && (
+        {handleOpenTelemetry && (
           <button
             type="button"
-            onClick={onOpenTelemetry}
+            onClick={handleOpenTelemetry}
             title="Sistema & Telemetría"
             aria-label="Abrir modal de Sistema y Telemetría"
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white hover:bg-zinc-100 text-zinc-800 border border-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 dark:text-zinc-200 dark:border-white/10 shadow-xs transition-all active:scale-95 cursor-pointer"

@@ -31,7 +31,7 @@ export function ServicesTelemetryGrid({ telemetry }: ServicesTelemetryGridProps)
     { label: "Steam Live", sub: telemetry?.isSteamConnected ? "Conectado" : "Offline", icon: <Gamepad2 className="w-4 h-4 text-sky-500" />, ok: telemetry?.isSteamConnected },
     { label: "RAWG API", sub: telemetry?.isRawgConnected ? "Conectado" : "Cuota Preservada", icon: <Gamepad2 className="w-4 h-4 text-amber-500" />, ok: telemetry?.isRawgConnected },
     { label: "TMDB Cine", sub: telemetry?.isTmdbConnected ? "Conectado" : "Offline", icon: <Film className="w-4 h-4 text-purple-500" />, ok: telemetry?.isTmdbConnected },
-    { label: "Gemini IA", sub: telemetry?.activeModel || "gemini-2.0-flash", icon: <Cpu className="w-4 h-4 text-rose-500" />, ok: telemetry?.isGeminiConnected },
+    { label: "Gemini IA", sub: telemetry?.activeModel || "gemini-2.5-flash", icon: <Cpu className="w-4 h-4 text-rose-500" />, ok: telemetry?.isGeminiConnected },
   ];
 
   return (

@@ -4,18 +4,18 @@ import type { IAiSettingsRepository } from "../interfaces";
 
 export class AiSettingsRepository implements IAiSettingsRepository {
   async getSettings(): Promise<AiSettings> {
-    let settings = await prisma.aiSettings.findUnique({ where: { id: "default" } });
-    if (!settings) {
-      settings = await prisma.aiSettings.create({
-        data: {
-          id: "default",
-          activeProvider: "gemini",
-          selectedModel: "gemini-2.5-flash",
-          temperature: 0.7,
-        },
-      });
-    }
-    return settings;
+    const envModel = process.env.GEMINI_MODEL?.trim();
+    const defaultModel = envModel || "gemini-2.5-flash";
+    return await prisma.aiSettings.upsert({
+      where: { id: "default" },
+      update: envModel ? { selectedModel: envModel } : {},
+      create: {
+        id: "default",
+        activeProvider: "gemini",
+        selectedModel: defaultModel,
+        temperature: 0.7,
+      },
+    });
   }
 
   async updateSettings(data: Prisma.AiSettingsUpdateInput): Promise<AiSettings> {

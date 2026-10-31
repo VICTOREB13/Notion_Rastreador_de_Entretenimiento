@@ -60,7 +60,7 @@ export function parseSpecContracts(specFilePath: string, sliceFilter?: string): 
   const endpoints: ContractEndpoint[] = [];
   const seen = new Set<string>();
 
-  const httpRegex = /(?:^-\s*\*\*(GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD)(?:\*\*\s*`|\s+)([^\*`]+)(?:\*\*|`\*\*)|^-\s*`\s*(GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD)\s+([^`]+)`|^#{2,4}\s*`?\s*(GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD)\s+([^`\s]+)`?|(?:#|\/\/|<!--)\s*@spec-contract\s+(GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD)\s+(\S+)|\|\s*(GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD)\s*\|\s*([^\|]+)\s*\|)/i;
+  const httpRegex = /(?:^-\s*\*\*(GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD)(?:\*\*\s*`|\s+)([^\*`]+)(?:\*\*|`\*\*)|^-\s*`\s*(GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD)\s+([^`]+)`|^#{1,6}\s*`?\s*(GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD)\s+(\S+)|(?:#|\/\/|<!--)\s*@spec-contract\s+(GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD)\s+(\S+)|\|\s*(GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD)\s*\|\s*([^\|]+)\s*\|)/i;
 
   for (let i = 0; i < lines.length; i++) {
     const rawLine = lines[i].trim();

@@ -1,21 +1,31 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, unlinkSync } from "node:fs";
-import { resolve } from "node:path";
+import { afterAll, afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { existsSync, mkdtempSync, rmSync, unlinkSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { CircuitBreaker } from "../../../scripts/circuit_breaker";
 import { handlePreToolUse } from "../src/pre_tool_use";
 
 describe("Harness³ PreToolUse Hook Handler (In-Flight & Circuit Breaker V9)", () => {
   const testCounterPath = resolve("_workspace/test_pre_tool_counter.json");
-  const workspaceRoot = process.cwd().replace(/\\/g, "/");
+  // Workspace temporal: un "deny" dispara auto-heal y nunca debe escribir en las heurísticas reales
+  const workspaceRoot = mkdtempSync(join(tmpdir(), "pre-tool-ws-")).replace(/\\/g, "/");
+  const originalPluginData = process.env.PLUGIN_DATA;
 
   beforeEach(() => {
+    process.env.PLUGIN_DATA = workspaceRoot;
     if (existsSync(testCounterPath)) unlinkSync(testCounterPath);
   });
 
   afterEach(() => {
+    if (originalPluginData === undefined) delete process.env.PLUGIN_DATA;
+    else process.env.PLUGIN_DATA = originalPluginData;
     if (existsSync(testCounterPath)) {
       try { unlinkSync(testCounterPath); } catch {}
     }
+  });
+
+  afterAll(() => {
+    try { rmSync(workspaceRoot, { recursive: true, force: true }); } catch {}
   });
 
   test("1. Allows valid tool calls without overwrite when arguments are clean", () => {
