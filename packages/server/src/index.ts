@@ -20,6 +20,17 @@ async function main() {
   console.log(`[Server] Initializing SQLite WAL pragmas...`);
   await configurePragmas();
 
+  // Diagnóstico de variables de entorno al arranque
+  console.log(`[Config Diagnostics] --------------------------------------------------`);
+  console.log(`[Config] Notion Token: ${config.notionToken ? "Configurado (***)" : "FALTANTE ❌ (Coloca NOTION_TOKEN en tu .env)"}`);
+  console.log(`[Config] Notion Games DB: ${config.notionDatabaseIdGames ? config.notionDatabaseIdGames : "FALTANTE ❌ (Coloca DB_ID_GAMES en tu .env)"}`);
+  console.log(`[Config] Notion Movies DB: ${config.notionDatabaseIdMovies ? config.notionDatabaseIdMovies : "FALTANTE ❌ (Coloca DB_ID_MOVIES en tu .env)"}`);
+  console.log(`[Config] Steam API Key: ${config.steamKey ? "Configurado (***)" : "Opcional (STEAM_KEY)"}`);
+  console.log(`[Config] Steam User ID: ${config.steamUserId ? config.steamUserId : "Opcional (STEAM_USER_ID)"}`);
+  console.log(`[Config] Gemini AI Key: ${config.geminiApiKey ? "Configurado (***)" : "Opcional (GEMINI_API_KEY)"}`);
+  console.log(`[Config] Gemini Model: ${config.geminiDefaultModel}`);
+  console.log(`[Config Diagnostics] --------------------------------------------------`);
+
   // Iniciar demonio de fondo
   daemonScheduler.start();
 

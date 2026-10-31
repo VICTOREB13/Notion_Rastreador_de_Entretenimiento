@@ -188,6 +188,7 @@ export class NotionSyncService {
     let created = 0;
 
     if (!this.gamesDbId) {
+      console.warn("[NotionSync] No games database ID configured (DB_ID_GAMES / NOTION_DB_GAMES). Skipping games sync.");
       return {
         processed: 0,
         updated: 0,
@@ -328,6 +329,7 @@ export class NotionSyncService {
     let created = 0;
 
     if (!this.moviesDbId) {
+      console.warn("[NotionSync] No movies database ID configured (DB_ID_MOVIES / NOTION_DB_MOVIES). Skipping movies sync.");
       return {
         processed: 0,
         updated: 0,

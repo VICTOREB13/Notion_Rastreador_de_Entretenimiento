@@ -29,13 +29,23 @@ export function getConfig(): AppConfig {
     host: process.env.HOST || "0.0.0.0",
     nodeEnv: process.env.NODE_ENV || "development",
     notionToken: cleanNotionToken(
-      process.env.NOTION_TOKEN || process.env.NOTION_API_KEY || process.env.NOTION_SECRET || ""
+      process.env.NOTION_TOKEN ||
+        process.env.NOTION_API_KEY ||
+        process.env.NOTION_SECRET ||
+        process.env.NOTION_KEY ||
+        process.env.NOTION_INTEGRATION_TOKEN ||
+        ""
     ),
     notionDatabaseIdGames: cleanNotionDatabaseId(
       process.env.DB_ID_GAMES ||
         process.env.NOTION_DB_GAMES ||
         process.env.NOTION_DATABASE_ID_GAMES ||
         process.env.NOTION_GAMES_DATABASE_ID ||
+        process.env.NOTION_GAMES_DB_ID ||
+        process.env.NOTION_DB_ID_GAMES ||
+        process.env.GAMES_DB_ID ||
+        process.env.GAMES_DATABASE_ID ||
+        process.env.NOTION_DATABASE_ID ||
         ""
     ),
     notionDatabaseIdMovies: cleanNotionDatabaseId(
@@ -43,6 +53,10 @@ export function getConfig(): AppConfig {
         process.env.NOTION_DB_MOVIES ||
         process.env.NOTION_DATABASE_ID_MOVIES ||
         process.env.NOTION_MOVIES_DATABASE_ID ||
+        process.env.NOTION_MOVIES_DB_ID ||
+        process.env.NOTION_DB_ID_MOVIES ||
+        process.env.MOVIES_DB_ID ||
+        process.env.MOVIES_DATABASE_ID ||
         ""
     ),
     steamKey: cleanEnv(
