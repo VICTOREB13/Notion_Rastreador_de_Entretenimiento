@@ -1,4 +1,5 @@
 import type { INotionSyncClient, NotionPageDelta } from "@repo/database";
+import { cleanNotionDatabaseId, cleanNotionToken } from "@repo/database";
 import { config } from "../config";
 
 export class NotionClient implements INotionSyncClient {
@@ -6,7 +7,11 @@ export class NotionClient implements INotionSyncClient {
   private baseUrl = "https://api.notion.com/v1";
 
   constructor(token?: string) {
-    this.token = token ?? config.notionToken;
+    this.token = cleanNotionToken(token ?? config.notionToken);
+  }
+
+  setToken(token: string): void {
+    this.token = cleanNotionToken(token);
   }
 
   private get headers(): HeadersInit {
@@ -15,6 +20,46 @@ export class NotionClient implements INotionSyncClient {
       "Notion-Version": "2022-06-28",
       "Content-Type": "application/json",
     };
+  }
+
+  /**
+   * Ejecuta peticiones HTTP a Notion con control de timeout (15s), reintentos automáticos
+   * ante 429 (Rate Limit) o caídas de socket transitorias (UND_ERR_SOCKET).
+   */
+  private async fetchWithRetry(
+    url: string,
+    options: RequestInit,
+    retries = 2
+  ): Promise<Response> {
+    let lastError: any;
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        const timeoutSignal = AbortSignal.timeout(15000);
+        const combinedSignal =
+          options.signal && typeof (AbortSignal as any).any === "function"
+            ? (AbortSignal as any).any([options.signal, timeoutSignal])
+            : timeoutSignal;
+
+        const res = await fetch(url, {
+          ...options,
+          signal: combinedSignal,
+        });
+
+        if (res.status === 429 && attempt < retries) {
+          const retryAfterSec = Number(res.headers.get("Retry-After")) || 1;
+          await new Promise((r) => setTimeout(r, retryAfterSec * 1000));
+          continue;
+        }
+
+        return res;
+      } catch (err: any) {
+        lastError = err;
+        if (attempt < retries) {
+          await new Promise((r) => setTimeout(r, 600 * (attempt + 1)));
+        }
+      }
+    }
+    throw lastError;
   }
 
   async fetchModifiedPages(databaseId: string, lastEditedAfter: Date): Promise<NotionPageDelta[]> {
@@ -31,12 +76,17 @@ export class NotionClient implements INotionSyncClient {
   }
 
   async queryDatabase(databaseId: string, filter?: Record<string, unknown>): Promise<NotionPageDelta[]> {
+    const cleanId = cleanNotionDatabaseId(databaseId);
     if (!this.token) {
       console.warn("[NotionClient] NOTION_TOKEN is not configured. Returning empty array.");
       return [];
     }
+    if (!cleanId) {
+      console.warn("[NotionClient] Database ID is empty or invalid. Returning empty array.");
+      return [];
+    }
 
-    const url = `${this.baseUrl}/databases/${databaseId}/query`;
+    const url = `${this.baseUrl}/databases/${cleanId}/query`;
     const results: NotionPageDelta[] = [];
     let hasMore = true;
     let startCursor: string | undefined = undefined;
@@ -54,7 +104,7 @@ export class NotionClient implements INotionSyncClient {
         payload.start_cursor = startCursor;
       }
 
-      const res = await fetch(url, {
+      const res = await this.fetchWithRetry(url, {
         method: "POST",
         headers: this.headers,
         body: JSON.stringify(payload),
@@ -62,6 +112,16 @@ export class NotionClient implements INotionSyncClient {
 
       if (!res.ok) {
         const errorText = await res.text();
+        if (res.status === 401) {
+          throw new Error(
+            `Notion API error (401 Unauthorized): NOTION_TOKEN inválido o no reconocido por Notion. Verifique la clave secreta.`
+          );
+        }
+        if (res.status === 404) {
+          throw new Error(
+            `Notion API error (404 Not Found): Base de datos '${cleanId}' no encontrada. Asegúrese de haber compartido la base de datos con la integración (Menú '...' > Conexiones > Agregar conexión).`
+          );
+        }
         throw new Error(`Notion API query error (${res.status}): ${errorText}`);
       }
 
@@ -103,18 +163,19 @@ export class NotionClient implements INotionSyncClient {
     cover?: unknown,
     icon?: unknown
   ): Promise<string> {
+    const cleanId = cleanNotionDatabaseId(databaseId);
     if (!this.token) {
       throw new Error("NOTION_TOKEN is required to create Notion pages");
     }
 
     const payload: Record<string, unknown> = {
-      parent: { database_id: databaseId },
+      parent: { database_id: cleanId },
       properties,
     };
     if (cover) payload.cover = cover;
     if (icon) payload.icon = icon;
 
-    const res = await fetch(`${this.baseUrl}/pages`, {
+    const res = await this.fetchWithRetry(`${this.baseUrl}/pages`, {
       method: "POST",
       headers: this.headers,
       body: JSON.stringify(payload),
@@ -141,7 +202,7 @@ export class NotionClient implements INotionSyncClient {
       throw new Error("NOTION_TOKEN is required to update Notion pages");
     }
 
-    const res = await fetch(`${this.baseUrl}/pages/${pageId}`, {
+    const res = await this.fetchWithRetry(`${this.baseUrl}/pages/${pageId}`, {
       method: "PATCH",
       headers: this.headers,
       body: JSON.stringify(payload),
@@ -159,3 +220,4 @@ export class NotionClient implements INotionSyncClient {
 }
 
 export const notionClient = new NotionClient();
+

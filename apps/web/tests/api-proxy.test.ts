@@ -162,4 +162,31 @@ describe("Runtime API Proxy (/api/[...path]/route.ts)", () => {
     // Restore URL
     process.env.INTERNAL_API_URL = `http://localhost:${upstreamPort}`;
   });
+
+  it("should strip hop-by-hop headers like connection and keep-alive to protect undici socket pool", async () => {
+    const req = new NextRequest(`http://localhost:3000/api/games`, {
+      headers: {
+        connection: "keep-alive",
+        "keep-alive": "timeout=5",
+        "transfer-encoding": "chunked",
+        "x-custom-header": "valid-header",
+      },
+    });
+    const context = { params: Promise.resolve({ path: ["games"] }) };
+
+    const res = await GET(req, context);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("connection")).toBeNull();
+  });
+
+  it("should not inject hop-by-hop connection headers into SSE stream responses", async () => {
+    const req = new NextRequest(`http://localhost:3000/api/events`);
+    const context = { params: Promise.resolve({ path: ["events"] }) };
+
+    const res = await GET(req, context);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("text/event-stream");
+    expect(res.headers.get("connection")).toBeNull();
+  });
 });
+

@@ -85,7 +85,7 @@ function collectIssues(state: ToolCounterState, workspaceRoot: string): string[]
     try {
       const sddRes = lintContracts({
         specFile: specPath,
-        srcDirs: [resolve(workspaceRoot, "src")],
+        repoRoot: workspaceRoot,
         allowMissing: false,
       });
 

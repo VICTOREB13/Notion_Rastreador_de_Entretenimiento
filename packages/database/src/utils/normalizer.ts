@@ -67,3 +67,53 @@ export function formatLocalDate(date: Date = new Date()): string {
   return `${year}-${month}-${day}`;
 }
 
+/**
+ * Normaliza y extrae el identificador canónico de una base de datos de Notion.
+ * Tolera:
+ * - URLs completas de Notion (ej: https://notion.so/workspace/8a92f0b3c4d5e6f7a8b9c0d1e2f3a4b5?v=...)
+ * - URLs con slugs (ej: https://notion.so/workspace/Videojuegos-8a92f0b3c4d5e6f7a8b9c0d1e2f3a4b5)
+ * - Identificadores con guiones (UUID v4 de 36 caracteres)
+ * - Cadenas con comillas dobles/simples o espacios residuales
+ */
+export function cleanNotionDatabaseId(rawId: string): string {
+  if (!rawId) return "";
+  const cleaned = rawId.trim().replace(/^["']|["']$/g, "");
+  // Strip query params and hashes first to never confuse view id (?v=) with database id
+  const withoutQuery = cleaned.split("?")[0].split("#")[0];
+
+  // Si contiene un UUID estándar con guiones
+  const uuidMatch = withoutQuery.match(/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/i);
+  if (uuidMatch) {
+    return uuidMatch[0].toLowerCase();
+  }
+
+  // Si contiene 32 caracteres hexadecimales consecutivos (formato habitual de Notion sin guiones)
+  const hex32Match = withoutQuery.match(/[a-f0-9]{32}/i);
+  if (hex32Match) {
+    return hex32Match[0].toLowerCase();
+  }
+
+  // Fallback: remover query params y slashes
+  return withoutQuery.split("/").pop() || withoutQuery;
+}
+
+/**
+ * Normaliza y limpia el token de integración de Notion.
+ * Remueve comillas envolventes y espacios accidentales.
+ */
+export function cleanNotionToken(rawToken: string): string {
+  if (!rawToken) return "";
+  return rawToken.trim().replace(/^["']|["']$/g, "");
+}
+
+/**
+ * Normaliza el nombre del modelo de IA (elimina comillas, espacios residuales y
+ * convierte espacios en guiones, ej. 'gemini 3.8 flash' -> 'gemini-3.8-flash').
+ */
+export function cleanAiModelName(rawModel?: string): string {
+  if (!rawModel) return "";
+  const cleaned = rawModel.trim().replace(/^["']|["']$/g, "").trim();
+  if (!cleaned) return "";
+  return cleaned.replace(/\s+/g, "-");
+}
+

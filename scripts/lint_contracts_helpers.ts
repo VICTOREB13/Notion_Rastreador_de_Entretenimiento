@@ -12,6 +12,7 @@ export interface ContractEndpoint {
 
 export interface LintContractsOptions {
   specFile?: string;
+  repoRoot?: string;
   srcDirs?: string[];
   stack?: "node" | "flutter" | "laravel" | "python" | "auto";
   slice?: string;

@@ -358,4 +358,33 @@ describe("Frontend Web Utilities (@repo/web)", () => {
     const movieContent = fs.readFileSync(path.resolve(__dirname, "../src/components/catalog/MovieCard.tsx"), "utf-8");
     expect(movieContent).toContain("text-zinc-900 dark:text-zinc-100");
   });
+
+  test("Fase 5: SmoothScroll component incorporates Lenis with inertia and DOM resize observers", async () => {
+    const fs = await import("fs");
+    const path = await import("path");
+    const scrollPath = path.resolve(__dirname, "../src/components/layout/SmoothScroll.tsx");
+    expect(fs.existsSync(scrollPath)).toBe(true);
+
+    const scrollContent = fs.readFileSync(scrollPath, "utf-8");
+    expect(scrollContent).toContain("import Lenis from \"lenis\"");
+    expect(scrollContent).toContain("smoothWheel: true");
+    expect(scrollContent).toContain("requestAnimationFrame(updateTicker)");
+    expect(scrollContent).toContain("new ResizeObserver");
+    expect(scrollContent).toContain("__lenis");
+    expect(scrollContent).toContain("lenis.destroy()");
+  });
+
+  test("Fase 5: ScrollToTop component integrates with Lenis or window scroll with accessible styling", async () => {
+    const fs = await import("fs");
+    const path = await import("path");
+    const toTopPath = path.resolve(__dirname, "../src/components/layout/ScrollToTop.tsx");
+    expect(fs.existsSync(toTopPath)).toBe(true);
+
+    const toTopContent = fs.readFileSync(toTopPath, "utf-8");
+    expect(toTopContent).toContain("scrollToTop");
+    expect(toTopContent).toContain("__lenis");
+    expect(toTopContent).toContain("fixed bottom-8 right-6");
+    expect(toTopContent).toContain("Volver arriba");
+  });
 });
+

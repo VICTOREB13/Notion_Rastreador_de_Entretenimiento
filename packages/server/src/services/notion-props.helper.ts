@@ -44,9 +44,24 @@ export function extractNotionTitle(props: Record<string, any>): string {
     "Nombre",
     "Película",
     "Pelicula",
+    "Juego",
+    "Videojuego",
   ]);
   if (prop?.title && Array.isArray(prop.title) && prop.title.length > 0) {
-    return prop.title[0]?.text?.content?.trim() || "";
+    return prop.title
+      .map((t: any) => t?.plain_text || t?.text?.content || "")
+      .join("")
+      .trim();
+  }
+  // Fallback dinámico: encontrar cualquier propiedad de tipo 'title' en Notion
+  for (const key of Object.keys(props)) {
+    const p = props[key];
+    if (p?.type === "title" || (Array.isArray(p?.title) && p.title.length > 0)) {
+      return (p.title || [])
+        .map((t: any) => t?.plain_text || t?.text?.content || "")
+        .join("")
+        .trim();
+    }
   }
   return "";
 }
@@ -55,6 +70,9 @@ export function extractNotionNumber(props: Record<string, any>, aliases: string[
   const prop = findNotionProp(props, aliases);
   if (typeof prop?.number === "number") {
     return prop.number;
+  }
+  if (prop?.formula?.type === "number" && typeof prop.formula.number === "number") {
+    return prop.formula.number;
   }
   return null;
 }

@@ -78,9 +78,32 @@ export class NotionSyncService {
   }
 
   private extractTitle(props: Record<string, any>): string {
-    const prop = this.findProp(props, ["Título", "Titulo", "Title", "Name", "Nombre", "Película", "Pelicula"]);
+    const prop = this.findProp(props, [
+      "Título",
+      "Titulo",
+      "Title",
+      "Name",
+      "Nombre",
+      "Película",
+      "Pelicula",
+      "Juego",
+      "Videojuego",
+    ]);
     if (prop?.title && Array.isArray(prop.title) && prop.title.length > 0) {
-      return prop.title[0]?.text?.content?.trim() || "";
+      return prop.title
+        .map((t: any) => t?.plain_text || t?.text?.content || "")
+        .join("")
+        .trim();
+    }
+    // Fallback dinámico: encontrar cualquier propiedad que sea de tipo 'title' en Notion
+    for (const key of Object.keys(props)) {
+      const p = props[key];
+      if (p?.type === "title" || (Array.isArray(p?.title) && p.title.length > 0)) {
+        return (p.title || [])
+          .map((t: any) => t?.plain_text || t?.text?.content || "")
+          .join("")
+          .trim();
+      }
     }
     return "";
   }
@@ -89,6 +112,9 @@ export class NotionSyncService {
     const prop = this.findProp(props, aliases);
     if (typeof prop?.number === "number") {
       return prop.number;
+    }
+    if (prop?.formula?.type === "number" && typeof prop.formula.number === "number") {
+      return prop.formula.number;
     }
     return null;
   }
@@ -135,7 +161,7 @@ export class NotionSyncService {
   private extractRichText(props: Record<string, any>, aliases: string[]): string | null {
     const prop = this.findProp(props, aliases);
     if (prop?.rich_text && Array.isArray(prop.rich_text) && prop.rich_text.length > 0) {
-      return prop.rich_text.map((t: any) => t.text?.content || "").join("").trim() || null;
+      return prop.rich_text.map((t: any) => t.plain_text || t.text?.content || "").join("").trim() || null;
     }
     return null;
   }
@@ -202,7 +228,10 @@ export class NotionSyncService {
       const playtimeNotion = this.extractNumber(props, ["Horas Jugadas", "Horas", "Playtime"]) ?? 0;
       const hltbMain = this.extractNumber(props, ["HLTB Principal", "HLTB Main"]);
       const hltbCompletionist = this.extractNumber(props, ["HLTB Completista", "HLTB 100%"]);
-      const coverUrl = this.extractFileUrl(props, ["Portada", "Cover", "Banner"]);
+      const pageCoverUrl =
+        (page.cover as any)?.external?.url || (page.cover as any)?.file?.url || null;
+      const coverUrl =
+        this.extractFileUrl(props, ["Portada", "Cover", "Banner"]) || pageCoverUrl;
       const genres = this.extractMultiSelect(props, ["Géneros", "Generos", "Genres"]);
       const link = this.extractUrl(props, ["Link", "URL", "Enlace"]);
       const platform = this.extractSelect(props, ["Plataforma", "Platform"], "PC");
@@ -345,7 +374,10 @@ export class NotionSyncService {
       const explicitYear = this.extractNumber(props, ["Año", "Year"]);
       const year = explicitYear ?? detectedYear;
       const clean = cleanGameTitle(title);
-      const posterUrl = this.extractFileUrl(props, ["Portada", "Poster", "Cover"]);
+      const pageCoverUrl =
+        (page.cover as any)?.external?.url || (page.cover as any)?.file?.url || null;
+      const posterUrl =
+        this.extractFileUrl(props, ["Portada", "Poster", "Cover"]) || pageCoverUrl;
       const overview = this.extractRichText(props, ["Resumen", "Overview", "Sinopsis"]);
       const genres = this.extractMultiSelect(props, ["Géneros", "Generos", "Genres"]);
       const wikiUrl = this.extractUrl(props, ["Link", "Wikipedia", "URL"]);

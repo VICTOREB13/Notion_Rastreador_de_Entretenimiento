@@ -13,14 +13,24 @@ export * from "./lint_contracts_helpers";
 export * from "./lint_contracts_extractors";
 
 export function lintContracts(options: LintContractsOptions = {}): LintContractsResult {
-  const repoRoot = process.cwd();
+  const repoRoot = options.repoRoot ? resolve(options.repoRoot) : process.cwd();
   const specFile = options.specFile ? resolve(options.specFile) : join(repoRoot, "artifacts", "architecture", "api_spec.md");
-  const defaultDirs = ["src", "lib", "routes", "app", "features", "packages/server/src"];
-  const candidateDirs = options.srcDirs && options.srcDirs.length > 0 ? options.srcDirs : defaultDirs;
+  const defaultDirs = [
+    join(repoRoot, "src"),
+    join(repoRoot, "lib"),
+    join(repoRoot, "routes"),
+    join(repoRoot, "app"),
+    join(repoRoot, "features"),
+    join(repoRoot, "packages/server/src"),
+  ];
+  const candidateDirs = options.srcDirs && options.srcDirs.length > 0
+    ? options.srcDirs.map((d) => resolve(repoRoot, d))
+    : defaultDirs;
   if (!options.srcDirs || options.srcDirs.length === 0) {
     for (const d of ["packages", "apps"]) {
-      if (existsSync(join(repoRoot, d)) && !candidateDirs.includes(d)) {
-        candidateDirs.push(d);
+      const fullDir = join(repoRoot, d);
+      if (existsSync(fullDir) && !candidateDirs.includes(fullDir)) {
+        candidateDirs.push(fullDir);
       }
     }
   }

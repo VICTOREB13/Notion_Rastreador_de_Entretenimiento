@@ -7,6 +7,9 @@ import {
   ensureDatabaseDirectory,
   cleanGameTitle,
   computeSimilarityRatio,
+  cleanNotionDatabaseId,
+  cleanNotionToken,
+  cleanAiModelName,
   gameRepository,
   movieRepository,
   sessionRepository,
@@ -64,6 +67,24 @@ describe("SQLite Database & Prisma Repositories", () => {
 
       const different = computeSimilarityRatio("Super Mario Odyssey", "Dark Souls III");
       expect(different).toBeLessThan(0.3);
+    });
+
+    it("should clean and extract Notion Database IDs safely, even with query params and views", () => {
+      expect(
+        cleanNotionDatabaseId("https://www.notion.so/myorg/8a92f0b3c4d5e6f7a8b9c0d1e2f3a4b5?v=99999999999999999999999999999999")
+      ).toBe("8a92f0b3c4d5e6f7a8b9c0d1e2f3a4b5");
+      expect(
+        cleanNotionDatabaseId("https://notion.so/workspace/Videojuegos-8a92f0b3-c4d5-e6f7-a8b9-c0d1e2f3a4b5?v=123")
+      ).toBe("8a92f0b3-c4d5-e6f7-a8b9-c0d1e2f3a4b5");
+      expect(cleanNotionDatabaseId('"8a92f0b3c4d5e6f7a8b9c0d1e2f3a4b5"')).toBe("8a92f0b3c4d5e6f7a8b9c0d1e2f3a4b5");
+      expect(cleanNotionDatabaseId("")).toBe("");
+    });
+
+    it("should normalize AI model names converting spaces to hyphens", () => {
+      expect(cleanAiModelName("gemini 3.8 flash")).toBe("gemini-3.8-flash");
+      expect(cleanAiModelName("  gemini 2.5 flash  ")).toBe("gemini-2.5-flash");
+      expect(cleanAiModelName('"gemini-1.5-pro"')).toBe("gemini-1.5-pro");
+      expect(cleanAiModelName("")).toBe("");
     });
   });
 

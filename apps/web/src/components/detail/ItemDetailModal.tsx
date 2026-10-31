@@ -18,6 +18,7 @@ import {
   useMovieDetailQuery,
   useEnrichGameMutation,
   useEnrichMovieMutation,
+  useSystemSettingsQuery,
 } from "@/lib/hooks";
 
 export interface ItemDetailModalProps {
@@ -48,6 +49,7 @@ export function ItemDetailModal({ item, type, onClose }: ItemDetailModalProps) {
   const isGame = type === "GAME";
   const { data: freshGame } = useGameDetailQuery(isGame && item ? item.id : null);
   const { data: freshMovie } = useMovieDetailQuery(!isGame && item ? item.id : null);
+  const { data: telemetry } = useSystemSettingsQuery();
 
   const enrichGameMutation = useEnrichGameMutation();
   const enrichMovieMutation = useEnrichMovieMutation();
@@ -185,8 +187,13 @@ export function ItemDetailModal({ item, type, onClose }: ItemDetailModalProps) {
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-rose-500 dark:text-rose-400" />
               <h4 className="text-xs font-bold uppercase tracking-wider text-rose-600 dark:text-rose-300">
-                Análisis Contextual de IA (Gemini 2.5 Flash)
+                Análisis Contextual de IA
               </h4>
+              {telemetry?.activeModel && (
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 font-semibold">
+                  {telemetry.activeModel}
+                </span>
+              )}
             </div>
             <button
               type="button"

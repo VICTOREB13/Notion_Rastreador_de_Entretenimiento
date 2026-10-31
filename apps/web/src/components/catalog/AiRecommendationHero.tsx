@@ -29,47 +29,47 @@ export function AiRecommendationHero({
   return (
     <SpotlightCard
       className={cn(
-        "relative overflow-hidden p-6 sm:p-8 border border-white/10 bg-linear-to-br from-zinc-900 via-[#111113] to-zinc-950",
+        "relative overflow-hidden p-6 sm:p-8 border border-zinc-200 dark:border-white/10 bg-linear-to-br from-rose-50/70 via-white to-zinc-50 dark:from-zinc-900 dark:via-[#111113] dark:to-zinc-950",
         className
       )}
     >
       {/* Background Cover Overlay */}
       {game.coverUrl && (
         <div
-          className="absolute inset-0 bg-cover bg-center opacity-15 blur-sm pointer-events-none transform scale-105"
+          className="absolute inset-0 bg-cover bg-center opacity-10 dark:opacity-15 blur-sm pointer-events-none transform scale-105"
           style={{ backgroundImage: `url(${game.coverUrl})` }}
         />
       )}
 
       <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="max-w-2xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs font-semibold mb-3">
-            <Sparkles className="w-3.5 h-3.5 text-rose-400" />
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-500/10 dark:bg-rose-500/15 border border-rose-500/25 dark:border-rose-500/30 text-rose-600 dark:text-rose-300 text-xs font-semibold mb-3">
+            <Sparkles className="w-3.5 h-3.5 text-rose-500 dark:text-rose-400" />
             <span>Recomendación Contextual IA: ¿Por qué jugarlo hoy?</span>
           </div>
 
-          <h2 className="text-2xl sm:text-3xl font-extrabold font-display text-zinc-100 tracking-tight flex items-center gap-2">
+          <h2 className="text-2xl sm:text-3xl font-extrabold font-display text-zinc-900 dark:text-zinc-100 tracking-tight flex items-center gap-2">
             <ShinyText speed={5}>{game.title}</ShinyText>
           </h2>
 
-          <p className="mt-3 text-sm sm:text-base text-zinc-300 leading-relaxed italic">
+          <p className="mt-3 text-sm sm:text-base text-zinc-700 dark:text-zinc-300 leading-relaxed italic">
             "{pitch}"
           </p>
 
           <div className="flex flex-wrap items-center gap-2 mt-4 text-xs font-mono">
             {firstVibe && (
-              <span className="px-2.5 py-1 rounded-full bg-zinc-900 border border-white/10 text-rose-300">
+              <span className="px-2.5 py-1 rounded-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 text-rose-600 dark:text-rose-300">
                 Vibe: {firstVibe}
               </span>
             )}
             {aiData?.completionEstimateWeeks && (
-              <span className="px-2.5 py-1 rounded-full bg-zinc-900 border border-white/10 text-zinc-300 flex items-center gap-1">
+              <span className="px-2.5 py-1 rounded-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300 flex items-center gap-1">
                 <Compass className="w-3 h-3 text-zinc-400" />
                 Tiempo Estimado: ~{aiData.completionEstimateWeeks} semanas
               </span>
             )}
             {game.platform && (
-              <span className="px-2.5 py-1 rounded-full bg-zinc-900 border border-white/10 text-zinc-400 hidden sm:inline-flex">
+              <span className="px-2.5 py-1 rounded-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 text-zinc-500 dark:text-zinc-400 hidden sm:inline-flex">
                 Plataforma: {game.platform}
               </span>
             )}

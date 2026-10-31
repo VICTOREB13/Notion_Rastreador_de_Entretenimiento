@@ -8,6 +8,19 @@ export const dynamic = "force-dynamic";
  * Eliminates build-time static rewrites and Docker ECONNREFUSED issues.
  * Supports streaming and Server-Sent Events (SSE) for /api/events.
  */
+const HOP_BY_HOP_HEADERS = new Set([
+  "host",
+  "content-length",
+  "connection",
+  "keep-alive",
+  "proxy-authenticate",
+  "proxy-authorization",
+  "te",
+  "trailer",
+  "transfer-encoding",
+  "upgrade",
+]);
+
 async function proxyRequest(
   request: NextRequest,
   context: { params: Promise<{ path: string[] }> }
@@ -22,7 +35,7 @@ async function proxyRequest(
   const headers = new Headers();
   request.headers.forEach((value, key) => {
     const lower = key.toLowerCase();
-    if (lower !== "host" && lower !== "content-length") {
+    if (!HOP_BY_HOP_HEADERS.has(lower)) {
       headers.set(key, value);
     }
   });
@@ -37,7 +50,7 @@ async function proxyRequest(
       headers,
       body,
       // @ts-ignore - Node fetch duplex flag for streaming bodies
-      duplex: "half",
+      duplex: hasBody ? "half" : undefined,
       cache: "no-store",
       signal: request.signal,
     });
@@ -48,7 +61,12 @@ async function proxyRequest(
     const responseHeaders = new Headers();
     upstreamRes.headers.forEach((val, key) => {
       const lower = key.toLowerCase();
-      if (lower !== "content-encoding" && lower !== "content-length") {
+      if (
+        lower !== "content-encoding" &&
+        lower !== "content-length" &&
+        lower !== "transfer-encoding" &&
+        lower !== "connection"
+      ) {
         responseHeaders.set(key, val);
       }
     });
@@ -56,7 +74,6 @@ async function proxyRequest(
     if (isSSE) {
       responseHeaders.set("Content-Type", "text/event-stream");
       responseHeaders.set("Cache-Control", "no-cache, no-transform");
-      responseHeaders.set("Connection", "keep-alive");
       responseHeaders.set("X-Accel-Buffering", "no");
 
       if (upstreamRes.body) {
@@ -96,17 +113,14 @@ async function proxyRequest(
                   controller.enqueue(value);
                   pump();
                 })
-                .catch((err) => {
+                .catch((_err) => {
                   cleanup();
-                  if (request.signal.aborted) {
-                    try {
-                      controller.close();
-                    } catch {}
-                  } else {
-                    try {
-                      controller.error(err);
-                    } catch {}
-                  }
+                  // En SSE, cuando el socket se cierra o hay desconexión remota,
+                  // cerrar el stream limpiamente sin invocar controller.error()
+                  // para evitar "failed to pipe response" en el runtime de Next.js.
+                  try {
+                    controller.close();
+                  } catch {}
                 });
             }
             pump();
@@ -135,8 +149,20 @@ async function proxyRequest(
       headers: responseHeaders,
     });
   } catch (error: any) {
-    if (request.signal?.aborted) {
+    if (request.signal?.aborted || error?.name === "AbortError") {
       return new Response(null, { status: 499, statusText: "Client Closed Request" });
+    }
+    const isSocketTerminated =
+      error?.code === "UND_ERR_SOCKET" ||
+      error?.cause?.code === "UND_ERR_SOCKET" ||
+      error?.message?.includes("terminated") ||
+      error?.cause?.message?.includes("terminated") ||
+      error?.message?.includes("other side closed") ||
+      error?.cause?.message?.includes("other side closed") ||
+      error?.cause?.name === "SocketError";
+
+    if (isSocketTerminated) {
+      return new Response(null, { status: 204 });
     }
     return NextResponse.json(
       {
@@ -149,6 +175,7 @@ async function proxyRequest(
     );
   }
 }
+
 
 export const GET = proxyRequest;
 export const POST = proxyRequest;

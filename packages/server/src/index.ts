@@ -29,6 +29,7 @@ async function main() {
     port: config.port,
     hostname: config.host,
     fetch: app.fetch,
+    idleTimeout: 255, // Extiende el timeout para mantener vivos flujos SSE prolongados
   });
 
   const shutdown = async () => {

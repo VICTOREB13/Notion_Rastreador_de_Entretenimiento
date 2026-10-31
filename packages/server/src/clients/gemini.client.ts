@@ -48,7 +48,10 @@ export interface GenAiClientLike {
 
 export class GeminiClient implements IAiProvider {
   readonly id = "gemini" as const;
-  readonly defaultModel = "gemini-2.5-flash";
+
+  get defaultModel(): string {
+    return config.geminiDefaultModel || "gemini-2.5-flash";
+  }
 
   private clientInstance?: GenAiClientLike;
 

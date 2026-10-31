@@ -86,7 +86,7 @@ export default function EntertainmentShowcasePage() {
     <main className="min-h-screen bg-zinc-50 dark:bg-[#09090B] text-zinc-900 dark:text-zinc-100 pb-28 pt-6 sm:pt-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto transition-colors duration-200">
       {/* Brand Header with Authentic Vectors, Crimson Border & Version Badge */}
       <BrandHeader
-        version="v2.0.0"
+        version="v2.1.0"
         onOpenTelemetry={() => setIsTelemetryOpen(true)}
         actions={
           <div className="flex items-center gap-2">
@@ -205,17 +205,28 @@ export default function EntertainmentShowcasePage() {
       <FloatingIslandNavDock
         activeId={category === "ALL" ? "coleccion" : category === "GAMES" ? "juegos" : "peliculas"}
         onItemClick={(id) => {
+          const scrollToTarget = (targetId: string) => {
+            const targetEl = document.getElementById(targetId);
+            if (!targetEl) return;
+            const lenis = (window as unknown as { __lenis?: { scrollTo: (target: HTMLElement) => void } }).__lenis;
+            if (lenis) {
+              lenis.scrollTo(targetEl);
+            } else {
+              targetEl.scrollIntoView({ behavior: "smooth" });
+            }
+          };
+
           if (id === "coleccion") {
             setCategory("ALL");
-            document.getElementById("catalogo")?.scrollIntoView({ behavior: "smooth" });
+            scrollToTarget("catalogo");
           } else if (id === "juegos") {
             setCategory("GAMES");
-            document.getElementById("catalogo")?.scrollIntoView({ behavior: "smooth" });
+            scrollToTarget("catalogo");
           } else if (id === "peliculas") {
             setCategory("MOVIES");
-            document.getElementById("catalogo")?.scrollIntoView({ behavior: "smooth" });
+            scrollToTarget("catalogo");
           } else if (id === "ritmo") {
-            document.getElementById("ritmo")?.scrollIntoView({ behavior: "smooth" });
+            scrollToTarget("ritmo");
           }
         }}
         onOpenSettings={() => setIsTelemetryOpen(true)}

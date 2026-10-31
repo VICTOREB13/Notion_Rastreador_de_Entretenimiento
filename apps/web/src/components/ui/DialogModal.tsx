@@ -132,7 +132,10 @@ export function DialogModal({
           </button>
         </div>
 
-        <div className="p-6 overflow-y-auto flex-1 space-y-6 custom-scrollbar text-zinc-800 dark:text-zinc-200">
+        <div
+          data-lenis-prevent
+          className="p-6 overflow-y-auto flex-1 space-y-6 custom-scrollbar text-zinc-800 dark:text-zinc-200"
+        >
           {children}
         </div>
       </div>

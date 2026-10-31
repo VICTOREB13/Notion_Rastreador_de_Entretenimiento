@@ -55,7 +55,7 @@ export const eventsController = new Hono()
       abortResolve?.();
     };
 
-    // Latido periódico (keep-alive) cada 25 segundos
+    // Latido periódico (keep-alive) cada 10 segundos para prevenir desconexiones de socket en proxies/Undici
     const heartbeat = setInterval(async () => {
       try {
         await stream.writeSSE({
@@ -65,7 +65,7 @@ export const eventsController = new Hono()
       } catch {
         cleanup();
       }
-    }, 25000);
+    }, 10000);
 
     stream.onAbort(cleanup);
 

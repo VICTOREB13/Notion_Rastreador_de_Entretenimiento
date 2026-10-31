@@ -116,6 +116,22 @@
 .shiny-text-animation {
   background: linear-gradient(
     90deg,
+    #52525b 0%,
+    #18181b 25%,
+    #e11d48 50%,
+    #18181b 75%,
+    #52525b 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shiny-text-shimmer var(--shiny-speed, 5s) linear infinite;
+  display: inline-block;
+}
+
+.dark .shiny-text-animation {
+  background: linear-gradient(
+    90deg,
     #a1a1aa 0%,
     #fafafa 25%,
     #ef4444 50%,
@@ -125,23 +141,31 @@
   background-size: 200% 100%;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  animation: shiny-text-shimmer var(--shiny-speed, 5s) linear infinite;
-  display: inline-block;
 }
 
-/* Scrollbar sutil y minimalista */
+/* Scrollbar sutil y minimalista adaptativo */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #09090b;
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #27272a;
+  background: #d4d4d8;
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
+  background: #a1a1aa;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: #09090b;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: #27272a;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
   background: #3f3f46;
 }
 
