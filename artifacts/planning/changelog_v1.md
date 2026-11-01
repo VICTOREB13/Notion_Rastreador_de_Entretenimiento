@@ -1,7 +1,7 @@
 ---
 tipo: changelog
 proyecto: Notion_Rastreador_de_Entretenimiento
-version: v2.5.0
+version: v2.5.1
 estado: activo
 fecha: 2026-11-01
 tags: [proyecto, changelog, versiones, release, quality-gate, v2, docker, nextjs16, hono, fix]
@@ -15,6 +15,20 @@ Todos los cambios notables de este proyecto se documentarán en este archivo sig
 > 1. Este archivo es la **fuente única de verdad** para los cortes de versión y las notas oficiales de **GitHub Releases** (`gh release create`).
 > 2. Mantén un estándar técnico riguroso (Anti-Slop): incluye métricas cuantitativas, rutas exactas de archivos, clases y justificación de la causa raíz.
 > 3. Queda prohibido el uso de viñetas genéricas como "mejoras varias" o "bugs corregidos".
+
+---
+
+## [2.5.1] - 2026-11-01 (Hotfix Proxy Fallback Rewrites, Dynamic App Version & Gateway Hardening)
+
+### Fixed & Hardening
+- **Resiliencia de Reverse Proxy en Next.js (`apps/web/next.config.mjs` & `apps/web/src/app/api/[...path]/route.ts`):**
+  - Migrados los `rewrites` estáticos de `next.config.mjs` a la clave `fallback: [...]`, erradicando el error fatal no capturado `ECONNREFUSED 127.0.0.1:3001` cuando el backend aún no ha levantado o está en ciclo de reinicio.
+  - El handler dinámico en tiempo de ejecución de Next.js App Router (`route.ts`) asume el control prioritario sobre `/api/[...path]`, normalizando los segmentos de ruta (`path.filter(Boolean).join("/")`), sanitizando payloads vacíos en peticiones POST/PUT sin forzar `duplex: "half"`, e inyectando `Cache-Control: no-store, no-cache, must-revalidate` en respuestas HTTP 502 JSON controladas.
+- **Sincronización Dinámica de Versión en Frontend e Infraestructura (`apps/web/src/app/page.tsx`, `BrandHeader.tsx`, `docker-compose.yml`, `.env.example`):**
+  - Eliminado el string hardcodeado `"v2.4.0"` en `page.tsx`, resolviendo `process.env.NEXT_PUBLIC_APP_VERSION || "v2.5.1"`.
+  - Inyectada la variable `NEXT_PUBLIC_APP_VERSION` en el servicio `showcase-web` en `docker-compose.yml` y documentada en `.env.example`.
+- **Cobertura de Tests Unitarios (`apps/web/tests/api-proxy.test.ts` & `apps/web/tests/web.test.ts`):**
+  - Añadidas 3 nuevas pruebas unitarias para certificar la respuesta 502 con cabeceras `no-store`, el soporte de peticiones POST sin body y la resolución de `NEXT_PUBLIC_APP_VERSION`.
 
 ---
 

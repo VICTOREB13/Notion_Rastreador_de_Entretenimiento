@@ -919,14 +919,14 @@ describe("Frontend Web Utilities (@repo/web)", () => {
     expect(nextConfigContent).toContain('source: "/api/:path*"');
     expect(nextConfigContent).toContain("fallback");
 
-    // 6. Version badge defaults to v2.5.0 and supports NEXT_PUBLIC_APP_VERSION
+    // 6. Version badge defaults to v2.5.1 and supports NEXT_PUBLIC_APP_VERSION
     const brandPath = path.resolve(__dirname, "../src/components/brand/BrandHeader.tsx");
     const brandContent = fs.readFileSync(brandPath, "utf-8");
     expect(brandContent).toContain("NEXT_PUBLIC_APP_VERSION");
-    expect(brandContent).toContain("v2.5.0");
+    expect(brandContent).toContain("v2.5.1");
 
     expect(pageContent).toContain("NEXT_PUBLIC_APP_VERSION");
-    expect(pageContent).toContain("v2.5.0");
+    expect(pageContent).toContain("v2.5.1");
     expect(pageContent).not.toContain('version="v2.4.0"');
   });
 });

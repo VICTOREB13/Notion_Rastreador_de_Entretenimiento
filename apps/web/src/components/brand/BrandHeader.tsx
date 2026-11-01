@@ -16,7 +16,7 @@ export interface BrandHeaderProps {
 }
 
 export function BrandHeader({
-  version = process.env.NEXT_PUBLIC_APP_VERSION || "v2.5.0", // Versión de la app (v2.3.0 -> v2.5.0)
+  version = process.env.NEXT_PUBLIC_APP_VERSION || "v2.5.1", // Versión de la app (v2.3.0 -> v2.5.1)
   onOpenTelemetry,
   onOpenSettings,
   actions,
