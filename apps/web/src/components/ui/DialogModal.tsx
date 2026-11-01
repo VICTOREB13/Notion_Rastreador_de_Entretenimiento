@@ -113,10 +113,10 @@ export function DialogModal({
         )}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="bg-zinc-50/80 dark:bg-zinc-950/70 border-b border-zinc-200 dark:border-zinc-800 px-6 py-5 flex items-start justify-between gap-4 shrink-0">
+        <div className="bg-zinc-50/80 dark:bg-zinc-950/70 border-b border-zinc-200 dark:border-zinc-800 px-4 sm:px-6 py-4 sm:py-5 flex items-start justify-between gap-4 shrink-0">
           <div>
             {title && (
-              <h3 id="dialog-modal-title" className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
+              <h3 id="dialog-modal-title" className="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-100">
                 {title}
               </h3>
             )}
@@ -129,7 +129,7 @@ export function DialogModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-xl text-zinc-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-zinc-100 dark:hover:bg-rose-500/10 hover:rotate-90 active:scale-90 transition-all duration-200 cursor-pointer"
+            className="p-2 rounded-xl text-zinc-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-zinc-100 dark:hover:bg-rose-500/10 hover:rotate-90 active:scale-90 transition-all duration-200 cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center shrink-0"
             aria-label="Cerrar modal"
           >
             <X className="w-5 h-5" />
@@ -138,7 +138,7 @@ export function DialogModal({
 
         <div
           data-lenis-prevent
-          className="p-6 overflow-y-auto flex-1 space-y-6 custom-scrollbar text-zinc-800 dark:text-zinc-200"
+          className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-6 custom-scrollbar text-zinc-800 dark:text-zinc-200"
         >
           {children}
         </div>

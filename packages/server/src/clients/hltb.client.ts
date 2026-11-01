@@ -45,9 +45,6 @@ export class HltbClient implements IHltbClient {
         useCache: true,
       };
 
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
-
       const res = await fetch("https://howlongtobeat.com/api/search", {
         method: "POST",
         headers: {
@@ -58,9 +55,8 @@ export class HltbClient implements IHltbClient {
           Origin: "https://howlongtobeat.com",
         },
         body: JSON.stringify(payload),
-        signal: controller.signal,
+        signal: AbortSignal.timeout(8000),
       });
-      clearTimeout(timeoutId);
 
       if (!res.ok) {
         const fallback: HltbEstimate = { mainHours: null, completionistHours: null };

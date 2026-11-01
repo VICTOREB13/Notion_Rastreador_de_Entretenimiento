@@ -10,7 +10,12 @@ describe("Movies Controller API (/api/movies)", () => {
     await configurePragmas(prisma);
 
     await prisma.movie.deleteMany({
-      where: { notionPageId: testNotionPageId },
+      where: {
+        OR: [
+          { notionPageId: testNotionPageId },
+          { cleanTitle: "dune part two" },
+        ],
+      },
     });
 
     const movie = await prisma.movie.create({

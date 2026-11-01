@@ -470,4 +470,122 @@ describe("SteamToNotionSyncService & Exact Python Logic Preservation (Fase 3)", 
     expect(props["Genre"]).toBeDefined();
     expect(props["Wikipedia"]).toBeDefined();
   });
+
+  it("8. Anti-Split-Brain: Vincula y unifica un juego existente en SQLite sin steamAppId cuando Steam lo reporta", async () => {
+    // Página en Notion sin Steam ID
+    const notionPage: NotionPageDelta = {
+      id: "page-notion-celeste",
+      lastEditedTime: "2026-10-25T10:00:00Z",
+      properties: {
+        Título: { title: [{ text: { content: "Celeste" } }] },
+        "Horas Jugadas": { number: 10.0 },
+      },
+    };
+
+    mockNotion.fetchAllPages = mock(async () => [notionPage]);
+    mockSteam.getCombinedGames = mock(async () => [
+      { appId: 504230, name: "Celeste", playtimeMinutes: 600 }, // 10h
+    ]);
+
+    // Registro existente en SQLite pero con steamAppId nulo
+    mockGameRepo.findBySteamAppId = mock(async () => null);
+    mockGameRepo.findByCleanTitle = mock(async (title: string) => {
+      if (title === "celeste") {
+        return {
+          id: "local-celeste-id",
+          notionPageId: "page-notion-celeste",
+          title: "Celeste",
+          cleanTitle: "celeste",
+          steamAppId: null,
+          playtimeForever: 10.0,
+          playtimeNotion: 10.0,
+          status: "Jugando",
+          genres: "[]",
+          notionGenres: "[]",
+          platform: "PC",
+        } as any;
+      }
+      return null;
+    });
+
+    const service = new SteamToNotionSyncService(
+      mockSteam,
+      mockNotion,
+      mockRawg,
+      mockHltb,
+      mockWiki,
+      mockGameRepo,
+      "test_user",
+      "db_games_123",
+      0
+    );
+
+    const result = await service.syncSteamToNotion();
+    expect(result.updatedNotion).toBe(1);
+
+    // Debe haber llamado a upsert unificando el registro con el steamAppId
+    expect(mockGameRepo.upsert).toHaveBeenCalled();
+    const upsertCall = (mockGameRepo.upsert as any).mock.calls[0][0];
+    expect(upsertCall.steamAppId).toBe(504230);
+    expect(upsertCall.notionPageId).toBe("page-notion-celeste");
+  });
+
+  it("9. Anti-Split-Brain: Resuelve página de Notion vía localGame.notionPageId cuando títulos divergen", async () => {
+    // Notion tiene página con título divergente que no pasa matching difuso
+    const notionPage: NotionPageDelta = {
+      id: "page-ori-definitive",
+      lastEditedTime: "2026-10-25T10:00:00Z",
+      properties: {
+        Título: { title: [{ text: { content: "Ori Definitive Edition (2016)" } }] },
+        "Horas Jugadas": { number: 8.0 },
+      },
+    };
+
+    mockNotion.fetchAllPages = mock(async () => [notionPage]);
+    mockSteam.getCombinedGames = mock(async () => [
+      { appId: 261570, name: "Ori and the Blind Forest", playtimeMinutes: 480 },
+    ]);
+
+    // SQLite local tiene el registro previo enlazado a esa notionPageId
+    mockGameRepo.findBySteamAppId = mock(async () => null);
+    mockGameRepo.findByCleanTitle = mock(async (title: string) => {
+      if (title === "ori and the blind forest") {
+        return {
+          id: "local-ori-id",
+          notionPageId: "page-ori-definitive",
+          title: "Ori and the Blind Forest",
+          cleanTitle: "ori and the blind forest",
+          steamAppId: null,
+          playtimeForever: 8.0,
+          playtimeNotion: 8.0,
+          status: "Jugando",
+          genres: "[]",
+          notionGenres: "[]",
+          platform: "PC",
+        } as any;
+      }
+      return null;
+    });
+
+    const service = new SteamToNotionSyncService(
+      mockSteam,
+      mockNotion,
+      mockRawg,
+      mockHltb,
+      mockWiki,
+      mockGameRepo,
+      "test_user",
+      "db_games_123",
+      0
+    );
+
+    const result = await service.syncSteamToNotion();
+    expect(result.updatedNotion).toBe(1);
+
+    expect(mockGameRepo.upsert).toHaveBeenCalled();
+    const upsertCall = (mockGameRepo.upsert as any).mock.calls[0][0];
+    expect(upsertCall.steamAppId).toBe(261570);
+    expect(upsertCall.notionPageId).toBe("page-ori-definitive");
+  });
 });
+

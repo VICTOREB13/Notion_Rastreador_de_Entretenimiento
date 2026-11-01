@@ -587,6 +587,292 @@ describe("Frontend Web Utilities (@repo/web)", () => {
     expect(pageContent).toContain("sortBy");
     expect(pageContent).toContain("selectedGenre");
   });
+
+  test("v2.4.0 (TASK-332): Movie completionDate formatting and MovieCard/ItemDetailModal display", async () => {
+    const fs = await import("fs");
+    const path = await import("path");
+    const { formatDate } = await import("../src/lib/utils");
+
+    // 1. formatDate unit tests with comprehensive edge cases
+    expect(formatDate(null)).toBe("");
+    expect(formatDate(undefined)).toBe("");
+    expect(formatDate("")).toBe("");
+    expect(formatDate("   ")).toBe("");
+    expect(formatDate("not-a-date")).toBe("");
+    expect(formatDate("invalid-date")).toBe("");
+    expect(formatDate("foo-bar-baz")).toBe("");
+    expect(formatDate("2024-02-31")).toBe(""); // Non-existent date
+    expect(formatDate("2023-02-29")).toBe(""); // Non-leap year 29 Feb
+
+    // Valid dates
+    expect(formatDate("2024-05-15")).toContain("2024");
+    expect(formatDate("2024-05-15")).toContain("15");
+    expect(formatDate("2024-05-15T00:00:00.000Z")).toContain("2024");
+    expect(formatDate("2024-05-15T00:00:00.000Z")).toContain("15");
+    expect(formatDate("2024-02-29")).toContain("2024"); // Leap year
+    expect(formatDate("2023-12-31")).toContain("2023");
+
+    // 2. MovieCard.tsx verification
+    const movieCardPath = path.resolve(__dirname, "../src/components/catalog/MovieCard.tsx");
+    const movieCardContent = fs.readFileSync(movieCardPath, "utf-8");
+    expect(movieCardContent).toContain("CalendarCheck");
+    expect(movieCardContent).toContain("movie.completionDate");
+    expect(movieCardContent).toContain("formatDate(movie.completionDate)");
+    expect(movieCardContent).toContain("Vista:");
+    expect(movieCardContent).toContain("p-3.5 sm:p-4");
+
+    // 3. ItemDetailModal.tsx verification
+    const itemDetailPath = path.resolve(__dirname, "../src/components/detail/ItemDetailModal.tsx");
+    const itemDetailContent = fs.readFileSync(itemDetailPath, "utf-8");
+    expect(itemDetailContent).toContain("CalendarCheck");
+    expect(itemDetailContent).toContain("Fecha de visualización:");
+    expect(itemDetailContent).toContain("formatDate(movie.completionDate)");
+    expect(itemDetailContent).toContain("formatDate(game.completionDate)");
+  });
+
+  test("v2.4.0 (TASK-333): Global keyboard shortcuts logic and UI indicators", async () => {
+    const fs = await import("fs");
+    const path = await import("path");
+    const { isInteractiveElement } = await import("../src/lib/useKeyboardShortcuts");
+
+    // 1. isInteractiveElement unit tests
+    const dummyInput = { tagName: "INPUT", isContentEditable: false } as unknown as Element;
+    const dummyTextarea = { tagName: "TEXTAREA", isContentEditable: false } as unknown as Element;
+    const dummySelect = { tagName: "SELECT", isContentEditable: false } as unknown as Element;
+    const dummyEditable = { tagName: "DIV", isContentEditable: true } as unknown as Element;
+    const dummyButton = { tagName: "BUTTON", isContentEditable: false } as unknown as Element;
+    const dummyDiv = { tagName: "DIV", isContentEditable: false } as unknown as Element;
+
+    expect(isInteractiveElement(dummyInput)).toBe(true);
+    expect(isInteractiveElement(dummyTextarea)).toBe(true);
+    expect(isInteractiveElement(dummySelect)).toBe(true);
+    expect(isInteractiveElement(dummyEditable)).toBe(true);
+    expect(isInteractiveElement(dummyButton)).toBe(false);
+    expect(isInteractiveElement(dummyDiv)).toBe(false);
+    expect(isInteractiveElement(null)).toBe(false);
+
+    // Nested element inside contentEditable container
+    const nestedChild = {
+      tagName: "SPAN",
+      isContentEditable: false,
+      closest: (sel: string) => (sel.includes("contenteditable") ? {} : null),
+    } as unknown as Element;
+    expect(isInteractiveElement(nestedChild)).toBe(true);
+
+    // 2. Behavioral simulation of keyboard shortcuts logic
+    type ShortcutEvent = {
+      key: string;
+      ctrlKey?: boolean;
+      metaKey?: boolean;
+      altKey?: boolean;
+      target: any;
+      defaultPrevented: boolean;
+      preventDefault: () => void;
+    };
+
+    const createShortcutSimulator = (handlers: {
+      onSearchFocus: () => void;
+      onEscape: () => void;
+      onToggleTheme: () => void;
+    }) => {
+      return (event: Partial<ShortcutEvent>, activeElement: any = null) => {
+        let prevented = false;
+        const e = {
+          key: event.key || "",
+          ctrlKey: Boolean(event.ctrlKey),
+          metaKey: Boolean(event.metaKey),
+          altKey: Boolean(event.altKey),
+          target: event.target || null,
+          preventDefault: () => {
+            prevented = true;
+          },
+        };
+
+        const isTargetInteractive = isInteractiveElement(e.target) || isInteractiveElement(activeElement);
+
+        if (e.key === "Escape") {
+          handlers.onEscape();
+          if (activeElement && typeof activeElement.blur === "function") {
+            activeElement.blur();
+          }
+          return { prevented, action: "escape" };
+        }
+
+        if (isTargetInteractive) {
+          return { prevented, action: "ignored_interactive" };
+        }
+
+        const isSearchKey =
+          (e.key === "/" && !e.ctrlKey && !e.metaKey && !e.altKey) ||
+          ((e.key === "k" || e.key === "K") && (e.ctrlKey || e.metaKey) && !e.altKey);
+
+        if (isSearchKey) {
+          e.preventDefault();
+          handlers.onSearchFocus();
+          return { prevented, action: "search" };
+        }
+
+        if ((e.key === "t" || e.key === "T") && !e.ctrlKey && !e.metaKey && !e.altKey) {
+          e.preventDefault();
+          handlers.onToggleTheme();
+          return { prevented, action: "theme" };
+        }
+
+        return { prevented, action: "none" };
+      };
+    };
+
+    let searchCalled = 0;
+    let escapeCalled = 0;
+    let themeCalled = 0;
+    let blurred = false;
+
+    const mockActiveInput = {
+      tagName: "INPUT",
+      isContentEditable: false,
+      blur: () => {
+        blurred = true;
+      },
+    };
+
+    const simulate = createShortcutSimulator({
+      onSearchFocus: () => {
+        searchCalled++;
+      },
+      onEscape: () => {
+        escapeCalled++;
+      },
+      onToggleTheme: () => {
+        themeCalled++;
+      },
+    });
+
+    // Test non-interactive shortcuts
+    expect(simulate({ key: "/", target: dummyDiv })).toEqual({ prevented: true, action: "search" });
+    expect(searchCalled).toBe(1);
+
+    expect(simulate({ key: "k", ctrlKey: true, target: dummyDiv })).toEqual({ prevented: true, action: "search" });
+    expect(searchCalled).toBe(2);
+
+    expect(simulate({ key: "k", metaKey: true, target: dummyDiv })).toEqual({ prevented: true, action: "search" });
+    expect(searchCalled).toBe(3);
+
+    // AltGr + K must NOT trigger search
+    expect(simulate({ key: "k", ctrlKey: true, altKey: true, target: dummyDiv })).toEqual({ prevented: false, action: "none" });
+    expect(searchCalled).toBe(3);
+
+    // Theme toggle
+    expect(simulate({ key: "t", target: dummyDiv })).toEqual({ prevented: true, action: "theme" });
+    expect(themeCalled).toBe(1);
+
+    expect(simulate({ key: "T", target: dummyDiv })).toEqual({ prevented: true, action: "theme" });
+    expect(themeCalled).toBe(2);
+
+    // Ctrl+T (browser new tab) must NOT trigger theme toggle
+    expect(simulate({ key: "t", ctrlKey: true, target: dummyDiv })).toEqual({ prevented: false, action: "none" });
+    expect(themeCalled).toBe(2);
+
+    // While typing in interactive element: / and t must be ignored
+    expect(simulate({ key: "/", target: dummyInput })).toEqual({ prevented: false, action: "ignored_interactive" });
+    expect(simulate({ key: "t", target: dummyInput })).toEqual({ prevented: false, action: "ignored_interactive" });
+    expect(searchCalled).toBe(3);
+    expect(themeCalled).toBe(2);
+
+    // Escape in interactive element calls onEscape and blurs input
+    expect(simulate({ key: "Escape", target: dummyInput }, mockActiveInput)).toEqual({ prevented: false, action: "escape" });
+    expect(escapeCalled).toBe(1);
+    expect(blurred).toBe(true);
+
+    // 3. CatalogHeader shortcut indicators and ref
+    const catalogHeaderPath = path.resolve(__dirname, "../src/components/catalog/CatalogHeader.tsx");
+    const catalogHeaderContent = fs.readFileSync(catalogHeaderPath, "utf-8");
+    expect(catalogHeaderContent).toContain("Ctrl+K o /");
+    expect(catalogHeaderContent).toContain("searchInputRef");
+    expect(catalogHeaderContent).toContain("<kbd");
+
+    // 4. ThemeToggle shortcut indicator
+    const themeTogglePath = path.resolve(__dirname, "../src/components/ui/ThemeToggle.tsx");
+    const themeToggleContent = fs.readFileSync(themeTogglePath, "utf-8");
+    expect(themeToggleContent).toContain("Atajo: T");
+
+    // 5. page.tsx integration of shortcuts
+    const pagePath = path.resolve(__dirname, "../src/app/page.tsx");
+    const pageContent = fs.readFileSync(pagePath, "utf-8");
+    expect(pageContent).toContain("useKeyboardShortcuts");
+    expect(pageContent).toContain("onSearchFocus");
+    expect(pageContent).toContain("onEscape");
+    expect(pageContent).toContain("onToggleTheme");
+    expect(pageContent).toContain("preventScroll: true");
+    expect(pageContent).toContain("searchInputRef={searchInputRef}");
+  });
+
+  test("v2.4.0 (TASK-334): AnalyticsModal component, FloatingIslandNavDock button, and Mobile polish", async () => {
+    const fs = await import("fs");
+    const path = await import("path");
+
+    // 1. AnalyticsModal exists and adheres to specifications
+    const analyticsModalPath = path.resolve(__dirname, "../src/components/analytics/AnalyticsModal.tsx");
+    expect(fs.existsSync(analyticsModalPath)).toBe(true);
+
+    const analyticsContent = fs.readFileSync(analyticsModalPath, "utf-8");
+    expect(analyticsContent).toContain("useAnalyticsQuery");
+    expect(analyticsContent).toContain("Total Horas");
+    expect(analyticsContent).toContain("Total Juegos");
+    expect(analyticsContent).toContain("Total Películas");
+    expect(analyticsContent).toContain("Top 5 Juegos Más Jugados");
+    expect(analyticsContent).toContain("Desglose de Géneros Destacados");
+    expect(analyticsContent).toContain("DialogModal");
+    expect(analyticsContent).toContain("maxPlaytime");
+    expect(analyticsContent).toContain("formatHours");
+    expect(analyticsContent).toContain("min-h-[36px]");
+
+    // 2. FloatingIslandNavDock analytics trigger button
+    const dockPath = path.resolve(__dirname, "../src/components/brand/FloatingIslandNavDock.tsx");
+    const dockContent = fs.readFileSync(dockPath, "utf-8");
+    expect(dockContent).toContain("onOpenAnalytics");
+    expect(dockContent).toContain("BarChart3");
+    expect(dockContent).toContain("title=\"Analíticas\"");
+    expect(dockContent).toContain("aria-label=\"Analíticas\"");
+    expect(dockContent).toContain("Analíticas</span>");
+    expect(dockContent).toContain("min-h-[36px]");
+
+    // 3. DialogModal Mobile polish (<640px) & Touch targets >= 44px
+    const dialogPath = path.resolve(__dirname, "../src/components/ui/DialogModal.tsx");
+    const dialogContent = fs.readFileSync(dialogPath, "utf-8");
+    expect(dialogContent).toContain("min-h-[44px]");
+    expect(dialogContent).toContain("min-w-[44px]");
+    expect(dialogContent).toContain("px-4 sm:px-6");
+    expect(dialogContent).toContain("p-4 sm:p-6");
+
+    // 4. Mobile clearance and card polish
+    const pagePath = path.resolve(__dirname, "../src/app/page.tsx");
+    const pageContent = fs.readFileSync(pagePath, "utf-8");
+    expect(pageContent).toMatch(/pb-(32|36)/);
+    expect(pageContent).toContain("AnalyticsModal");
+    expect(pageContent).toContain("isAnalyticsOpen");
+
+    const movieCardPath = path.resolve(__dirname, "../src/components/catalog/MovieCard.tsx");
+    const movieCardContent = fs.readFileSync(movieCardPath, "utf-8");
+    expect(movieCardContent).toContain("p-3.5 sm:p-4");
+
+    const gameCardPath = path.resolve(__dirname, "../src/components/catalog/GameCard.tsx");
+    const gameCardContent = fs.readFileSync(gameCardPath, "utf-8");
+    expect(gameCardContent).toContain("p-3.5 sm:p-4");
+
+    const itemDetailPath = path.resolve(__dirname, "../src/components/detail/ItemDetailModal.tsx");
+    const itemDetailContent = fs.readFileSync(itemDetailPath, "utf-8");
+    expect(itemDetailContent).toContain("min-h-[44px]");
+
+    // 5. Strict NO PWA rule: confirm no manifest.json or sw.js in public directory
+    const publicPath = path.resolve(__dirname, "../public");
+    const manifestExists = fs.existsSync(path.join(publicPath, "manifest.json"));
+    const swExists =
+      fs.existsSync(path.join(publicPath, "sw.js")) ||
+      fs.existsSync(path.join(publicPath, "service-worker.js"));
+    expect(manifestExists).toBe(false);
+    expect(swExists).toBe(false);
+  });
 });
+
 
 

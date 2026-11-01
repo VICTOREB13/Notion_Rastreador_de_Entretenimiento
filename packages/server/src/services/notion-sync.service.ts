@@ -727,13 +727,24 @@ export class NotionSyncService {
       const genres = this.extractMultiSelect(props, ["Géneros", "Generos", "Genres"]);
       const wikiUrl = this.extractUrl(props, ["Link", "Wikipedia", "URL"]);
       let status = this.extractSelect(props, ["Estado", "Status"], "Por Ver");
-      const completionDate = this.extractCompletionDate(props, [
+      const movieDateAliases = [
+        "Fecha de Visualización",
+        "Fecha de Visualizacion",
         "Fecha de Culminación",
+        "Fecha de Culminacion",
         "Fecha de Finalización",
+        "Fecha de Finalizacion",
+        "Watched Date",
+        "Fecha",
+        "Fecha Visualización",
+        "Fecha Visualizacion",
         "Completion Date",
         "Fecha Fin",
         "Vista en",
-      ]);
+      ];
+      const completionDate =
+        this.extractDate(props, movieDateAliases, false) ||
+        this.extractCompletionDate(props, movieDateAliases);
       const rating = this.extractRating(props, [
         "Calificación",
         "Calificacion",

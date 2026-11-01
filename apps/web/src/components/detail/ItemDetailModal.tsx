@@ -13,7 +13,7 @@ import {
   CalendarCheck,
   MessageSquare,
 } from "lucide-react";
-import { cn, formatHours } from "@/lib/utils";
+import { cn, formatHours, formatDate } from "@/lib/utils";
 import type { GameItem, MovieItem, AIEnrichmentData } from "@/lib/types";
 import {
   useGameDetailQuery,
@@ -113,7 +113,7 @@ export function ItemDetailModal({ item, type, onClose }: ItemDetailModalProps) {
           type="button"
           onClick={onClose}
           aria-label="Cerrar modal de detalle"
-          className="absolute top-4 right-4 p-2 rounded-full bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-white/10 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white transition-all duration-200 cursor-pointer z-20 hover:scale-110 active:scale-95 hover:rotate-90 shadow-2xs"
+          className="absolute top-4 right-4 p-2 sm:p-2.5 rounded-full bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-white/10 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white transition-all duration-200 cursor-pointer z-20 hover:scale-110 active:scale-95 hover:rotate-90 shadow-2xs min-h-[44px] min-w-[44px] flex items-center justify-center"
         >
           <X className="w-4 h-4" />
         </button>
@@ -187,9 +187,9 @@ export function ItemDetailModal({ item, type, onClose }: ItemDetailModalProps) {
               <>
                 <span className="text-rose-600 dark:text-rose-400 font-semibold">{game?.platform}</span>
                 <span>• Horas: {formatHours(game?.playtimeForever)}</span>
-                {game?.completionDate && (
+                {game?.completionDate && formatDate(game.completionDate) && (
                   <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
-                    • <CalendarCheck className="w-3 h-3" /> Culminado: {game.completionDate.split("T")[0]}
+                    • <CalendarCheck className="w-3 h-3" /> Culminado: {formatDate(game.completionDate)}
                   </span>
                 )}
               </>
@@ -197,9 +197,9 @@ export function ItemDetailModal({ item, type, onClose }: ItemDetailModalProps) {
               <>
                 {movie?.year && <span>Año {movie.year}</span>}
                 {movie?.tmdbId && <span>• TMDB ID: {movie.tmdbId}</span>}
-                {movie?.completionDate && (
+                {movie?.completionDate && formatDate(movie.completionDate) && (
                   <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
-                    • <CalendarCheck className="w-3 h-3" /> Visto: {movie.completionDate.split("T")[0]}
+                    • <CalendarCheck className="w-3 h-3" /> Fecha de visualización: {formatDate(movie.completionDate)}
                   </span>
                 )}
               </>

@@ -95,7 +95,7 @@ export function GameCard({ game, onClick, className }: GameCardProps) {
         </div>
 
         {/* Content Details */}
-        <div className="p-4">
+        <div className="p-3.5 sm:p-4">
           <h3 className="font-display font-bold text-sm text-zinc-900 dark:text-zinc-100 group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors duration-200 line-clamp-1 tracking-tight">
             {game.title}
           </h3>
@@ -122,7 +122,7 @@ export function GameCard({ game, onClick, className }: GameCardProps) {
       </div>
 
       {/* Footer Playtime vs HLTB */}
-      <div className="p-4 pt-0">
+      <div className="p-3.5 sm:p-4 pt-0">
         <div className="pt-3 border-t border-zinc-200 dark:border-white/10 flex items-center justify-between text-xs">
           <div className="flex items-center gap-1.5 text-zinc-700 dark:text-zinc-300 font-mono">
             <Clock className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500" />

@@ -89,10 +89,12 @@ export class SteamToNotionSyncService {
     // Índices auxiliares para búsqueda rápida en Notion
     const notionBySteamId = new Map<number, NotionPageDelta>();
     const notionByCleanTitle = new Map<string, NotionPageDelta>();
+    const notionById = new Map<string, NotionPageDelta>();
     const allNotionRecords: Array<{ cleanTitle: string; page: NotionPageDelta }> = [];
 
     for (const page of notionPages) {
       if (page.archived) continue;
+      notionById.set(page.id, page);
       const props = page.properties as Record<string, any>;
       const title = extractNotionTitle(props);
       const steamId = extractNotionNumber(props, ["Steam ID", "SteamId", "AppId"]);
@@ -130,7 +132,7 @@ export class SteamToNotionSyncService {
 
       const steamCleanTitle = cleanGameTitle(g.name);
 
-      // TRIPLE ESTRATEGIA DE MATCHING
+      // TRIPLE ESTRATEGIA DE MATCHING (Notion)
       let matchedPage: NotionPageDelta | null = null;
 
       // Intento 1: Búsqueda exacta por Steam ID
@@ -153,6 +155,18 @@ export class SteamToNotionSyncService {
         }
       }
 
+      // Verificación en SQLite local (anti-split-brain):
+      // Buscar tanto por steamAppId como por cleanTitle en la base de datos local
+      let localGame = await this.gameRepo.findBySteamAppId(g.appId);
+      if (!localGame) {
+        localGame = await this.gameRepo.findByCleanTitle(steamCleanTitle);
+      }
+
+      // Si no se encontró en Notion por las 3 estrategias previas, pero existe en SQLite local con notionPageId
+      if (!matchedPage && localGame?.notionPageId && notionById.has(localGame.notionPageId)) {
+        matchedPage = notionById.get(localGame.notionPageId)!;
+      }
+
       if (matchedPage) {
         // --- JUEGO YA EXISTE EN NOTION ---
         const updatePayload = await buildNotionUpdatePayload({
@@ -167,7 +181,7 @@ export class SteamToNotionSyncService {
               : this.wiki.searchArticleUrl(name),
         });
 
-        // Si nada cambió, NO enviar petición a Notion (cero tráfico inútil)
+        // Si nada cambió en Notion, NO enviar petición a Notion (cero tráfico inútil)
         if (updatePayload.needsUpdate) {
           if (this.notion.updatePage) {
             await this.notion.updatePage(matchedPage.id, {
@@ -180,7 +194,7 @@ export class SteamToNotionSyncService {
           }
           updatedNotion++;
 
-          // Actualizar SQLite cache de forma idempotente
+          // Actualizar SQLite cache de forma idempotente y unificada
           const resolvedTitle = extractNotionTitle(matchedPage.properties as Record<string, any>) || g.name;
           await this.gameRepo.upsert({
             notionPageId: matchedPage.id,
@@ -195,6 +209,22 @@ export class SteamToNotionSyncService {
           });
 
           await this.sleep();
+        } else {
+          // Si Notion ya estaba al día, pero SQLite local no tenía steamAppId o tenía desalineado notionPageId, unificarlo
+          if (!localGame || !localGame.steamAppId || localGame.notionPageId !== matchedPage.id) {
+            const resolvedTitle = extractNotionTitle(matchedPage.properties as Record<string, any>) || g.name;
+            await this.gameRepo.upsert({
+              notionPageId: matchedPage.id,
+              title: resolvedTitle,
+              cleanTitle: cleanGameTitle(resolvedTitle),
+              steamAppId: g.appId,
+              playtimeForever: updatePayload.roundedNewHours,
+              playtimeNotion: updatePayload.roundedNewHours,
+              hltbMain: updatePayload.hltbPrincipal,
+              status: updatePayload.estadoActual || "Por Jugar",
+              platform: "PC",
+            });
+          }
         }
       } else {
         // --- JUEGO NUEVO: CREAR EN NOTION ---

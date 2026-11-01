@@ -22,6 +22,7 @@ export interface CatalogHeaderProps {
   availableGenres?: string[];
   search: string;
   onSearchChange: (search: string) => void;
+  searchInputRef?: React.Ref<HTMLInputElement>;
   totalGames?: number;
   totalMovies?: number;
   className?: string;
@@ -39,6 +40,7 @@ export function CatalogHeader({
   availableGenres = [],
   search,
   onSearchChange,
+  searchInputRef,
   totalGames = 0,
   totalMovies = 0,
   className,
@@ -80,7 +82,7 @@ export function CatalogHeader({
             />
           </div>
 
-          {/* Search Input Bar (Organic, integrated, zero Cmd+K slop) */}
+          {/* Search Input Bar (Organic, integrated, with subtle shortcut indicators) */}
           <div className="group/search relative w-full sm:w-72 lg:w-80">
             <Search
               className={cn(
@@ -89,13 +91,14 @@ export function CatalogHeader({
               )}
             />
             <input
+              ref={searchInputRef}
               type="text"
               value={search}
               onChange={(e) => onSearchChange(e.target.value)}
-              placeholder="Buscar por título, género o notas..."
-              className="w-full pl-10 pr-9 py-2 rounded-full bg-zinc-100 dark:bg-zinc-900/80 border border-zinc-200 dark:border-white/10 text-xs text-zinc-900 dark:text-zinc-200 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-hidden focus:border-rose-500/60 focus:ring-2 focus:ring-rose-500/20 transition-all duration-200 shadow-inner"
+              placeholder="Buscar por título, género o notas... (Ctrl+K o /)"
+              className="w-full pl-10 pr-14 py-2 rounded-full bg-zinc-100 dark:bg-zinc-900/80 border border-zinc-200 dark:border-white/10 text-xs text-zinc-900 dark:text-zinc-200 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-hidden focus:border-rose-500/60 focus:ring-2 focus:ring-rose-500/20 transition-all duration-200 shadow-inner"
             />
-            {search && (
+            {search ? (
               <button
                 type="button"
                 onClick={() => onSearchChange("")}
@@ -104,6 +107,15 @@ export function CatalogHeader({
               >
                 <X className="w-3.5 h-3.5" />
               </button>
+            ) : (
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 pointer-events-none">
+                <kbd className="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded border border-zinc-200 dark:border-white/10 bg-white/80 dark:bg-zinc-800/80 text-[10px] font-mono text-zinc-400 dark:text-zinc-500 shadow-2xs">
+                  <span>Ctrl+K</span>
+                </kbd>
+                <kbd className="inline-flex sm:hidden items-center px-1.5 py-0.5 rounded border border-zinc-200 dark:border-white/10 bg-white/80 dark:bg-zinc-800/80 text-[10px] font-mono text-zinc-400 dark:text-zinc-500 shadow-2xs">
+                  /
+                </kbd>
+              </div>
             )}
           </div>
         </div>

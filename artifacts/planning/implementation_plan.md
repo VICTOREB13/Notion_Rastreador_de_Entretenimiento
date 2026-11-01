@@ -106,6 +106,27 @@ Al iniciar el contenedor, el demonio esperaba 120 segundos para su primer ciclo 
 
 ---
 
+## Fase 10: Resiliencia del Daemon, Fecha de Película Notion, Atajos Web y Drawer de Analíticas (v2.4.0)
+
+### Diagnóstico y Objetivos
+1. **Resiliencia HTTP del Daemon:** Las llamadas externas de red a Steam API, TMDB y HowLongToBeat carecen de un timeout unificado con `AbortSignal`, lo que podría congelar workers de sincronización ante degradación de red.
+2. **Coalescencia Anti-Split-Brain:** Si un juego se registró originalmente en Notion o SQLite sin Steam ID (o con diferencias sutiles) y Steam lo reporta posteriormente, el repositorio debe unificar los registros mediante `cleanTitle` para evitar bifurcaciones o duplicaciones.
+3. **Fecha de Visualización de Películas:** Extraer dinámicamente en `syncMovies` ("Fecha de Visualización", "Fecha de Culminación", "Watched Date") y persistir `completionDate` para desplegar en `MovieCard` y `ItemDetailModal` con badge `CalendarCheck`.
+4. **Experiencia Web Avanzada (Sin PWA):**
+   - Atajos de teclado globales (`/` o `Ctrl+K` para buscar, `Escape` para cerrar modales, `T` para alternar tema) ignorando inputs de texto.
+   - Drawer/Modal visual de analíticas consumiendo `/api/analytics` con distribución de géneros y horas acumuladas.
+   - Optimización responsiva estricta para teléfonos (<640px) garantizando clearances de dock y touch targets.
+   - Exclusión explícita de PWA según requerimiento directo del usuario.
+
+### Acciones Específicas:
+- Integrar `AbortSignal.timeout(8000)` en `SteamClient`, `TmdbClient` y `HltbClient`.
+- Implementar coalescencia anti-split-brain en `GameRepository` y `SteamToNotionSyncService`.
+- Sincronizar y persistir `completionDate` en películas de Notion a SQLite y renderizar en UI.
+- Diseñar `AnalyticsModal` y registrar listeners globales en `apps/web`.
+- Validar suites, compilar Next.js, crear commit y tag `v2.4.0`.
+
+---
+
 ## Matriz de Validacion y Quality Gate
 
 | Fase | Verificacion Determinista | Herramienta | Resultado Requerido |
@@ -115,6 +136,7 @@ Al iniciar el contenedor, el demonio esperaba 120 segundos para su primer ciclo 
 | Fase 3 | Inspeccion visual de telemetria | Revision de UI | Cero inputs de credenciales o sliders |
 | Fase 4 | Auditoria de contraste Dark/Light y slider | Revision de DOM | Transicion fluida y estilos consistentes |
 | Fase 5 | Hidratacion de base de datos en arranque | Logs de Daemon | Sincronizacion inicial ejecutada en bootstrap |
+| Fase 10 | Resiliencia daemon, fecha películas y analíticas | `bun test`, `bun run web:build` | 100% pruebas en verde y build limpio |
 
 ---
 

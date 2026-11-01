@@ -97,11 +97,7 @@ export class TmdbClient implements ITmdbClient {
         }
 
         const url = `${this.baseUrl}/search/movie?${urlParams.toString()}`;
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 6000);
-
-        const res = await fetch(url, { signal: controller.signal });
-        clearTimeout(timeoutId);
+        const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
 
         if (res.ok) {
           const data = (await res.json()) as { results?: any[] };
@@ -125,7 +121,8 @@ export class TmdbClient implements ITmdbClient {
     if (!overview) {
       try {
         const detailRes = await fetch(
-          `${this.baseUrl}/movie/${bestMovie.id}?api_key=${this.apiKey}&language=en-US`
+          `${this.baseUrl}/movie/${bestMovie.id}?api_key=${this.apiKey}&language=en-US`,
+          { signal: AbortSignal.timeout(8000) }
         );
         if (detailRes.ok) {
           const detailData = (await detailRes.json()) as { overview?: string };
@@ -165,7 +162,7 @@ export class TmdbClient implements ITmdbClient {
 
     try {
       const url = `${this.baseUrl}/movie/${tmdbId}?api_key=${this.apiKey}&language=${language}`;
-      const res = await fetch(url);
+      const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
       if (!res.ok) return null;
 
       const data = (await res.json()) as any;

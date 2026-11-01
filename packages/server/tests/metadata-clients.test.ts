@@ -231,5 +231,56 @@ describe("Metadata Clients & Steam Family Sharing (Fase 2)", () => {
       expect(cyberpunk).toBeDefined();
       expect(cyberpunk?.playtimeMinutes).toBe(1800);
     });
+
+    it("should handle timeout and abort errors cleanly without throwing (TASK-330)", async () => {
+      globalThis.fetch = (async () => {
+        throw new DOMException("The operation was aborted due to timeout", "TimeoutError");
+      }) as any;
+
+      const steam = new SteamClient("test_steam_key");
+
+      const summary = await steam.getPlayerSummary("76561198000000000");
+      expect(summary.isError).toBe(true);
+      expect(summary.personaName).toBe("Error");
+      expect(summary.isPlaying).toBe(false);
+
+      const owned = await steam.getOwnedGames("76561198000000000");
+      expect(owned).toEqual([]);
+
+      const recent = await steam.getRecentlyPlayedGames("76561198000000000");
+      expect(recent).toEqual([]);
+
+      const details = await steam.getAppDetails(504230);
+      expect(details).toBeNull();
+    });
+  });
+
+  describe("HTTP Timeout & AbortSignal Resilience (TASK-330)", () => {
+    it("TmdbClient should handle timeout and abort cleanly without throwing", async () => {
+      globalThis.fetch = (async () => {
+        throw new DOMException("The operation was aborted due to timeout", "TimeoutError");
+      }) as any;
+
+      const tmdb = new TmdbClient("test_tmdb_key");
+
+      const searchMatch = await tmdb.searchMovie("Inception");
+      expect(searchMatch).toBeNull();
+
+      const details = await tmdb.getMovieDetails(27205);
+      expect(details).toBeNull();
+    });
+
+    it("HltbClient should handle timeout and abort cleanly without throwing", async () => {
+      globalThis.fetch = (async () => {
+        throw new DOMException("The operation was aborted due to timeout", "TimeoutError");
+      }) as any;
+
+      const hltb = new HltbClient();
+      const estimate = await hltb.searchDuration("Elden Ring");
+
+      expect(estimate.mainHours).toBeNull();
+      expect(estimate.completionistHours).toBeNull();
+    });
   });
 });
+

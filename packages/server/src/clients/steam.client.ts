@@ -21,7 +21,7 @@ export class SteamClient implements ISteamClient {
 
     try {
       const url = `${this.baseUrl}/ISteamUser/GetPlayerSummaries/v0002/?key=${this.apiKey}&steamids=${steamId}`;
-      const res = await fetch(url);
+      const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
       if (!res.ok) {
         throw new Error(`Steam GetPlayerSummaries returned status ${res.status}`);
       }
@@ -73,7 +73,7 @@ export class SteamClient implements ISteamClient {
 
     try {
       const url = `${this.baseUrl}/IPlayerService/GetOwnedGames/v0001/?key=${this.apiKey}&steamid=${steamId}&include_appinfo=1&format=json`;
-      const res = await fetch(url);
+      const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
       if (!res.ok) {
         throw new Error(`Steam GetOwnedGames returned status ${res.status}`);
       }
@@ -109,7 +109,7 @@ export class SteamClient implements ISteamClient {
 
     try {
       const url = `${this.baseUrl}/IPlayerService/GetRecentlyPlayedGames/v0001/?key=${this.apiKey}&steamid=${steamId}&format=json`;
-      const res = await fetch(url);
+      const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
       if (!res.ok) {
         throw new Error(`Steam GetRecentlyPlayedGames returned status ${res.status}`);
       }
@@ -165,7 +165,7 @@ export class SteamClient implements ISteamClient {
   async getAppDetails(appId: number): Promise<SteamStoreDetails | null> {
     try {
       const url = `${this.storeUrl}/appdetails?appids=${appId}&l=spanish`;
-      const res = await fetch(url);
+      const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
       if (!res.ok) {
         return null;
       }

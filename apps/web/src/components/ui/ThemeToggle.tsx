@@ -24,10 +24,10 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
   };
 
   const getLabel = () => {
-    if (!mounted) return "Cambiar tema";
-    if (theme === "dark") return "Tema: Oscuro (clic para Claro)";
-    if (theme === "light") return "Tema: Claro (clic para Sistema)";
-    return "Tema: Sistema (clic para Oscuro)";
+    if (!mounted) return "Cambiar tema (Atajo: T)";
+    if (theme === "dark") return "Tema: Oscuro (clic para Claro, Atajo: T)";
+    if (theme === "light") return "Tema: Claro (clic para Sistema, Atajo: T)";
+    return "Tema: Sistema (clic para Oscuro, Atajo: T)";
   };
 
   return (

@@ -1,9 +1,9 @@
 "use client";
 
 import React from "react";
-import { Film, Sparkles, Calendar, Star } from "lucide-react";
+import { Film, Sparkles, Calendar, Star, CalendarCheck } from "lucide-react";
 import { SpotlightCard } from "../brand/SpotlightCard";
-import { cn } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
 import type { MovieItem } from "@/lib/types";
 
 export interface MovieCardProps {
@@ -96,7 +96,7 @@ export function MovieCard({ movie, onClick, className, aspectRatio = "poster" }:
         </div>
 
         {/* Content Details */}
-        <div className="p-4">
+        <div className="p-3.5 sm:p-4">
           <h3 className="font-display font-bold text-sm text-zinc-900 dark:text-zinc-100 group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors duration-200 line-clamp-1 tracking-tight">
             {movie.title}
           </h3>
@@ -115,6 +115,16 @@ export function MovieCard({ movie, onClick, className, aspectRatio = "poster" }:
               </>
             )}
           </div>
+
+          {/* Completion Date Badge */}
+          {movie.completionDate && formatDate(movie.completionDate) && (
+            <div className="mt-2 flex items-center">
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] sm:text-[11px] font-medium font-mono bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/20 shadow-2xs group-hover:border-emerald-500/40 transition-colors duration-200">
+                <CalendarCheck className="w-3 h-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <span>Vista: {formatDate(movie.completionDate)}</span>
+              </span>
+            </div>
+          )}
 
           {/* Genres */}
           {movie.genres && movie.genres.length > 0 && (
@@ -138,7 +148,7 @@ export function MovieCard({ movie, onClick, className, aspectRatio = "poster" }:
       </div>
 
       {/* Footer Synopsis Preview */}
-      <div className="p-4 pt-0">
+      <div className="p-3.5 sm:p-4 pt-0">
         <p className="text-xs text-zinc-600 dark:text-zinc-400 line-clamp-2 leading-relaxed">
           {aiData?.personalizedPitch || movie.overview || "Sin sinopsis registrada."}
         </p>

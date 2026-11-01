@@ -60,6 +60,14 @@ tags: [tareas, refactorizacion, brand-components, telemetry, dark-mode, light-mo
 - [x] `TASK-328`: Reducir temperatura por defecto de Gemini de 0.7 a 0.35 y fortalecer `buildPrompt` con directivas negativas estrictas anti-slop.
 - [x] `TASK-329`: Validación integral (`bun test`, `bun run typecheck`, `bun run validate`, `bun run web:build`), bump a v2.3.0, git commit semántico y tag release `v2.3.0`.
 
+### Fase 10: Resiliencia Daemon (Timeouts & Coalescencia), Fecha Película Notion, Atajos Web y Drawer Analíticas (v2.4.0)
+- [x] `TASK-330`: Añadir `AbortSignal.timeout(8000)` en clientes HTTP (`steam.client.ts`, `tmdb.client.ts`, `hltb.client.ts`).
+- [x] `TASK-331`: Robustecer coalescencia anti-split-brain en `game.repository.ts` y `steam-notion-sync.service.ts` para unificar registros si Steam detecta un juego existente por `cleanTitle`.
+- [x] `TASK-332`: Extraer fecha de visualización en `syncMovies` (`notion-sync.service.ts`), persistir `completionDate` en SQLite y desplegar en `ItemDetailModal.tsx` y `MovieCard.tsx` con `CalendarCheck`.
+- [x] `TASK-333`: Atajos de teclado globales (`/` o `Ctrl+K` para buscar, `Escape` para cerrar modales, `T` para alternar tema) en la interfaz web sin interferir con inputs de texto.
+- [x] `TASK-334`: Drawer/Modal visual de analíticas consumiendo `/api/analytics` con distribución de géneros y horas, y pulido responsive para dispositivos móviles (<640px sin PWA).
+- [x] `TASK-335`: Validación integral (`bun test`, `bun run typecheck`, `bun run validate`, `bun run web:build`), bump a v2.4.0, commit semántico, tag release y push a `origin/main` y `origin/v2.4.0`.
+
 ---
 
 ## Referencias

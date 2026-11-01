@@ -233,6 +233,56 @@ describe("NotionSyncService (Intelligent Delta Polling & Anti-Loop Guard)", () =
     expect(savedMovie?.overview).toContain("Miles Morales");
   });
 
+  it("should sync movie completionDate from 'Fecha de Visualización' or 'Watched Date' in Notion (TASK-332)", async () => {
+    const movieWithWatchedDateId = "notion-movie-watched-furiosa";
+    mockNotion.allPagesResponse = [
+      {
+        id: movieWithWatchedDateId,
+        lastEditedTime: "2026-10-25T14:30:00.000Z",
+        properties: {
+          Título: { title: [{ text: { content: "Furiosa: A Mad Max Saga (2024)" } }] },
+          "Fecha de Visualización": { date: { start: "2024-05-24" } },
+          Estado: { status: { name: "Vista" } },
+        },
+      },
+    ];
+
+    const stats = await syncService.syncMovies(true);
+    expect(stats.moviesCreated).toBe(1);
+
+    const savedMovie = await movieRepo.findByNotionPageId(movieWithWatchedDateId);
+    expect(savedMovie).not.toBeNull();
+    expect(savedMovie?.title).toBe("Furiosa: A Mad Max Saga");
+    expect(savedMovie?.completionDate).toBe("2024-05-24");
+
+    await movieRepo.delete(savedMovie!.id);
+  });
+
+  it("should extract date.start when movie date is a range in 'Fecha' or 'Watched Date' (TASK-332)", async () => {
+    const movieWithRangeId = "notion-movie-watched-range";
+    mockNotion.allPagesResponse = [
+      {
+        id: movieWithRangeId,
+        lastEditedTime: "2026-10-25T14:30:00.000Z",
+        properties: {
+          Título: { title: [{ text: { content: "Civil War (2024)" } }] },
+          Fecha: { date: { start: "2024-04-12", end: "2024-04-16" } },
+          Estado: { status: { name: "Vista" } },
+        },
+      },
+    ];
+
+    const stats = await syncService.syncMovies(true);
+    expect(stats.moviesCreated).toBe(1);
+
+    const savedMovie = await movieRepo.findByNotionPageId(movieWithRangeId);
+    expect(savedMovie).not.toBeNull();
+    expect(savedMovie?.title).toBe("Civil War");
+    expect(savedMovie?.completionDate).toBe("2024-04-12"); // extrae start de rango
+
+    await movieRepo.delete(savedMovie!.id);
+  });
+
   it("should extract rating, completion date, and user summary/opinion from Notion", async () => {
     const customGamePageId = "notion-game-custom-props";
     mockNotion.allPagesResponse = [

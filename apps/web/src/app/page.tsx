@@ -13,6 +13,9 @@ import { BentoCatalogGrid } from "@/components/catalog/BentoCatalogGrid";
 import { AiRecommendationHero } from "@/components/catalog/AiRecommendationHero";
 import { ItemDetailModal } from "@/components/detail/ItemDetailModal";
 import { TelemetryModal } from "@/components/settings/TelemetryModal";
+import { AnalyticsModal } from "@/components/analytics/AnalyticsModal";
+import { useKeyboardShortcuts } from "@/lib/useKeyboardShortcuts";
+import { useTheme } from "@/lib/theme";
 import {
   useLiveStatusQuery,
   useAnalyticsQuery,
@@ -36,6 +39,37 @@ export default function EntertainmentShowcasePage() {
   } | null>(null);
 
   const [isTelemetryOpen, setIsTelemetryOpen] = useState(false);
+  const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
+  const searchInputRef = React.useRef<HTMLInputElement | null>(null);
+  const { toggleTheme } = useTheme();
+
+  // Atajos de teclado globales (TASK-333)
+  useKeyboardShortcuts({
+    onSearchFocus: () => {
+      const input = searchInputRef.current;
+      if (input) {
+        input.focus({ preventScroll: true });
+        input.select();
+        const catalogEl = document.getElementById("catalogo");
+        if (catalogEl) {
+          const lenis = (window as unknown as { __lenis?: { scrollTo: (target: HTMLElement) => void } }).__lenis;
+          if (lenis) {
+            lenis.scrollTo(catalogEl);
+          } else {
+            catalogEl.scrollIntoView({ behavior: "smooth" });
+          }
+        }
+      }
+    },
+    onEscape: () => {
+      if (selectedItem) setSelectedItem(null);
+      if (isTelemetryOpen) setIsTelemetryOpen(false);
+      if (isAnalyticsOpen) setIsAnalyticsOpen(false);
+    },
+    onToggleTheme: () => {
+      toggleTheme();
+    },
+  });
 
   // Hook reactivo SSE que escucha /api/events y actualiza la caché automáticamente
   const { isConnected: isSSEActive } = useServerEvents();
@@ -109,10 +143,10 @@ export default function EntertainmentShowcasePage() {
     null;
 
   return (
-    <main className="min-h-screen bg-zinc-50 dark:bg-[#09090B] text-zinc-900 dark:text-zinc-100 pb-28 pt-6 sm:pt-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto transition-colors duration-200">
+    <main className="min-h-screen bg-zinc-50 dark:bg-[#09090B] text-zinc-900 dark:text-zinc-100 pb-32 sm:pb-36 pt-6 sm:pt-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto transition-colors duration-200">
       {/* Brand Header with Authentic Vectors, Crimson Border & Version Badge */}
       <BrandHeader
-        version="v2.3.0"
+        version="v2.4.0"
         onOpenTelemetry={() => setIsTelemetryOpen(true)}
         actions={
           <div className="flex items-center gap-2">
@@ -220,6 +254,7 @@ export default function EntertainmentShowcasePage() {
           availableGenres={availableGenres}
           search={search}
           onSearchChange={setSearch}
+          searchInputRef={searchInputRef}
           totalGames={summary?.totalGames ?? games.length}
           totalMovies={summary?.totalMovies ?? movies.length}
         />
@@ -275,6 +310,7 @@ export default function EntertainmentShowcasePage() {
           }
         }}
         onOpenSettings={() => setIsTelemetryOpen(true)}
+        onOpenAnalytics={() => setIsAnalyticsOpen(true)}
       />
 
       {/* Detail Modal / Drawer */}
@@ -288,6 +324,12 @@ export default function EntertainmentShowcasePage() {
       <TelemetryModal
         isOpen={isTelemetryOpen}
         onClose={() => setIsTelemetryOpen(false)}
+      />
+
+      {/* Analytics Modal & Drawer */}
+      <AnalyticsModal
+        isOpen={isAnalyticsOpen}
+        onClose={() => setIsAnalyticsOpen(false)}
       />
     </main>
   );

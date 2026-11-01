@@ -20,6 +20,7 @@ export interface FloatingIslandNavDockProps {
   onItemClick?: (id: string) => void;
   onOpenSettings?: () => void;
   onOpenTelemetry?: () => void;
+  onOpenAnalytics?: () => void;
   showThemeToggle?: boolean;
   className?: string;
 }
@@ -30,6 +31,7 @@ export function FloatingIslandNavDock({
   onItemClick,
   onOpenSettings,
   onOpenTelemetry,
+  onOpenAnalytics,
   showThemeToggle = true,
   className,
 }: FloatingIslandNavDockProps) {
@@ -110,10 +112,27 @@ export function FloatingIslandNavDock({
               type="button"
               onClick={handleOpenTelemetry}
               title="Telemetría"
-              className="flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-medium text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white hover:bg-zinc-100/70 dark:hover:bg-zinc-800 transition-all duration-200 cursor-pointer"
+              aria-label="Telemetría"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-medium text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white hover:bg-zinc-100/70 dark:hover:bg-zinc-800 transition-all duration-200 cursor-pointer min-h-[36px] sm:min-h-0"
             >
-              <Activity className="w-4 h-4 text-rose-500" />
+              <Activity className="w-4 h-4 text-rose-500 shrink-0" />
               <span className="hidden sm:inline-block">Telemetría</span>
+            </button>
+          </>
+        )}
+
+        {onOpenAnalytics && (
+          <>
+            <div className="w-[1px] h-4 bg-zinc-200 dark:bg-white/10 mx-0.5" />
+            <button
+              type="button"
+              onClick={onOpenAnalytics}
+              title="Analíticas"
+              aria-label="Analíticas"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-medium text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white hover:bg-zinc-100/70 dark:hover:bg-zinc-800 transition-all duration-200 cursor-pointer min-h-[36px] sm:min-h-0"
+            >
+              <BarChart3 className="w-4 h-4 text-rose-500 shrink-0" />
+              <span className="hidden sm:inline-block">Analíticas</span>
             </button>
           </>
         )}

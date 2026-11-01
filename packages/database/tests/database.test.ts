@@ -179,6 +179,119 @@ describe("SQLite Database & Prisma Repositories", () => {
 
       await gameRepository.delete(created.id);
     });
+
+    it("should coalesce and unify game record on cleanTitle or steamAppId match (anti-split-brain)", async () => {
+      // 1. Crear juego inicial desde Notion sin steamAppId
+      const initial = await gameRepository.upsert({
+        notionPageId: "notion-split-test-1",
+        title: "Hollow Knight: Silksong",
+        cleanTitle: "hollow knight silksong",
+        playtimeForever: 5.0,
+      });
+
+      expect(initial.steamAppId).toBeNull();
+      expect(initial.notionPageId).toBe("notion-split-test-1");
+
+      // 2. Simular upsert desde Steam con notionPageId diferente pero mismo cleanTitle
+      const coalesced = await gameRepository.upsert({
+        notionPageId: "notion-split-test-2",
+        title: "Hollow Knight Silksong",
+        cleanTitle: "hollow knight silksong",
+        steamAppId: 1030300,
+        playtimeForever: 12.5,
+      });
+
+      // Debe ser el MISMO registro ID coalescido
+      expect(coalesced.id).toBe(initial.id);
+      expect(coalesced.steamAppId).toBe(1030300);
+      expect(coalesced.notionPageId).toBe("notion-split-test-2");
+      expect(coalesced.playtimeForever).toBe(12.5);
+
+      // Verificar que no existe un duplicado en la base de datos
+      const allMatches = await gameRepository.list({ search: "Silksong" });
+      expect(allMatches.total).toBe(1);
+
+      await gameRepository.delete(initial.id);
+    });
+
+    it("should merge daily playtimes and inherit metadata without data loss during anti-split-brain coalescence", async () => {
+      // 1. Crear juego A con metadata y dailyPlaytime
+      const gameA = await gameRepository.upsert({
+        notionPageId: "notion-split-merge-a",
+        title: "Dead Cells",
+        cleanTitle: "dead cells",
+        playtimeForever: 10.0,
+        rating: 4.8,
+        completedAt: "2024-03-01",
+        coverUrl: "https://example.com/deadcells-a.jpg",
+      });
+
+      // Registrar 60 minutos en fecha 2026-10-01 y 30 minutos en 2026-10-02 para juego A
+      await dailyPlaytimeRepository.recordPlaytime("2026-10-01", gameA.id, 60);
+      await dailyPlaytimeRepository.recordPlaytime("2026-10-02", gameA.id, 30);
+
+      // 2. Crear juego B independiente (simulando divergencia previa) con su propio steamAppId y dailyPlaytime
+      const gameB = await prisma.game.create({
+        data: {
+          notionPageId: "notion-split-merge-b",
+          title: "Dead Cells (PC)",
+          cleanTitle: "dead cells pc",
+          steamAppId: 588650,
+          playtimeForever: 25.0,
+          userNotes: "Excelente rogue-lite con combate veloz.",
+        },
+      });
+
+      // Registrar 45 minutos en 2026-10-01 (misma fecha que A) y 50 minutos en 2026-10-03 (fecha exclusiva de B)
+      await dailyPlaytimeRepository.recordPlaytime("2026-10-01", gameB.id, 45);
+      await dailyPlaytimeRepository.recordPlaytime("2026-10-03", gameB.id, 50);
+
+      // Registrar sesión en juego B
+      await sessionRepository.startSession(gameB.id, 588650);
+
+      // 3. Ejecutar upsert coalesciendo con cleanTitle "dead cells" y steamAppId 588650
+      const coalesced = await gameRepository.upsert({
+        notionPageId: "notion-split-merge-a",
+        title: "Dead Cells",
+        cleanTitle: "dead cells",
+        steamAppId: 588650,
+        playtimeForever: 30.0,
+      });
+
+      expect(coalesced.id).toBe(gameA.id);
+      expect(coalesced.steamAppId).toBe(588650);
+      expect(coalesced.rating).toBe(4.8); // Preservado de A
+      expect(coalesced.completedAt).toBe("2024-03-01"); // Preservado de A
+      expect(coalesced.coverUrl).toBe("https://example.com/deadcells-a.jpg"); // Preservado de A
+      expect(coalesced.userNotes).toBe("Excelente rogue-lite con combate veloz."); // Heredado de B
+
+      // Verificar que el juego B divergente fue eliminado
+      const oldB = await gameRepository.findById(gameB.id);
+      expect(oldB).toBeNull();
+
+      // Verificar que las sesiones de B migraron a A
+      const sessions = await prisma.gameSession.findMany({ where: { gameId: gameA.id } });
+      expect(sessions.length).toBeGreaterThanOrEqual(1);
+
+      // Verificar que DailyPlaytime se combinó sin pérdida de datos
+      const dp1 = await prisma.dailyPlaytime.findUnique({
+        where: { date_gameId: { date: "2026-10-01", gameId: gameA.id } },
+      });
+      expect(dp1).not.toBeNull();
+      expect(dp1?.minutes).toBe(105); // 60 (A) + 45 (B) combinados!
+
+      const dp2 = await prisma.dailyPlaytime.findUnique({
+        where: { date_gameId: { date: "2026-10-02", gameId: gameA.id } },
+      });
+      expect(dp2?.minutes).toBe(30);
+
+      const dp3 = await prisma.dailyPlaytime.findUnique({
+        where: { date_gameId: { date: "2026-10-03", gameId: gameA.id } },
+      });
+      expect(dp3?.minutes).toBe(50); // Fecha exclusiva de B migrada intacta a A!
+
+      await gameRepository.delete(gameA.id);
+    });
   });
 
   describe("MovieRepository", () => {
@@ -210,6 +323,40 @@ describe("SQLite Database & Prisma Repositories", () => {
 
       const listResult = await movieRepository.list({ year: 2017 });
       expect(listResult.items.some((m) => m.id === createdMovieId)).toBe(true);
+    });
+
+    it("should persist completionDate and coalesce divergent movie records on cleanTitle match", async () => {
+      // 1. Crear película inicial desde Notion con completionDate
+      const movie1 = await movieRepository.upsert({
+        notionPageId: "notion-movie-coalesce-1",
+        title: "Interstellar",
+        cleanTitle: "interstellar",
+        completionDate: "2024-01-20",
+        rating: 4.9,
+      });
+
+      expect(movie1.completionDate).toBe("2024-01-20");
+
+      // 2. Upsert con diferente notionPageId pero mismo cleanTitle y con tmdbId
+      const movie2 = await movieRepository.upsert({
+        notionPageId: "notion-movie-coalesce-2",
+        title: "Interstellar (2014)",
+        cleanTitle: "interstellar",
+        tmdbId: 157336,
+        overview: "Un grupo de exploradores espaciales viajan a través de un agujero de gusano...",
+      });
+
+      // Debe coalescer en el mismo registro y conservar completionDate y rating
+      expect(movie2.id).toBe(movie1.id);
+      expect(movie2.tmdbId).toBe(157336);
+      expect(movie2.completionDate).toBe("2024-01-20");
+      expect(movie2.rating).toBe(4.9);
+      expect(movie2.overview).toContain("agujero de gusano");
+
+      const allMatches = await movieRepository.list({ search: "Interstellar" });
+      expect(allMatches.total).toBe(1);
+
+      await movieRepository.delete(movie1.id);
     });
   });
 

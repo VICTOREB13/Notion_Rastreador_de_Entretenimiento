@@ -32,9 +32,162 @@ export class GameRepository implements IGameRepository {
     const genres = data.genres ?? data.notionGenres ?? "[]";
     const notionGenres = data.notionGenres ?? data.genres ?? "[]";
 
-    return prisma.game.upsert({
-      where: { notionPageId: data.notionPageId },
-      create: {
+    // 1. Buscar si ya existe por notionPageId, steamAppId, o cleanTitle normalizado
+    let existing: Game | null = null;
+    if (data.notionPageId) {
+      existing = await prisma.game.findUnique({ where: { notionPageId: data.notionPageId } });
+    }
+    if (!existing && data.steamAppId) {
+      existing = await prisma.game.findFirst({ where: { steamAppId: data.steamAppId } });
+    }
+    if (!existing && normalizedCleanTitle) {
+      if (data.steamAppId) {
+        existing = await prisma.game.findFirst({
+          where: {
+            cleanTitle: normalizedCleanTitle,
+            OR: [{ steamAppId: null }, { steamAppId: data.steamAppId }],
+          },
+        });
+      } else {
+        existing = await prisma.game.findFirst({ where: { cleanTitle: normalizedCleanTitle } });
+      }
+    }
+
+    if (existing) {
+      // Coalescencia anti-split-brain: buscar TODOS los registros divergentes que coincidan por steamAppId o cleanTitle
+      const duplicateConditions: Prisma.GameWhereInput[] = [];
+      if (data.steamAppId) {
+        duplicateConditions.push({ steamAppId: data.steamAppId });
+      }
+      if (normalizedCleanTitle) {
+        duplicateConditions.push({
+          cleanTitle: normalizedCleanTitle,
+          OR: [{ steamAppId: null }, ...(data.steamAppId ? [{ steamAppId: data.steamAppId }] : [])],
+        });
+      }
+
+      const duplicates = duplicateConditions.length > 0
+        ? await prisma.game.findMany({
+            where: {
+              id: { not: existing.id },
+              OR: duplicateConditions,
+            },
+          })
+        : [];
+
+      // Consolidar datos de duplicados en existing antes de eliminarlos
+      let inheritedSteamAppId = existing.steamAppId;
+      let inheritedRating = existing.rating;
+      let inheritedCompletedAt = existing.completedAt;
+      let inheritedCompletionDate = existing.completionDate;
+      let inheritedCoverUrl = existing.coverUrl;
+      let inheritedHltbMain = existing.hltbMain;
+      let inheritedHltbCompletionist = existing.hltbCompletionist;
+      let inheritedUserNotes = existing.userNotes;
+      let inheritedSummary = existing.summary;
+      let inheritedPersonalSummary = existing.personalSummary;
+      let inheritedLink = existing.link;
+      let maxDuplicatePlaytime = existing.playtimeForever;
+
+      for (const duplicate of duplicates) {
+        if (!inheritedSteamAppId && duplicate.steamAppId) inheritedSteamAppId = duplicate.steamAppId;
+        if (inheritedRating === null && duplicate.rating !== null) inheritedRating = duplicate.rating;
+        if (!inheritedCompletedAt && duplicate.completedAt) inheritedCompletedAt = duplicate.completedAt;
+        if (!inheritedCompletionDate && duplicate.completionDate) inheritedCompletionDate = duplicate.completionDate;
+        if (!inheritedCoverUrl && duplicate.coverUrl) inheritedCoverUrl = duplicate.coverUrl;
+        if (inheritedHltbMain === null && duplicate.hltbMain !== null) inheritedHltbMain = duplicate.hltbMain;
+        if (inheritedHltbCompletionist === null && duplicate.hltbCompletionist !== null) inheritedHltbCompletionist = duplicate.hltbCompletionist;
+        if (!inheritedUserNotes && duplicate.userNotes) inheritedUserNotes = duplicate.userNotes;
+        if (!inheritedSummary && duplicate.summary) inheritedSummary = duplicate.summary;
+        if (!inheritedPersonalSummary && duplicate.personalSummary) inheritedPersonalSummary = duplicate.personalSummary;
+        if (!inheritedLink && duplicate.link) inheritedLink = duplicate.link;
+        if (duplicate.playtimeForever > maxDuplicatePlaytime) maxDuplicatePlaytime = duplicate.playtimeForever;
+
+        // Migrar sesiones activas e históricas
+        await prisma.gameSession.updateMany({
+          where: { gameId: duplicate.id },
+          data: { gameId: existing.id },
+        });
+
+        // Migrar series temporales de DailyPlaytime sin pérdida de datos
+        const duplicateDailyPlaytimes = await prisma.dailyPlaytime.findMany({
+          where: { gameId: duplicate.id },
+        });
+
+        for (const dp of duplicateDailyPlaytimes) {
+          const existingDp = await prisma.dailyPlaytime.findUnique({
+            where: {
+              date_gameId: {
+                date: dp.date,
+                gameId: existing.id,
+              },
+            },
+          });
+
+          if (existingDp) {
+            await prisma.dailyPlaytime.update({
+              where: { id: existingDp.id },
+              data: { minutes: existingDp.minutes + dp.minutes },
+            });
+            await prisma.dailyPlaytime.delete({
+              where: { id: dp.id },
+            });
+          } else {
+            await prisma.dailyPlaytime.update({
+              where: { id: dp.id },
+              data: { gameId: existing.id },
+            });
+          }
+        }
+
+        // Eliminar registro duplicado coalescido
+        await prisma.game.delete({
+          where: { id: duplicate.id },
+        });
+      }
+
+      const resolvedPlaytimeForever = Math.max(
+        data.playtimeForever !== undefined ? data.playtimeForever : existing.playtimeForever,
+        maxDuplicatePlaytime
+      );
+
+      const resolvedStatus = (existing.status === "Jugado" && data.status === "Por Jugar")
+        ? "Jugado"
+        : (data.status ?? existing.status);
+
+      const updateData: Prisma.GameUpdateInput = {
+        title: data.title ?? existing.title,
+        cleanTitle: normalizedCleanTitle,
+        notionPageId: data.notionPageId ?? existing.notionPageId,
+        steamAppId: data.steamAppId ?? inheritedSteamAppId,
+        playtimeForever: resolvedPlaytimeForever,
+        playtimeNotion: data.playtimeNotion !== undefined ? data.playtimeNotion : existing.playtimeNotion,
+        hltbMain: data.hltbMain ?? inheritedHltbMain,
+        hltbCompletionist: data.hltbCompletionist ?? inheritedHltbCompletionist,
+        coverUrl: data.coverUrl || inheritedCoverUrl,
+        genres: data.genres ?? (existing.genres || genres),
+        notionGenres: data.notionGenres ?? (existing.notionGenres || notionGenres),
+        rating: data.rating !== undefined ? data.rating : inheritedRating,
+        completedAt: completedAt ?? inheritedCompletedAt,
+        completionDate: completionDate ?? inheritedCompletionDate,
+        userNotes: userNotes ?? inheritedUserNotes,
+        personalSummary: personalSummary ?? inheritedPersonalSummary,
+        summary: summary ?? inheritedSummary,
+        link: data.link ?? inheritedLink,
+        platform: data.platform ?? existing.platform,
+        status: resolvedStatus,
+        startDate: data.startDate ?? existing.startDate,
+        lastSyncAt: data.lastSyncAt ?? existing.lastSyncAt,
+      };
+
+      return prisma.game.update({
+        where: { id: existing.id },
+        data: updateData,
+      });
+    }
+
+    return prisma.game.create({
+      data: {
         ...data,
         cleanTitle: normalizedCleanTitle,
         genres,
@@ -44,29 +197,6 @@ export class GameRepository implements IGameRepository {
         userNotes: userNotes ?? undefined,
         personalSummary: personalSummary ?? undefined,
         summary: summary ?? undefined,
-      },
-      update: {
-        title: data.title,
-        cleanTitle: normalizedCleanTitle,
-        steamAppId: data.steamAppId,
-        playtimeForever: data.playtimeForever,
-        playtimeNotion: data.playtimeNotion,
-        hltbMain: data.hltbMain,
-        hltbCompletionist: data.hltbCompletionist,
-        coverUrl: data.coverUrl,
-        genres: data.genres ?? genres,
-        notionGenres: data.notionGenres ?? notionGenres,
-        rating: data.rating,
-        completedAt: data.completedAt !== undefined ? data.completedAt : (completionDate ?? undefined),
-        completionDate: data.completionDate !== undefined ? data.completionDate : (completedAt ?? undefined),
-        userNotes: data.userNotes !== undefined ? data.userNotes : (summary ?? undefined),
-        personalSummary: data.personalSummary !== undefined ? data.personalSummary : (summary ?? undefined),
-        summary: data.summary !== undefined ? data.summary : (userNotes ?? undefined),
-        link: data.link,
-        platform: data.platform,
-        status: data.status,
-        startDate: data.startDate,
-        lastSyncAt: data.lastSyncAt,
       },
     });
   }
