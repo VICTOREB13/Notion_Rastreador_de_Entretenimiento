@@ -27,6 +27,27 @@ const enrichGameSchema = z.object({
   syncToNotion: z.boolean().optional(),
 });
 
+function formatGameDto(game: any, enrichment: any) {
+  const parse = (v?: string | null): string[] => {
+    if (Array.isArray(v)) return v;
+    try { return JSON.parse(v || "[]"); } catch { return []; }
+  };
+  const parsedGenres = parse(game.genres);
+  const parsedNotionGenres = parse(game.notionGenres);
+  return {
+    ...game,
+    genres: parsedGenres,
+    notionGenres: parsedNotionGenres.length > 0 ? parsedNotionGenres : parsedGenres,
+    rating: game.rating ?? null,
+    completedAt: game.completedAt ?? game.completionDate ?? null,
+    completionDate: game.completionDate ?? game.completedAt ?? null,
+    userNotes: game.userNotes ?? game.personalSummary ?? game.summary ?? null,
+    personalSummary: game.personalSummary ?? game.userNotes ?? game.summary ?? null,
+    summary: game.summary ?? game.personalSummary ?? game.userNotes ?? null,
+    aiEnrichment: enrichment,
+  };
+}
+
 export const gamesController = new Hono()
   .get("/", zValidator("query", listQuerySchema), async (c) => {
     const { status, search, limit, offset, all } = c.req.valid("query");
@@ -42,39 +63,9 @@ export const gamesController = new Hono()
     const gameIds = items.map((game) => game.id);
     const enrichmentMap = await aiEnrichmentRepository.findManyByTargets("GAME", gameIds);
 
-    const itemsWithEnrichment = items.map((game) => {
-      let parsedGenres: string[] = [];
-      try {
-        parsedGenres = JSON.parse(game.genres || "[]");
-      } catch {
-        parsedGenres = [];
-      }
-
-      let parsedNotionGenres: string[] = [];
-      try {
-        parsedNotionGenres = JSON.parse((game as any).notionGenres || "[]");
-      } catch {
-        parsedNotionGenres = [];
-      }
-      if (parsedNotionGenres.length === 0 && parsedGenres.length > 0) {
-        parsedNotionGenres = parsedGenres;
-      }
-
-      const enrichment = enrichmentMap.get(game.id) || null;
-
-      return {
-        ...game,
-        genres: parsedGenres,
-        notionGenres: parsedNotionGenres,
-        rating: game.rating ?? null,
-        completedAt: (game as any).completedAt ?? (game as any).completionDate ?? null,
-        completionDate: (game as any).completionDate ?? (game as any).completedAt ?? null,
-        userNotes: (game as any).userNotes ?? (game as any).personalSummary ?? (game as any).summary ?? null,
-        personalSummary: (game as any).personalSummary ?? (game as any).userNotes ?? (game as any).summary ?? null,
-        summary: (game as any).summary ?? (game as any).personalSummary ?? (game as any).userNotes ?? null,
-        aiEnrichment: enrichment,
-      };
-    });
+    const itemsWithEnrichment = items.map((game) =>
+      formatGameDto(game, enrichmentMap.get(game.id) || null)
+    );
 
     return c.json({
       success: true,
@@ -165,38 +156,10 @@ export const gamesController = new Hono()
       );
     }
 
-    const enrichment = await aiEnrichmentRepository.getParsedEnrichment?.("GAME", game.id) ?? null;
-    let parsedGenres: string[] = [];
-    try {
-      parsedGenres = JSON.parse(game.genres || "[]");
-    } catch {
-      parsedGenres = [];
-    }
-
-    let parsedNotionGenres: string[] = [];
-    try {
-      parsedNotionGenres = JSON.parse((game as any).notionGenres || "[]");
-    } catch {
-      parsedNotionGenres = [];
-    }
-    if (parsedNotionGenres.length === 0 && parsedGenres.length > 0) {
-      parsedNotionGenres = parsedGenres;
-    }
-
+    const enrichment = (await aiEnrichmentRepository.getParsedEnrichment?.("GAME", game.id)) ?? null;
     return c.json({
       success: true,
-      data: {
-        ...game,
-        genres: parsedGenres,
-        notionGenres: parsedNotionGenres,
-        rating: game.rating ?? null,
-        completedAt: (game as any).completedAt ?? (game as any).completionDate ?? null,
-        completionDate: (game as any).completionDate ?? (game as any).completedAt ?? null,
-        userNotes: (game as any).userNotes ?? (game as any).personalSummary ?? (game as any).summary ?? null,
-        personalSummary: (game as any).personalSummary ?? (game as any).userNotes ?? (game as any).summary ?? null,
-        summary: (game as any).summary ?? (game as any).personalSummary ?? (game as any).userNotes ?? null,
-        aiEnrichment: enrichment,
-      },
+      data: formatGameDto(game, enrichment),
     });
   })
   .post("/sync", zValidator("json", syncBodySchema.optional()), async (c) => {

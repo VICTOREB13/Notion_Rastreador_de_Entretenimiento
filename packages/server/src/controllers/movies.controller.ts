@@ -34,6 +34,13 @@ const legacyEnrichBodySchema = z.object({
   syncToNotion: z.boolean().optional(),
 });
 
+function formatMovieDto(movie: any, enrichment: any) {
+  let genres: string[] = [];
+  if (Array.isArray(movie.genres)) genres = movie.genres;
+  else { try { genres = JSON.parse(movie.genres || "[]"); } catch { genres = []; } }
+  return { ...movie, genres, aiEnrichment: enrichment };
+}
+
 export const moviesController = new Hono()
   .get("/", zValidator("query", listQuerySchema), async (c) => {
     const { status, search, year, limit, offset } = c.req.valid("query");
@@ -49,22 +56,9 @@ export const moviesController = new Hono()
     const movieIds = items.map((movie) => movie.id);
     const enrichmentMap = await aiEnrichmentRepository.findManyByTargets("MOVIE", movieIds);
 
-    const itemsWithEnrichment = items.map((movie) => {
-      let parsedGenres: string[] = [];
-      try {
-        parsedGenres = JSON.parse(movie.genres || "[]");
-      } catch {
-        parsedGenres = [];
-      }
-
-      const enrichment = enrichmentMap.get(movie.id) || null;
-
-      return {
-        ...movie,
-        genres: parsedGenres,
-        aiEnrichment: enrichment,
-      };
-    });
+    const itemsWithEnrichment = items.map((movie) =>
+      formatMovieDto(movie, enrichmentMap.get(movie.id) || null)
+    );
 
     return c.json({
       success: true,
@@ -155,21 +149,10 @@ export const moviesController = new Hono()
       );
     }
 
-    const enrichment = await aiEnrichmentRepository.getParsedEnrichment?.("MOVIE", movie.id) ?? null;
-    let parsedGenres: string[] = [];
-    try {
-      parsedGenres = JSON.parse(movie.genres || "[]");
-    } catch {
-      parsedGenres = [];
-    }
-
+    const enrichment = (await aiEnrichmentRepository.getParsedEnrichment?.("MOVIE", movie.id)) ?? null;
     return c.json({
       success: true,
-      data: {
-        ...movie,
-        genres: parsedGenres,
-        aiEnrichment: enrichment,
-      },
+      data: formatMovieDto(movie, enrichment),
     });
   })
   .post("/sync", zValidator("json", syncBodySchema.optional()), async (c) => {

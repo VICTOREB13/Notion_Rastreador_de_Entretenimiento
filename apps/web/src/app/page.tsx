@@ -66,33 +66,13 @@ export default function EntertainmentShowcasePage() {
       if (isTelemetryOpen) setIsTelemetryOpen(false);
       if (isAnalyticsOpen) setIsAnalyticsOpen(false);
     },
-    onToggleTheme: () => {
-      toggleTheme();
-    },
+    onToggleTheme: toggleTheme,
   });
 
-  // Hook reactivo SSE que escucha /api/events y actualiza la caché automáticamente
   const { isConnected: isSSEActive } = useServerEvents();
-
   const daysNumber = timeRange === "7D" ? 7 : timeRange === "30D" ? 30 : 90;
-
-  const gameStatus =
-    status === "PLAYING"
-      ? "Jugando"
-      : status === "TODO"
-      ? "Por Jugar"
-      : status === "COMPLETED"
-      ? "Jugado"
-      : undefined;
-
-  const movieStatus =
-    status === "PLAYING"
-      ? "Viendo"
-      : status === "TODO"
-      ? "Por Ver"
-      : status === "COMPLETED"
-      ? "Vista"
-      : undefined;
+  const gameStatus = ({ PLAYING: "Jugando", TODO: "Por Jugar", COMPLETED: "Jugado" } as Record<string, string>)[status];
+  const movieStatus = ({ PLAYING: "Viendo", TODO: "Por Ver", COMPLETED: "Vista" } as Record<string, string>)[status];
 
   const { data: liveStatusData, isLoading: isLiveLoading } = useLiveStatusQuery();
   const { data: analytics } = useAnalyticsQuery(daysNumber);

@@ -83,30 +83,18 @@ export async function fetchMovieDetail(id: string) {
 }
 
 
-export async function enrichGame(id: string, options: { force?: boolean; model?: string } = {}) {
-  const res = await client.api.games[":id"].enrich.$post({
-    param: { id },
-    json: options,
-  });
+async function handleEnrichRes(res: any, fallback: string) {
   const json = await res.json();
-  if (!res.ok || !json.success) {
-    const errorMsg = "error" in json ? (json as any).error : "Error enriching game";
-    throw new Error(errorMsg);
-  }
+  if (!res.ok || !json.success) throw new Error("error" in json ? (json as any).error : fallback);
   return json;
 }
 
+export async function enrichGame(id: string, options: { force?: boolean; model?: string } = {}) {
+  return handleEnrichRes(await client.api.games[":id"].enrich.$post({ param: { id }, json: options }), "Error enriching game");
+}
+
 export async function enrichMovie(id: string, options: { force?: boolean; model?: string } = {}) {
-  const res = await client.api.movies[":id"].enrich.$post({
-    param: { id },
-    json: options,
-  });
-  const json = await res.json();
-  if (!res.ok || !json.success) {
-    const errorMsg = "error" in json ? (json as any).error : "Error enriching movie";
-    throw new Error(errorMsg);
-  }
-  return json;
+  return handleEnrichRes(await client.api.movies[":id"].enrich.$post({ param: { id }, json: options }), "Error enriching movie");
 }
 
 export async function fetchSystemSettings() {

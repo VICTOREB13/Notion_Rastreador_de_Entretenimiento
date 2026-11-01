@@ -77,31 +77,22 @@ export function useMovieDetailQuery(id: string | null) {
 }
 
 
-export function useEnrichGameMutation() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, options }: { id: string; options?: { force?: boolean; model?: string } }) =>
-      enrichGame(id, options),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["games"] });
-      queryClient.invalidateQueries({ queryKey: ["game", variables.id] });
-      queryClient.invalidateQueries({ queryKey: ["analytics"] });
-    },
-  });
+function createEnrichMutation(entity: "game" | "movie", fn: (id: string, opt?: any) => Promise<any>) {
+  return () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+      mutationFn: ({ id, options }: { id: string; options?: { force?: boolean; model?: string } }) => fn(id, options),
+      onSuccess: (_, variables) => {
+        queryClient.invalidateQueries({ queryKey: [entity === "game" ? "games" : "movies"] });
+        queryClient.invalidateQueries({ queryKey: [entity, variables.id] });
+        queryClient.invalidateQueries({ queryKey: ["analytics"] });
+      },
+    });
+  };
 }
 
-export function useEnrichMovieMutation() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, options }: { id: string; options?: { force?: boolean; model?: string } }) =>
-      enrichMovie(id, options),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["movies"] });
-      queryClient.invalidateQueries({ queryKey: ["movie", variables.id] });
-      queryClient.invalidateQueries({ queryKey: ["analytics"] });
-    },
-  });
-}
+export const useEnrichGameMutation = createEnrichMutation("game", enrichGame);
+export const useEnrichMovieMutation = createEnrichMutation("movie", enrichMovie);
 
 export function useSystemSettingsQuery() {
   return useQuery({

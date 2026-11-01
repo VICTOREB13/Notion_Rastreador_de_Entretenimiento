@@ -17,26 +17,20 @@ export function normalizeSelectOptions<T = string>(
   options: (SelectOption<T> | string | number)[]
 ): SelectOption<T>[] {
   if (!Array.isArray(options)) return [];
-
   return options
     .filter((opt) => opt !== null && opt !== undefined)
-    .map((opt) => {
-      if (typeof opt === "string" || typeof opt === "number") {
-        return {
-          value: opt as unknown as T,
-          label: String(opt),
-          disabled: false,
-        };
-      }
-      return {
-        value: opt.value,
-        label: opt.label ?? String(opt.value),
-        icon: opt.icon,
-        badge: opt.badge,
-        disabled: Boolean(opt.disabled),
-        description: opt.description,
-      };
-    });
+    .map((opt) =>
+      typeof opt === "object"
+        ? {
+            value: opt.value,
+            label: opt.label ?? String(opt.value),
+            icon: opt.icon,
+            badge: opt.badge,
+            disabled: Boolean(opt.disabled),
+            description: opt.description,
+          }
+        : { value: opt as unknown as T, label: String(opt), disabled: false }
+    );
 }
 
 export interface CustomSelectProps<T = string> {
@@ -192,31 +186,18 @@ export function CustomSelect<T = string>({
                   }}
                   className={cn(
                     "w-full text-left px-2.5 py-2 rounded-xl text-xs font-medium flex items-center justify-between gap-2 transition-colors cursor-pointer",
-                    opt.disabled
-                      ? "opacity-40 cursor-not-allowed"
-                      : isSelected
-                      ? "bg-rose-500/10 dark:bg-rose-600/20 text-rose-600 dark:text-rose-400 font-semibold"
-                      : "text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100/80 dark:hover:bg-zinc-800/60"
+                    opt.disabled ? "opacity-40 cursor-not-allowed" : isSelected ? "bg-rose-500/10 dark:bg-rose-600/20 text-rose-600 dark:text-rose-400 font-semibold" : "text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100/80 dark:hover:bg-zinc-800/60"
                   )}
                 >
                   <div className="flex items-center gap-2 truncate min-w-0">
                     {opt.icon && <span className="shrink-0">{opt.icon}</span>}
                     <div className="truncate">
                       <span className="block truncate">{opt.label}</span>
-                      {opt.description && (
-                        <span className="block text-[10px] text-zinc-500 dark:text-zinc-400 truncate">
-                          {opt.description}
-                        </span>
-                      )}
+                      {opt.description && <span className="block text-[10px] text-zinc-500 dark:text-zinc-400 truncate">{opt.description}</span>}
                     </div>
                   </div>
-
                   <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                    {opt.badge && (
-                      <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300">
-                        {opt.badge}
-                      </span>
-                    )}
+                    {opt.badge && <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300">{opt.badge}</span>}
                     {isSelected && <Check className="w-3.5 h-3.5 text-rose-500 font-bold shrink-0" />}
                   </div>
                 </div>

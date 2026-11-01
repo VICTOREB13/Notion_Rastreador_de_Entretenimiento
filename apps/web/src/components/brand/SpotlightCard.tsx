@@ -32,26 +32,12 @@ export function SpotlightCard({
     }
   }, []);
 
-  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (reducedMotion || !cardRef.current) return;
-    if (e.pointerType === "touch") return;
+  const updateCoords = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (reducedMotion || e.pointerType === "touch" || !cardRef.current) return false;
     const rect = cardRef.current.getBoundingClientRect();
     cardRef.current.style.setProperty("--mouse-x", `${e.clientX - rect.left}px`);
     cardRef.current.style.setProperty("--mouse-y", `${e.clientY - rect.top}px`);
-  };
-
-  const handlePointerEnter = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (reducedMotion || e.pointerType === "touch") return;
-    if (cardRef.current) {
-      const rect = cardRef.current.getBoundingClientRect();
-      cardRef.current.style.setProperty("--mouse-x", `${e.clientX - rect.left}px`);
-      cardRef.current.style.setProperty("--mouse-y", `${e.clientY - rect.top}px`);
-    }
-    setIsHovered(true);
-  };
-
-  const handlePointerLeave = () => {
-    setIsHovered(false);
+    return true;
   };
 
   const activeColor = spotlightColor || "rgba(239, 68, 68, 0.12)";
@@ -59,10 +45,10 @@ export function SpotlightCard({
   return (
     <div
       ref={cardRef}
-      onPointerMove={handlePointerMove}
-      onPointerEnter={handlePointerEnter}
-      onPointerLeave={handlePointerLeave}
-      onPointerCancel={handlePointerLeave}
+      onPointerMove={updateCoords}
+      onPointerEnter={(e) => { if (updateCoords(e)) setIsHovered(true); }}
+      onPointerLeave={() => setIsHovered(false)}
+      onPointerCancel={() => setIsHovered(false)}
       onClick={onClick}
       className={cn(
         "relative overflow-hidden rounded-2xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-[#111113] text-zinc-900 dark:text-zinc-100 shadow-card hover:shadow-card-hover transition-all duration-300",

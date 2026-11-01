@@ -6,57 +6,45 @@ export interface AIEnrichmentData {
   rawResponse?: string;
 }
 
-export interface GameItem {
+export interface BaseCatalogItem {
   id: string;
   notionPageId: string;
   title: string;
   cleanTitle: string;
-  steamAppId: number | null;
-  playtimeForever: number;
-  playtimeNotion: number;
-  hltbMain: number | null;
-  hltbCompletionist: number | null;
-  coverUrl: string | null;
   genres: string[];
-  link: string | null;
-  platform: string;
   status: string;
-  startDate: string | null;
   lastPlayedAt?: string | null;
   completedAt?: string | null;
   completionDate?: string | null;
   rating?: number | null;
-  userNotes?: string | null;
-  personalSummary?: string | null;
   summary?: string | null;
-  notionGenres?: string[];
   lastSyncAt: Date | string | null;
   createdAt: Date | string;
   updatedAt: Date | string;
   aiEnrichment?: AIEnrichmentData | null;
 }
 
-export interface MovieItem {
-  id: string;
-  notionPageId: string;
-  title: string;
-  cleanTitle: string;
+export interface GameItem extends BaseCatalogItem {
+  steamAppId: number | null;
+  playtimeForever: number;
+  playtimeNotion: number;
+  hltbMain: number | null;
+  hltbCompletionist: number | null;
+  coverUrl: string | null;
+  link: string | null;
+  platform: string;
+  startDate: string | null;
+  userNotes?: string | null;
+  personalSummary?: string | null;
+  notionGenres?: string[];
+}
+
+export interface MovieItem extends BaseCatalogItem {
   tmdbId: number | null;
   posterUrl: string | null;
   overview: string | null;
-  genres: string[];
   wikiUrl: string | null;
-  status: string;
   year: number | null;
-  lastPlayedAt?: string | null;
-  completedAt?: string | null;
-  completionDate?: string | null;
-  rating?: number | null;
-  summary?: string | null;
-  lastSyncAt: Date | string | null;
-  createdAt: Date | string;
-  updatedAt: Date | string;
-  aiEnrichment?: AIEnrichmentData | null;
 }
 
 export interface LiveStatusGame {

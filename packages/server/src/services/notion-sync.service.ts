@@ -29,6 +29,59 @@ import {
   extractNotionSummary,
 } from "./notion-props.helper";
 
+const GAME_DATE_ALIASES = [
+  "Fecha de Culminación (primera campaña)",
+  "Fecha de Culminación",
+  "Fecha de Finalización",
+  "Fecha de Término",
+  "Fecha de Completado",
+  "Completion Date",
+  "Completed At",
+  "Fecha Fin",
+  "Culminado",
+];
+
+const MOVIE_DATE_ALIASES = [
+  "Fecha de Visualización",
+  "Fecha de Culminación",
+  "Fecha de Finalización",
+  "Watched Date",
+  "Fecha",
+  "Completion Date",
+  "Fecha Fin",
+  "Vista en",
+];
+
+const RATING_ALIASES = [
+  "Calificación Personal",
+  "Calificación",
+  "Rating",
+  "Puntuación",
+  "Nota",
+  "Score",
+  "Estrellas",
+];
+
+const SUMMARY_ALIASES = [
+  "Pensamiento Personal",
+  "Pensamiento",
+  "Opinión Personal",
+  "Opinión",
+  "Notas Personales",
+  "Notas",
+  "User Notes",
+  "Personal Notes",
+  "Mis Notas",
+  "Mi Opinión",
+  "Comentario Personal",
+  "Review Personal",
+  "Reseña Personal",
+  "Reseña",
+  "Personal Thoughts",
+  "Personal Summary",
+  "Crítica Personal",
+];
+
 export interface SyncStats {
   processed: number;
   updated: number;
@@ -76,21 +129,9 @@ export class NotionSyncService {
     return this.lastMovieSyncWatermark;
   }
 
-  // --- Delegación al motor unificado SSoT de Notion (notion-props.helper) ---
-  private normalizePropKey = normalizePropKey;
-  private findProp = findNotionProp;
-  private findPropKey = findNotionPropKey;
-  private extractTitle = extractNotionTitle;
-  private extractNumber = extractNotionNumber;
-  private extractUrl = extractNotionUrl;
-  private extractFileUrl = extractNotionFileUrl;
-  private extractMultiSelect = extractNotionMultiSelect;
-  private extractSelect = extractNotionSelect;
-  private extractRichText = extractNotionRichText;
-  private extractDate = extractNotionDate;
+  // Helper preservado para compatibilidad y tests unitarios
   private extractRating = extractNotionRating;
-  private extractCompletionDate = extractNotionCompletionDate;
-  private extractSummary = extractNotionSummary;
+
 
   /**
    * Sincronización inteligente delta de videojuegos desde Notion.
@@ -137,111 +178,28 @@ export class NotionSyncService {
       }
 
       const props = page.properties;
-      const title = this.extractTitle(props);
+      const title = extractNotionTitle(props);
       if (!title) continue;
 
       processed++;
 
       const clean = cleanGameTitle(title);
-      const steamAppId = this.extractNumber(props, ["Steam ID", "Steam ID ", "Steam App ID", "SteamId"]);
-      const playtimeNotion = this.extractNumber(props, ["Horas Jugadas", "Horas", "Playtime"]) ?? 0;
-      const hltbMain = this.extractNumber(props, ["HLTB Principal", "HLTB Main"]);
-      const hltbCompletionist = this.extractNumber(props, ["HLTB Completista", "HLTB 100%"]);
+      const steamAppId = extractNotionNumber(props, ["Steam ID", "Steam ID ", "Steam App ID", "SteamId"]);
+      const playtimeNotion = extractNotionNumber(props, ["Horas Jugadas", "Horas", "Playtime"]) ?? 0;
+      const hltbMain = extractNotionNumber(props, ["HLTB Principal", "HLTB Main"]);
+      const hltbCompletionist = extractNotionNumber(props, ["HLTB Completista", "HLTB 100%"]);
       const pageCoverUrl =
         (page.cover as any)?.external?.url || (page.cover as any)?.file?.url || null;
       const coverUrl =
-        this.extractFileUrl(props, ["Portada", "Cover", "Banner"]) || pageCoverUrl;
-      const genres = this.extractMultiSelect(props, ["Géneros", "Generos", "Genres"]);
-      const link = this.extractUrl(props, ["Link", "URL", "Wikipedia", "Wiki", "Enlace"]);
-      const platform = this.extractSelect(props, ["Plataforma", "Platform"], "PC");
-      let status = this.extractSelect(props, ["Estado", "Status"], "Por Jugar");
-      const startDate = this.extractDate(props, ["Fecha de Inicio", "Start Date"]);
-      const completionDate = this.extractCompletionDate(props, [
-        "Fecha de Culminación (primera campaña)",
-        "Fecha de Culminación",
-        "Fecha de Culminacion",
-        "Fecha Culminación",
-        "Fecha Culminacion",
-        "Fecha de Finalización",
-        "Fecha de Finalizacion",
-        "Fecha Finalización",
-        "Fecha Finalizacion",
-        "Fecha de Término",
-        "Fecha de Termino",
-        "Fecha Término",
-        "Fecha Termino",
-        "Fecha de Completado",
-        "Fecha Completado",
-        "Fecha Completada",
-        "Fecha Terminado",
-        "Completion Date",
-        "Completed Date",
-        "Finished Date",
-        "Date Completed",
-        "Completed At",
-        "Finished At",
-        "Fecha Fin",
-        "Fecha de Fin",
-        "Fecha Final",
-        "Culminado",
-        "Finalizado",
-        "Terminado",
-        "Completed",
-      ]);
-      const rating = this.extractRating(props, [
-        "Calificación Personal",
-        "Calificacion Personal",
-        "Calificación",
-        "Calificacion",
-        "Rating",
-        "Puntuación",
-        "Puntuacion",
-        "Nota",
-        "Score",
-        "Estrellas",
-        "Stars",
-      ]);
-      const summary = this.extractSummary(props, [
-        "Pensamiento Personal",
-        "Pensamientos Personales",
-        "Pensamiento",
-        "Pensamientos",
-        "Opinión Personal",
-        "Opinión",
-        "Opinion Personal",
-        "Opinion",
-        "Opiniones",
-        "Notas Personales",
-        "Notas",
-        "User Notes",
-        "Personal Notes",
-        "Mis Notas",
-        "Mi Opinión",
-        "Mi Opinion",
-        "Comentario Personal",
-        "Comentarios Personales",
-        "Comentario",
-        "Comentarios",
-        "Review Personal",
-        "Personal Review",
-        "Review",
-        "Reviews",
-        "Reseña Personal",
-        "Reseña",
-        "Resena Personal",
-        "Resena",
-        "Reseñas",
-        "Personal Thoughts",
-        "Thoughts",
-        "Notes",
-        "Personal Summary",
-        "Resumen Personal",
-        "Resumen",
-        "Crítica Personal",
-        "Critica Personal",
-        "Crítica",
-        "Critica",
-      ]);
+        extractNotionFileUrl(props, ["Portada", "Cover", "Banner"]) || pageCoverUrl;
+      const genres = extractNotionMultiSelect(props, ["Géneros", "Generos", "Genres"]);
+      const link = extractNotionUrl(props, ["Link", "URL", "Wikipedia", "Wiki", "Enlace"]);
+      const platform = extractNotionSelect(props, ["Plataforma", "Platform"], "PC");
+      let status = extractNotionSelect(props, ["Estado", "Status"], "Por Jugar");
+      const startDate = extractNotionDate(props, ["Fecha de Inicio", "Start Date"]);
+      const completionDate = extractNotionCompletionDate(props, GAME_DATE_ALIASES);
+      const rating = extractNotionRating(props, RATING_ALIASES);
+      const summary = extractNotionSummary(props, SUMMARY_ALIASES);
 
       // Comprobar existencia previa por notionPageId o cleanTitle
       let existing = await this.gameRepo.findByNotionPageId(page.id);
@@ -254,69 +212,43 @@ export class NotionSyncService {
         const notionEditTime = new Date(page.lastEditedTime).getTime();
         const localSyncTime = existing.lastSyncAt ? existing.lastSyncAt.getTime() : 0;
 
-        // Si la página de Notion no es más reciente que nuestra última sincronización, omitir
         if (localSyncTime > 0 && notionEditTime <= localSyncTime) {
           continue;
         }
 
         // Respeto de Candados Manuales (Zero-Overwrite)
-        // Si localmente está en estado terminal "Jugado", no permitir que Notion lo regrese a "Por Jugar"
         if (existing.status === "Jugado" && status === "Por Jugar") {
           status = "Jugado";
         }
-
-        await this.gameRepo.upsert({
-          notionPageId: page.id,
-          title,
-          cleanTitle: clean,
-          steamAppId: steamAppId ?? existing.steamAppId,
-          playtimeForever: Math.max(existing.playtimeForever, playtimeNotion),
-          playtimeNotion,
-          hltbMain: hltbMain ?? existing.hltbMain,
-          hltbCompletionist: hltbCompletionist ?? existing.hltbCompletionist,
-          coverUrl: coverUrl ?? existing.coverUrl,
-          genres: JSON.stringify(genres.length > 0 ? genres : JSON.parse(existing.genres || "[]")),
-          notionGenres: JSON.stringify(genres.length > 0 ? genres : JSON.parse((existing as any).notionGenres || "[]")),
-          link: link ?? existing.link,
-          platform,
-          status,
-          startDate: startDate ?? existing.startDate,
-          completedAt: completionDate ?? (existing as any).completedAt ?? existing.completionDate,
-          completionDate: completionDate ?? existing.completionDate ?? (existing as any).completedAt,
-          rating: rating ?? existing.rating,
-          userNotes: summary ?? (existing as any).userNotes ?? existing.summary,
-          personalSummary: summary ?? (existing as any).personalSummary ?? existing.summary,
-          summary: summary ?? existing.summary ?? (existing as any).personalSummary,
-          lastSyncAt: now,
-        });
-        updated++;
-      } else {
-        await this.gameRepo.upsert({
-          notionPageId: page.id,
-          title,
-          cleanTitle: clean,
-          steamAppId: steamAppId ?? undefined,
-          playtimeForever: playtimeNotion,
-          playtimeNotion,
-          hltbMain: hltbMain ?? undefined,
-          hltbCompletionist: hltbCompletionist ?? undefined,
-          coverUrl: coverUrl ?? undefined,
-          genres: JSON.stringify(genres),
-          notionGenres: JSON.stringify(genres),
-          link: link ?? undefined,
-          platform,
-          status,
-          startDate: startDate ?? undefined,
-          completedAt: completionDate ?? undefined,
-          completionDate: completionDate ?? undefined,
-          rating: rating ?? undefined,
-          userNotes: summary ?? undefined,
-          personalSummary: summary ?? undefined,
-          summary: summary ?? undefined,
-          lastSyncAt: now,
-        });
-        created++;
       }
+
+      await this.gameRepo.upsert({
+        notionPageId: page.id,
+        title,
+        cleanTitle: clean,
+        steamAppId: steamAppId ?? existing?.steamAppId ?? undefined,
+        playtimeForever: existing ? Math.max(existing.playtimeForever, playtimeNotion) : playtimeNotion,
+        playtimeNotion,
+        hltbMain: hltbMain ?? existing?.hltbMain ?? undefined,
+        hltbCompletionist: hltbCompletionist ?? existing?.hltbCompletionist ?? undefined,
+        coverUrl: coverUrl ?? existing?.coverUrl ?? undefined,
+        genres: JSON.stringify(genres.length > 0 ? genres : (existing ? JSON.parse(existing.genres || "[]") : [])),
+        notionGenres: JSON.stringify(genres.length > 0 ? genres : (existing ? JSON.parse((existing as any).notionGenres || "[]") : [])),
+        link: link ?? existing?.link ?? undefined,
+        platform,
+        status,
+        startDate: startDate ?? existing?.startDate ?? undefined,
+        completedAt: completionDate ?? (existing as any)?.completedAt ?? existing?.completionDate ?? undefined,
+        completionDate: completionDate ?? existing?.completionDate ?? (existing as any)?.completedAt ?? undefined,
+        rating: rating ?? existing?.rating ?? undefined,
+        userNotes: summary ?? (existing as any)?.userNotes ?? existing?.summary ?? undefined,
+        personalSummary: summary ?? (existing as any)?.personalSummary ?? existing?.summary ?? undefined,
+        summary: summary ?? existing?.summary ?? (existing as any)?.personalSummary ?? (existing as any)?.userNotes ?? undefined,
+        lastSyncAt: now,
+      });
+
+      if (existing) updated++;
+      else created++;
     }
 
     this.lastGameSyncWatermark = now;
@@ -377,7 +309,7 @@ export class NotionSyncService {
       }
 
       const props = page.properties;
-      const rawTitle = this.extractTitle(props);
+      const rawTitle = extractNotionTitle(props);
       if (!rawTitle) continue;
 
       processed++;
@@ -391,82 +323,22 @@ export class NotionSyncService {
         detectedYear = parseInt(yearMatch[2], 10);
       }
 
-      const explicitYear = this.extractNumber(props, ["Año", "Year"]);
+      const explicitYear = extractNotionNumber(props, ["Año", "Year"]);
       const year = explicitYear ?? detectedYear;
       const clean = cleanGameTitle(title);
       const pageCoverUrl =
         (page.cover as any)?.external?.url || (page.cover as any)?.file?.url || null;
       const posterUrl =
-        this.extractFileUrl(props, ["Portada", "Poster", "Cover"]) || pageCoverUrl;
-      const overview = this.extractRichText(props, ["Resumen", "Overview", "Sinopsis"]);
-      const genres = this.extractMultiSelect(props, ["Géneros", "Generos", "Genres"]);
-      const wikiUrl = this.extractUrl(props, ["Link", "Wikipedia", "URL"]);
-      let status = this.extractSelect(props, ["Estado", "Status"], "Por Ver");
-      const movieDateAliases = [
-        "Fecha de Visualización",
-        "Fecha de Visualizacion",
-        "Fecha de Culminación",
-        "Fecha de Culminacion",
-        "Fecha de Finalización",
-        "Fecha de Finalizacion",
-        "Watched Date",
-        "Fecha",
-        "Fecha Visualización",
-        "Fecha Visualizacion",
-        "Completion Date",
-        "Fecha Fin",
-        "Vista en",
-      ];
+        extractNotionFileUrl(props, ["Portada", "Poster", "Cover"]) || pageCoverUrl;
+      const overview = extractNotionRichText(props, ["Resumen", "Overview", "Sinopsis"]);
+      const genres = extractNotionMultiSelect(props, ["Géneros", "Generos", "Genres"]);
+      const wikiUrl = extractNotionUrl(props, ["Link", "Wikipedia", "URL"]);
+      let status = extractNotionSelect(props, ["Estado", "Status"], "Por Ver");
       const completionDate =
-        this.extractDate(props, movieDateAliases, false) ||
-        this.extractCompletionDate(props, movieDateAliases);
-      const rating = this.extractRating(props, [
-        "Calificación",
-        "Calificacion",
-        "Rating",
-        "Puntuación",
-        "Nota",
-        "Score",
-      ]);
-      const summary = this.extractSummary(props, [
-        "Pensamiento Personal",
-        "Pensamientos Personales",
-        "Pensamiento",
-        "Pensamientos",
-        "Opinión Personal",
-        "Opinión",
-        "Opinion Personal",
-        "Opinion",
-        "Opiniones",
-        "Notas Personales",
-        "Notas",
-        "User Notes",
-        "Personal Notes",
-        "Mis Notas",
-        "Mi Opinión",
-        "Mi Opinion",
-        "Comentario Personal",
-        "Comentarios Personales",
-        "Comentario",
-        "Comentarios",
-        "Review Personal",
-        "Personal Review",
-        "Review",
-        "Reviews",
-        "Reseña Personal",
-        "Reseña",
-        "Resena Personal",
-        "Resena",
-        "Personal Thoughts",
-        "Thoughts",
-        "Notes",
-        "Personal Summary",
-        "Resumen Personal",
-        "Crítica Personal",
-        "Critica Personal",
-        "Crítica",
-        "Critica",
-      ]);
+        extractNotionDate(props, MOVIE_DATE_ALIASES, false) ||
+        extractNotionCompletionDate(props, MOVIE_DATE_ALIASES);
+      const rating = extractNotionRating(props, RATING_ALIASES);
+      const summary = extractNotionSummary(props, SUMMARY_ALIASES);
 
       let existing = await this.movieRepo.findByNotionPageId(page.id);
       if (!existing && clean) {
@@ -485,42 +357,27 @@ export class NotionSyncService {
         if (existing.status === "Vista" && status === "Por Ver") {
           status = "Vista";
         }
-
-        await this.movieRepo.upsert({
-          notionPageId: page.id,
-          title,
-          cleanTitle: clean,
-          tmdbId: existing.tmdbId,
-          posterUrl: posterUrl ?? existing.posterUrl,
-          overview: overview ?? existing.overview,
-          genres: JSON.stringify(genres.length > 0 ? genres : JSON.parse(existing.genres || "[]")),
-          wikiUrl: wikiUrl ?? existing.wikiUrl,
-          status,
-          year: year ?? existing.year,
-          completionDate: completionDate ?? existing.completionDate,
-          rating: rating ?? existing.rating,
-          summary: summary ?? existing.summary,
-          lastSyncAt: now,
-        });
-        updated++;
-      } else {
-        await this.movieRepo.upsert({
-          notionPageId: page.id,
-          title,
-          cleanTitle: clean,
-          posterUrl: posterUrl ?? undefined,
-          overview: overview ?? undefined,
-          genres: JSON.stringify(genres),
-          wikiUrl: wikiUrl ?? undefined,
-          status,
-          year: year ?? undefined,
-          completionDate: completionDate ?? undefined,
-          rating: rating ?? undefined,
-          summary: summary ?? undefined,
-          lastSyncAt: now,
-        });
-        created++;
       }
+
+      await this.movieRepo.upsert({
+        notionPageId: page.id,
+        title,
+        cleanTitle: clean,
+        tmdbId: existing?.tmdbId,
+        posterUrl: posterUrl ?? existing?.posterUrl ?? undefined,
+        overview: overview ?? existing?.overview ?? undefined,
+        genres: JSON.stringify(genres.length > 0 ? genres : (existing ? JSON.parse(existing.genres || "[]") : [])),
+        wikiUrl: wikiUrl ?? existing?.wikiUrl ?? undefined,
+        status,
+        year: year ?? existing?.year ?? undefined,
+        completionDate: completionDate ?? existing?.completionDate ?? undefined,
+        rating: rating ?? existing?.rating ?? undefined,
+        summary: summary ?? existing?.summary ?? undefined,
+        lastSyncAt: now,
+      });
+
+      if (existing) updated++;
+      else created++;
     }
 
     this.lastMovieSyncWatermark = now;

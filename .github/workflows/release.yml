@@ -2,8 +2,6 @@ name: Pipeline Unificado de Calidad, Contenedores y Release Oficial
 
 on:
   push:
-    branches:
-      - main
     tags:
       - 'v*'
   workflow_dispatch:

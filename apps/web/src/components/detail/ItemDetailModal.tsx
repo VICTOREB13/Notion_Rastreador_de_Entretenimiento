@@ -62,19 +62,15 @@ export function ItemDetailModal({ item, type, onClose }: ItemDetailModalProps) {
 
   const isEnriching = enrichGameMutation.isPending || enrichMovieMutation.isPending;
 
+  const genres = (isGame && game?.notionGenres?.length ? game.notionGenres : currentItem.genres) || [];
+
   const handleReEnrich = async () => {
     setEnrichmentError(null);
     try {
-      if (isGame && game) {
-        const res = await enrichGameMutation.mutateAsync({ id: game.id, options: { force: true } });
-        if (res?.data?.enrichment) {
-          setLocalEnrichment(res.data.enrichment as AIEnrichmentData);
-        }
-      } else if (movie) {
-        const res = await enrichMovieMutation.mutateAsync({ id: movie.id, options: { force: true } });
-        if (res?.data?.enrichment) {
-          setLocalEnrichment(res.data.enrichment as AIEnrichmentData);
-        }
+      const mutation = isGame ? enrichGameMutation : enrichMovieMutation;
+      const res = await mutation.mutateAsync({ id: currentItem.id, options: { force: true } } as any);
+      if (res?.data?.enrichment) {
+        setLocalEnrichment(res.data.enrichment as AIEnrichmentData);
       }
     } catch (err: any) {
       setEnrichmentError(err.message || "Error al enriquecer el contenido con Gemini IA");
@@ -190,9 +186,9 @@ export function ItemDetailModal({ item, type, onClose }: ItemDetailModalProps) {
           </div>
 
           {/* Genres from Notion */}
-          {(((isGame && game?.notionGenres && game.notionGenres.length > 0) ? game.notionGenres : currentItem.genres) || []).length > 0 && (
+          {genres.length > 0 && (
             <div className="flex flex-wrap items-center gap-1.5 mt-3">
-              {((isGame && game?.notionGenres && game.notionGenres.length > 0) ? game.notionGenres : currentItem.genres).map((genre, idx) => (
+              {genres.map((genre, idx) => (
                 <span
                   key={idx}
                   className="px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/5 hover:border-rose-500/30 hover:scale-105 transition-all duration-150 select-none"
@@ -221,20 +217,12 @@ export function ItemDetailModal({ item, type, onClose }: ItemDetailModalProps) {
         {isGame && (game?.hltbMain || game?.hltbCompletionist) && (
           <div className="mt-5 p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/5 grid grid-cols-2 gap-2 text-center">
             <div className="p-2 rounded-lg hover:bg-zinc-100/60 dark:hover:bg-zinc-800/40 transition-colors duration-150">
-              <span className="text-[10px] font-mono uppercase text-zinc-400 dark:text-zinc-500 block">
-                Historia Principal
-              </span>
-              <span className="text-base font-bold font-mono text-zinc-800 dark:text-zinc-200">
-                {game.hltbMain ? `${game.hltbMain}h` : "--"}
-              </span>
+              <span className="text-[10px] font-mono uppercase text-zinc-400 dark:text-zinc-500 block">Historia Principal</span>
+              <span className="text-base font-bold font-mono text-zinc-800 dark:text-zinc-200">{game.hltbMain ? `${game.hltbMain}h` : "--"}</span>
             </div>
             <div className="p-2 rounded-lg hover:bg-zinc-100/60 dark:hover:bg-zinc-800/40 transition-colors duration-150">
-              <span className="text-[10px] font-mono uppercase text-zinc-400 dark:text-zinc-500 block">
-                Completista 100%
-              </span>
-              <span className="text-base font-bold font-mono text-zinc-800 dark:text-zinc-200">
-                {game.hltbCompletionist ? `${game.hltbCompletionist}h` : "--"}
-              </span>
+              <span className="text-[10px] font-mono uppercase text-zinc-400 dark:text-zinc-500 block">Completista 100%</span>
+              <span className="text-base font-bold font-mono text-zinc-800 dark:text-zinc-200">{game.hltbCompletionist ? `${game.hltbCompletionist}h` : "--"}</span>
             </div>
           </div>
         )}
@@ -294,17 +282,10 @@ export function ItemDetailModal({ item, type, onClose }: ItemDetailModalProps) {
 
               {aiData.vibeTags && aiData.vibeTags.length > 0 && (
                 <div>
-                  <span className="text-[10px] font-mono uppercase text-zinc-400 dark:text-zinc-500 block mb-1.5">
-                    Vibe Tags
-                  </span>
+                  <span className="text-[10px] font-mono uppercase text-zinc-400 dark:text-zinc-500 block mb-1.5">Vibe Tags</span>
                   <div className="flex flex-wrap gap-1.5">
                     {aiData.vibeTags.map((vibe, idx) => (
-                      <span
-                        key={idx}
-                        className="px-2.5 py-0.5 rounded-full bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-500/20 text-rose-600 dark:text-rose-300 text-[11px]"
-                      >
-                        {vibe}
-                      </span>
+                      <span key={idx} className="px-2.5 py-0.5 rounded-full bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-500/20 text-rose-600 dark:text-rose-300 text-[11px]">{vibe}</span>
                     ))}
                   </div>
                 </div>
@@ -312,17 +293,10 @@ export function ItemDetailModal({ item, type, onClose }: ItemDetailModalProps) {
 
               {aiData.thematicTropes && aiData.thematicTropes.length > 0 && (
                 <div>
-                  <span className="text-[10px] font-mono uppercase text-zinc-400 dark:text-zinc-500 block mb-1.5">
-                    Tropos y Elementos Narrativos
-                  </span>
+                  <span className="text-[10px] font-mono uppercase text-zinc-400 dark:text-zinc-500 block mb-1.5">Tropos y Elementos Narrativos</span>
                   <div className="flex flex-wrap gap-1.5">
                     {aiData.thematicTropes.map((trope, idx) => (
-                      <span
-                        key={idx}
-                        className="px-2 py-0.5 rounded-md bg-white dark:bg-zinc-950 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/5 text-[11px]"
-                      >
-                        {trope}
-                      </span>
+                      <span key={idx} className="px-2 py-0.5 rounded-md bg-white dark:bg-zinc-950 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/5 text-[11px]">{trope}</span>
                     ))}
                   </div>
                 </div>
