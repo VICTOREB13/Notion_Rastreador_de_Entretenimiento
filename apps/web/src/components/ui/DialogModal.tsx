@@ -24,6 +24,44 @@ function unlockBodyScroll() {
   }
 }
 
+export function useModalLock(isOpen: boolean, onClose?: () => void) {
+  const modalIdRef = useRef<number | null>(null);
+
+  if (modalIdRef.current === null) {
+    modalIdRef.current = ++modalIdCounter;
+  }
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const modalId = modalIdRef.current!;
+    modalStack.push(modalId);
+    lockBodyScroll();
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        const topModalId = modalStack[modalStack.length - 1];
+        if (topModalId === modalId) {
+          onClose?.();
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      const idx = modalStack.lastIndexOf(modalId);
+      if (idx !== -1) {
+        modalStack.splice(idx, 1);
+      }
+      unlockBodyScroll();
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen, onClose]);
+
+  return modalIdRef.current;
+}
+
 export interface DialogModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -46,43 +84,11 @@ export function DialogModal({
   className,
 }: DialogModalProps) {
   const [mounted, setMounted] = useState(false);
-  const modalIdRef = useRef<number | null>(null);
-
-  if (modalIdRef.current === null) {
-    modalIdRef.current = ++modalIdCounter;
-  }
+  const modalId = useModalLock(isOpen, preventBackdropClose ? undefined : onClose);
 
   useEffect(() => {
     setMounted(true);
   }, []);
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const modalId = modalIdRef.current!;
-    modalStack.push(modalId);
-    lockBodyScroll();
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        const topModalId = modalStack[modalStack.length - 1];
-        if (topModalId === modalId && !preventBackdropClose) {
-          onClose?.();
-        }
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      const idx = modalStack.lastIndexOf(modalId);
-      if (idx !== -1) {
-        modalStack.splice(idx, 1);
-      }
-      unlockBodyScroll();
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isOpen, onClose, preventBackdropClose]);
 
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (e.target !== e.currentTarget) return;
@@ -93,7 +99,7 @@ export function DialogModal({
 
   if (!isOpen || !mounted) return null;
 
-  const stackIndex = Math.max(0, modalStack.indexOf(modalIdRef.current!));
+  const stackIndex = Math.max(0, modalStack.indexOf(modalId!));
   const dynamicZIndex = 100 + stackIndex * 10;
 
   return createPortal(

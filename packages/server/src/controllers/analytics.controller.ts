@@ -24,6 +24,7 @@ export const analyticsController = new Hono()
       gamesGenres,
       totalMovies,
       watchedMovies,
+      moviesGenres,
       timeSeries,
       recentSessionsRaw,
     ] = await Promise.all([
@@ -47,6 +48,9 @@ export const analyticsController = new Hono()
       }),
       prisma.movie.count(),
       prisma.movie.count({ where: { status: "Vista" } }),
+      prisma.movie.findMany({
+        select: { genres: true },
+      }),
       dailyPlaytimeRepository.getTimeSeries(days),
       sessionRepository.getRecentSessions(10),
     ]);
@@ -58,6 +62,11 @@ export const analyticsController = new Hono()
 
     const completionRate =
       totalGames > 0 ? Number(((completedGames / totalGames) * 100).toFixed(2)) : 0;
+
+    // Métricas de cinefilia
+    const estimatedWatchTimeHours = Number((watchedMovies * 2.0).toFixed(1));
+    const movieCompletionRate =
+      totalMovies > 0 ? Number(((watchedMovies / totalMovies) * 100).toFixed(2)) : 0;
 
     // Calcular racha de juego
     const currentStreakDays = playtimeTrackerService.calculateStreak(timeSeries);
@@ -81,17 +90,23 @@ export const analyticsController = new Hono()
       coverUrl: g.coverUrl,
     }));
 
-    // Distribución de géneros
+    // Distribución unificada de géneros (Videojuegos + Películas)
     const genreMap = new Map<string, number>();
-    for (const g of gamesGenres) {
+    const allGenresSources = [...gamesGenres, ...moviesGenres];
+    for (const item of allGenresSources) {
+      let parsedGenres: string[] = [];
       try {
-        const parsedGenres: string[] = JSON.parse(g.genres || "[]");
-        for (const genre of parsedGenres) {
-          const current = genreMap.get(genre) ?? 0;
-          genreMap.set(genre, current + 1);
-        }
+        const raw = JSON.parse(item.genres || "[]");
+        parsedGenres = Array.isArray(raw) ? raw : [String(raw)];
       } catch {
-        // Ignorar errores de parseo de géneros antiguos
+        parsedGenres = (item.genres || "").split(",").map((s) => s.trim()).filter(Boolean);
+      }
+      for (const genre of parsedGenres) {
+        const cleanGenre = String(genre).trim();
+        if (cleanGenre) {
+          const current = genreMap.get(cleanGenre) ?? 0;
+          genreMap.set(cleanGenre, current + 1);
+        }
       }
     }
 
@@ -110,6 +125,8 @@ export const analyticsController = new Hono()
           completionRate,
           totalMovies,
           watchedMovies,
+          estimatedWatchTimeHours,
+          movieCompletionRate,
           currentStreakDays,
         },
         recentSessions,

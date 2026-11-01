@@ -37,6 +37,8 @@ describe("Analytics, Settings & Healthz API", () => {
       expect(typeof summary.completionRate).toBe("number");
       expect(typeof summary.totalMovies).toBe("number");
       expect(typeof summary.watchedMovies).toBe("number");
+      expect(typeof summary.estimatedWatchTimeHours).toBe("number");
+      expect(typeof summary.movieCompletionRate).toBe("number");
       expect(typeof summary.currentStreakDays).toBe("number");
 
       // Array assertions

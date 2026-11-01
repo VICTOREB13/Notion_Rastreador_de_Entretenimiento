@@ -91,6 +91,8 @@ export interface AnalyticsSummary {
   completionRate: number;
   totalMovies: number;
   watchedMovies: number;
+  estimatedWatchTimeHours?: number;
+  movieCompletionRate?: number;
   currentStreakDays: number;
 }
 
@@ -118,17 +120,3 @@ export interface AnalyticsData {
   }>;
 }
 
-export interface AiSettingsData {
-  activeProvider: string;
-  selectedModel: string;
-  temperature: number;
-  geminiConfigured: boolean;
-  deepseekConfigured: boolean;
-  groqConfigured: boolean;
-  ollamaBaseUrl: string;
-  availableProviders: Array<{
-    id: string;
-    label: string;
-    defaultModel: string;
-  }>;
-}

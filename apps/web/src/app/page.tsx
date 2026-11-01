@@ -135,12 +135,57 @@ export default function EntertainmentShowcasePage() {
       .map(([genre]) => genre);
   }, [category, games, movies]);
 
-  // Juego recomendado destacado para el hero
-  const featuredGame =
-    games.find((g) => g.status === "Jugando") ||
-    games.find((g) => g.aiEnrichment) ||
-    games[0] ||
-    null;
+  // Item recomendado contextual para el Hero según categoría activa
+  const featuredItem = React.useMemo<{
+    item: GameItem | MovieItem;
+    type: "GAME" | "MOVIE";
+  } | null>(() => {
+    if (category === "MOVIES") {
+      const movie =
+        movies.find((m) => m.status === "Viendo") ||
+        movies.find((m) => m.aiEnrichment) ||
+        movies.find((m) => (m.rating || 0) >= 4) ||
+        movies[0] ||
+        null;
+      return movie ? { item: movie, type: "MOVIE" } : null;
+    }
+
+    if (category === "GAMES") {
+      const game =
+        games.find((g) => g.status === "Jugando") ||
+        games.find((g) => g.aiEnrichment) ||
+        games.find((g) => (g.rating || 0) >= 4) ||
+        games[0] ||
+        null;
+      return game ? { item: game, type: "GAME" } : null;
+    }
+
+    // category === "ALL": Priorizar lo que esté en curso ("Jugando" o "Viendo")
+    const playingGame = games.find((g) => g.status === "Jugando");
+    if (playingGame) return { item: playingGame, type: "GAME" };
+
+    const watchingMovie = movies.find((m) => m.status === "Viendo");
+    if (watchingMovie) return { item: watchingMovie, type: "MOVIE" };
+
+    // Si nada está en progreso, priorizar el que tenga enriquecimiento IA
+    const enrichedGame = games.find((g) => g.aiEnrichment);
+    if (enrichedGame) return { item: enrichedGame, type: "GAME" };
+
+    const enrichedMovie = movies.find((m) => m.aiEnrichment);
+    if (enrichedMovie) return { item: enrichedMovie, type: "MOVIE" };
+
+    // Fallback al mejor valorado o primer título disponible
+    const topRatedGame = [...games].sort((a, b) => (b.rating || 0) - (a.rating || 0))[0];
+    const topRatedMovie = [...movies].sort((a, b) => (b.rating || 0) - (a.rating || 0))[0];
+    if (topRatedGame && (topRatedGame.rating || 0) >= (topRatedMovie?.rating || 0)) {
+      return { item: topRatedGame, type: "GAME" };
+    }
+    if (topRatedMovie) return { item: topRatedMovie, type: "MOVIE" };
+
+    if (games[0]) return { item: games[0], type: "GAME" };
+    if (movies[0]) return { item: movies[0], type: "MOVIE" };
+    return null;
+  }, [category, games, movies]);
 
   return (
     <main className="min-h-screen bg-zinc-50 dark:bg-[#09090B] text-zinc-900 dark:text-zinc-100 pb-32 sm:pb-36 pt-6 sm:pt-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto transition-colors duration-200">
@@ -228,11 +273,12 @@ export default function EntertainmentShowcasePage() {
       </section>
 
       {/* Featured AI Recommendation Hero */}
-      {featuredGame && (
+      {featuredItem && (
         <section className="mt-8">
           <AiRecommendationHero
-            game={featuredGame}
-            onSelectGame={(g) => setSelectedItem({ item: g, type: "GAME" })}
+            item={featuredItem.item}
+            itemType={featuredItem.type}
+            onSelectItem={(it, tp) => setSelectedItem({ item: it, type: tp })}
           />
         </section>
       )}

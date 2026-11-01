@@ -1,10 +1,26 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { Sun, Moon, Monitor, Cpu, Sparkles } from "lucide-react";
+import {
+  Sun,
+  Moon,
+  Monitor,
+  Cpu,
+  Sparkles,
+  Download,
+  Database,
+  RefreshCw,
+  CheckCircle2,
+  AlertCircle,
+} from "lucide-react";
 import { DialogModal } from "@/components/ui/DialogModal";
 import { useTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
-import { useSystemSettingsQuery, useTriggerSyncMutation } from "@/lib/hooks";
+import {
+  useSystemSettingsQuery,
+  useTriggerSyncMutation,
+  useBatchEnrichMutation,
+} from "@/lib/hooks";
+import { getBackupDownloadUrl } from "@/lib/api";
 import { ServicesTelemetryGrid } from "./ServicesTelemetryGrid";
 import { KineticManualSyncCard } from "./KineticManualSyncCard";
 
@@ -17,14 +33,20 @@ export function TelemetryModal({ isOpen, onClose }: TelemetryModalProps) {
   const { theme, setTheme } = useTheme();
   const { data: telemetry } = useSystemSettingsQuery();
   const syncMutation = useTriggerSyncMutation();
+  const batchEnrichMutation = useBatchEnrichMutation();
 
   const [syncSuccessMsg, setSyncSuccessMsg] = useState<string | null>(null);
   const [syncErrorMsg, setSyncErrorMsg] = useState<string | null>(null);
+
+  const [batchSuccessMsg, setBatchSuccessMsg] = useState<string | null>(null);
+  const [batchErrorMsg, setBatchErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
       setSyncSuccessMsg(null);
       setSyncErrorMsg(null);
+      setBatchSuccessMsg(null);
+      setBatchErrorMsg(null);
     }
   }, [isOpen]);
 
@@ -39,6 +61,26 @@ export function TelemetryModal({ isOpen, onClose }: TelemetryModalProps) {
       setSyncSuccessMsg(`¡Sincronizado! (${gamesCount} juegos, ${moviesCount} películas)`);
     } catch (err: any) {
       setSyncErrorMsg(err.message || "Error al sincronizar con Notion y Steam.");
+    }
+  };
+
+  const handleTriggerBatchEnrich = async () => {
+    setBatchSuccessMsg(null);
+    setBatchErrorMsg(null);
+    try {
+      const res = await batchEnrichMutation.mutateAsync({
+        limit: 15,
+        delayMs: 800,
+        targetType: "ALL",
+        force: false,
+      });
+      setBatchSuccessMsg(
+        `¡Enriquecimiento completado! Procesados: ${res.processed}, Éxitos: ${res.success}${
+          res.errors > 0 ? `, Errores: ${res.errors}` : ""
+        }`
+      );
+    } catch (err: any) {
+      setBatchErrorMsg(err.message || "Error al procesar el lote de enriquecimiento IA.");
     }
   };
 
@@ -69,7 +111,7 @@ export function TelemetryModal({ isOpen, onClose }: TelemetryModalProps) {
           )}
         </div>
 
-        {/* SECTION 3: Motor de IA Soberano (Showcase Público de Solo Lectura) */}
+        {/* SECTION 3: Motor de IA Soberano (Showcase Público & Enriquecimiento Masivo) */}
         <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800/80 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -123,9 +165,91 @@ export function TelemetryModal({ isOpen, onClose }: TelemetryModalProps) {
               </span>
             </div>
           </div>
+
+          {/* Botón de Enriquecimiento Masivo en Lote */}
+          <div className="pt-2 border-t border-zinc-200 dark:border-zinc-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+            <div>
+              <span className="font-semibold text-zinc-800 dark:text-zinc-200 block text-xs">
+                Enriquecimiento Masivo en Lote
+              </span>
+              <span className="text-[10px] text-zinc-500 dark:text-zinc-400">
+                Procesa secuencialmente títulos pendientes de análisis sin saturar cuota
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={handleTriggerBatchEnrich}
+              disabled={batchEnrichMutation.isPending || !isAiConnected}
+              className={cn(
+                "inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold shrink-0 transition-all cursor-pointer shadow-xs",
+                batchEnrichMutation.isPending
+                  ? "bg-zinc-200 dark:bg-zinc-800 text-zinc-400 cursor-not-allowed"
+                  : "bg-rose-600 hover:bg-rose-500 text-white shadow-rose-500/20 active:scale-95"
+              )}
+            >
+              {batchEnrichMutation.isPending ? (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  <span>Procesando lote...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Analizar Lote Pendiente</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          {batchSuccessMsg && (
+            <div className="flex items-center gap-1.5 p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[11px] font-mono">
+              <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+              <span>{batchSuccessMsg}</span>
+            </div>
+          )}
+
+          {batchErrorMsg && (
+            <div className="flex items-center gap-1.5 p-2 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-[11px] font-mono">
+              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+              <span>{batchErrorMsg}</span>
+            </div>
+          )}
         </div>
 
-        {/* SECTION 4: Apariencia & Modo (Dark, Light, System) */}
+        {/* SECTION 4: Respaldo y Snapshot de Base de Datos en un Clic */}
+        <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800/80 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-sky-500/10 text-sky-500">
+                <Database className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="font-semibold text-zinc-900 dark:text-zinc-100 text-xs">
+                  Respaldo & Snapshot Local (SQLite)
+                </h4>
+                <p className="text-[10px] text-zinc-500 dark:text-zinc-400">
+                  Exporta una copia de seguridad íntegra de videojuegos, películas, sesiones y enriquecimientos
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-1">
+            <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
+              Formato JSON estructurado con cabecera Content-Disposition para guardado directo en un clic.
+            </span>
+            <a
+              href={getBackupDownloadUrl()}
+              download="notion-entertainment-backup.json"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 hover:border-sky-500/30 text-zinc-900 dark:text-white shadow-xs hover:text-sky-600 dark:hover:text-sky-400 transition-colors shrink-0"
+            >
+              <Download className="w-3.5 h-3.5 text-sky-500" />
+              <span>Descargar Respaldo JSON</span>
+            </a>
+          </div>
+        </div>
+
+        {/* SECTION 5: Apariencia & Modo (Dark, Light, System) */}
         <div className="pt-2 border-t border-zinc-200 dark:border-zinc-800/80">
           <div className="flex items-center justify-between mb-2.5">
             <h4 className="text-[11px] font-mono uppercase tracking-wider text-zinc-500 dark:text-zinc-400 font-bold flex items-center gap-1.5">

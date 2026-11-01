@@ -82,29 +82,6 @@ export async function fetchMovieDetail(id: string) {
   return json.data;
 }
 
-export async function fetchAiSettings() {
-  const res = await client.api.settings.ai.$get();
-  if (!res.ok) throw new Error("Error fetching AI settings");
-  const json = await res.json();
-  return json.data;
-}
-
-export async function updateAiSettings(data: {
-  activeProvider?: "gemini" | "deepseek" | "groq" | "ollama";
-  selectedModel?: string;
-  temperature?: number;
-  geminiApiKey?: string;
-}) {
-  const res = await client.api.settings.ai.$put({ json: data });
-  if (!res.ok) throw new Error("Error updating AI settings");
-  return await res.json();
-}
-
-export async function testAiConnection(data: { apiKey?: string; model?: string } = {}) {
-  const res = await client.api.settings.ai.test.$post({ json: data });
-  if (!res.ok) throw new Error("Error testing AI connection");
-  return await res.json();
-}
 
 export async function enrichGame(id: string, options: { force?: boolean; model?: string } = {}) {
   const res = await client.api.games[":id"].enrich.$post({
@@ -143,5 +120,27 @@ export async function triggerManualSync() {
   const res = await client.api.sync.trigger.$post();
   if (!res.ok) throw new Error("Error triggering manual synchronization");
   return await res.json();
+}
+
+export async function triggerBatchEnrich(options: {
+  limit?: number;
+  delayMs?: number;
+  targetType?: "ALL" | "GAME" | "MOVIE";
+  force?: boolean;
+  model?: string;
+} = {}) {
+  const res = await client.api.enrich.batch.$post({
+    json: options,
+  });
+  const json = await res.json();
+  if (!res.ok || !json.success) {
+    const errorMsg = "error" in json ? (json as any).error : "Error al procesar enriquecimiento en lote";
+    throw new Error(errorMsg);
+  }
+  return json.data;
+}
+
+export function getBackupDownloadUrl(): string {
+  return `${baseUrl}/api/backup/export`;
 }
 

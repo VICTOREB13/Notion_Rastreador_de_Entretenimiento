@@ -22,6 +22,7 @@ import {
   useEnrichMovieMutation,
   useSystemSettingsQuery,
 } from "@/lib/hooks";
+import { useModalLock } from "@/components/ui/DialogModal";
 
 export interface ItemDetailModalProps {
   item: GameItem | MovieItem | null;
@@ -34,31 +35,13 @@ export function ItemDetailModal({ item, type, onClose }: ItemDetailModalProps) {
   const [localEnrichment, setLocalEnrichment] = useState<AIEnrichmentData | null>(null);
   const [imageError, setImageError] = useState(false);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
+  useModalLock(Boolean(item && type), onClose);
 
   useEffect(() => {
     setEnrichmentError(null);
     setLocalEnrichment(null);
     setImageError(false);
   }, [item?.id]);
-
-  useEffect(() => {
-    if (!item || !type || typeof document === "undefined") return;
-    document.body.style.overflow = "hidden";
-    const lenis = (window as unknown as { __lenis?: { stop: () => void; start: () => void } }).__lenis;
-    lenis?.stop();
-
-    return () => {
-      document.body.style.overflow = "";
-      lenis?.start();
-    };
-  }, [item, type]);
 
   const isGame = type === "GAME";
   const { data: freshGame } = useGameDetailQuery(isGame && item ? item.id : null);

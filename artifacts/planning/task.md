@@ -68,6 +68,15 @@ tags: [tareas, refactorizacion, brand-components, telemetry, dark-mode, light-mo
 - [x] `TASK-334`: Drawer/Modal visual de analíticas consumiendo `/api/analytics` con distribución de géneros y horas, y pulido responsive para dispositivos móviles (<640px sin PWA).
 - [x] `TASK-335`: Validación integral (`bun test`, `bun run typecheck`, `bun run validate`, `bun run web:build`), bump a v2.4.0, commit semántico, tag release y push a `origin/main` y `origin/v2.4.0`.
 
+### Fase 11: Poda Masiva de LoC, Anti-Slop, Hero Contextual, Batch AI y Respaldo Snapshot (v2.5.0)
+- [x] `TASK-336`: Poda masiva de ~1,000 LoC, simplificación de `CustomSelect` y `MorphButton`, optimización de `SpotlightCard` con CSS variables (0ms JS) y unificación de `notion-props.helper.ts`.
+- [x] `TASK-337`: Implementar Hero Contextual Inteligente (Funcionalidad 1) con click-through a modal y soporte adaptativo para juegos, películas y catálogo unificado.
+- [x] `TASK-338`: Implementar Analítica Unificada con Métricas de Cine (Funcionalidad 5) en backend y `AnalyticsModal.tsx`.
+- [x] `TASK-339`: Implementar Enriquecimiento IA Masivo en Lote (Funcionalidad 6) con `POST /api/enrich/batch` respetando rate limit y feedback visual en UI.
+- [x] `TASK-340`: Implementar Snapshot / Respaldo en un Clic (Funcionalidad 7) con `GET /api/backup/export` y botón de descarga directa en `TelemetryModal.tsx`.
+- [x] `TASK-341`: Documentar RFC técnico para soporte multi-proveedor de IA en `artifacts/architecture/rfc_multi_ai_provider.md` (Funcionalidad 8 futura).
+- [x] `TASK-342`: Validación integral (`bun test`, `bun run typecheck`, `bun run validate`, `bun run web:build`), bump a v2.5.0, commit semántico, tag release y push a `origin/main` y `origin/v2.5.0`.
+
 ---
 
 ## Referencias

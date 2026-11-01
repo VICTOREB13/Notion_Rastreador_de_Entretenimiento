@@ -11,7 +11,7 @@ import { tmdbClient, TmdbClient } from "../clients/tmdb.client";
 import { wikipediaClient } from "../clients/wikipedia.client";
 import { broadcastEvent } from "../controllers/events.controller";
 import { config } from "../config";
-import { findNotionProp, findNotionPropKey, extractNotionTitle } from "./notion-props.helper";
+import { findNotionProp, findNotionPropKey, extractNotionTitle, hasNotionCover, hasNotionGenres } from "./notion-props.helper";
 
 export interface MetadataEnricherResult {
   moviesProcessed: number;
@@ -87,22 +87,14 @@ export class NotionMetadataEnricherService {
       ]);
 
       // CHEQUEO DE PROTECCIÓN ("Candado")
-      const faltaFoto = !(
-        (portadaProp?.files && Array.isArray(portadaProp.files) && portadaProp.files.length > 0) ||
-        page.cover
-      );
+      const faltaFoto = !hasNotionCover(page);
       const faltaLink = !linkProp?.url;
       const faltaResumen = !(
         resumenProp?.rich_text &&
         Array.isArray(resumenProp.rich_text) &&
         resumenProp.rich_text.length > 0
       );
-      const faltaGenero = !(
-        (generosProp?.multi_select &&
-          Array.isArray(generosProp.multi_select) &&
-          generosProp.multi_select.length > 0) ||
-        generosProp?.select?.name
-      );
+      const faltaGenero = !hasNotionGenres(props);
 
       // Si no falta nada, omitir para ahorrar llamadas a las APIs de TMDB y Wikipedia
       if (!faltaFoto && !faltaLink && !faltaResumen && !faltaGenero) {

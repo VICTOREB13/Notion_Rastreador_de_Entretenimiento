@@ -431,8 +431,7 @@ describe("Frontend Web Utilities (@repo/web)", () => {
     const itemDetailPath = path.resolve(__dirname, "../src/components/detail/ItemDetailModal.tsx");
     const itemDetailContent = fs.readFileSync(itemDetailPath, "utf-8");
     expect(itemDetailContent).toContain("data-lenis-prevent");
-    expect(itemDetailContent).toContain("lenis?.stop()");
-    expect(itemDetailContent).toContain("lenis?.start()");
+    expect(itemDetailContent).toContain("useModalLock");
 
     // CustomSelect
     const customSelectPath = path.resolve(__dirname, "../src/components/ui/CustomSelect.tsx");
@@ -871,6 +870,53 @@ describe("Frontend Web Utilities (@repo/web)", () => {
       fs.existsSync(path.join(publicPath, "service-worker.js"));
     expect(manifestExists).toBe(false);
     expect(swExists).toBe(false);
+  });
+
+  test("v2.4.0: Contextual Hero (Func 1), Unified Analytics with Cinefilia (Func 5), Batch AI & Backup Snapshot (Func 6 & 7)", async () => {
+    const fs = await import("fs");
+    const path = await import("path");
+
+    // 1. AiRecommendationHero supports polymorphic GAME/MOVIE mode and card-level click
+    const heroPath = path.resolve(__dirname, "../src/components/catalog/AiRecommendationHero.tsx");
+    const heroContent = fs.readFileSync(heroPath, "utf-8");
+    expect(heroContent).toContain("Selección Cinematográfica IA");
+    expect(heroContent).toContain("Recomendación Contextual IA");
+    expect(heroContent).toContain("vibeTags");
+    expect(heroContent).toContain('role="button"');
+    expect(heroContent).toContain("tabIndex={0}");
+    expect(heroContent).toContain("cursor-pointer");
+
+    // 2. page.tsx selects contextual featuredItem based on active category
+    const pagePath = path.resolve(__dirname, "../src/app/page.tsx");
+    const pageContent = fs.readFileSync(pagePath, "utf-8");
+    expect(pageContent).toContain('category === "MOVIES"');
+    expect(pageContent).toContain('category === "GAMES"');
+    expect(pageContent).toContain('category === "ALL"');
+    expect(pageContent).toContain("featuredItem");
+    expect(pageContent).toContain("onSelectItem");
+
+    // 3. AnalyticsModal renders cinefilia cards and unified genres
+    const analyticsModalPath = path.resolve(__dirname, "../src/components/analytics/AnalyticsModal.tsx");
+    const analyticsModalContent = fs.readFileSync(analyticsModalPath, "utf-8");
+    expect(analyticsModalContent).toContain("Total Películas");
+    expect(analyticsModalContent).toContain("Horas de Cine");
+    expect(analyticsModalContent).toContain("estimatedWatchTimeHours");
+    expect(analyticsModalContent).toContain("movieCompletionRate");
+    expect(analyticsModalContent).toContain("Desglose de Géneros Destacados (Juegos & Cine)");
+
+    // 4. TelemetryModal has Batch Enrich and Backup JSON Download
+    const telemetryModalPath = path.resolve(__dirname, "../src/components/settings/TelemetryModal.tsx");
+    const telemetryModalContent = fs.readFileSync(telemetryModalPath, "utf-8");
+    expect(telemetryModalContent).toContain("useBatchEnrichMutation");
+    expect(telemetryModalContent).toContain("Enriquecimiento Masivo en Lote");
+    expect(telemetryModalContent).toContain("getBackupDownloadUrl");
+    expect(telemetryModalContent).toContain("Descargar Respaldo JSON");
+
+    // 5. next.config.mjs proxies /api to internal daemon
+    const nextConfigPath = path.resolve(__dirname, "../next.config.mjs");
+    const nextConfigContent = fs.readFileSync(nextConfigPath, "utf-8");
+    expect(nextConfigContent).toContain("rewrites");
+    expect(nextConfigContent).toContain('source: "/api/:path*"');
   });
 });
 

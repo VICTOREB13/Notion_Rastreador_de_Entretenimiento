@@ -9,13 +9,11 @@ import {
   fetchMovies,
   fetchGameDetail,
   fetchMovieDetail,
-  fetchAiSettings,
-  updateAiSettings,
-  testAiConnection,
   enrichGame,
   enrichMovie,
   fetchSystemSettings,
   triggerManualSync,
+  triggerBatchEnrich,
 } from "./api";
 
 export function useLiveStatusQuery() {
@@ -78,28 +76,6 @@ export function useMovieDetailQuery(id: string | null) {
   });
 }
 
-export function useAiSettingsQuery() {
-  return useQuery({
-    queryKey: ["aiSettings"],
-    queryFn: fetchAiSettings,
-  });
-}
-
-export function useUpdateAiSettingsMutation() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: updateAiSettings,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["aiSettings"] });
-    },
-  });
-}
-
-export function useTestAiConnectionMutation() {
-  return useMutation({
-    mutationFn: testAiConnection,
-  });
-}
 
 export function useEnrichGameMutation() {
   const queryClient = useQueryClient();
@@ -145,6 +121,25 @@ export function useTriggerSyncMutation() {
       queryClient.invalidateQueries({ queryKey: ["movies"] });
       queryClient.invalidateQueries({ queryKey: ["analytics"] });
       queryClient.invalidateQueries({ queryKey: ["liveStatus"] });
+      queryClient.invalidateQueries({ queryKey: ["systemSettings"] });
+    },
+  });
+}
+
+export function useBatchEnrichMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (options?: {
+      limit?: number;
+      delayMs?: number;
+      targetType?: "ALL" | "GAME" | "MOVIE";
+      force?: boolean;
+      model?: string;
+    }) => triggerBatchEnrich(options),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["games"] });
+      queryClient.invalidateQueries({ queryKey: ["movies"] });
+      queryClient.invalidateQueries({ queryKey: ["analytics"] });
       queryClient.invalidateQueries({ queryKey: ["systemSettings"] });
     },
   });

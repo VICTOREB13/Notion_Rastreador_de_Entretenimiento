@@ -25,10 +25,7 @@ export function normalizeSelectOptions<T = string>(
         return {
           value: opt as unknown as T,
           label: String(opt),
-          icon: undefined,
-          badge: undefined,
           disabled: false,
-          description: undefined,
         };
       }
       return {
@@ -74,10 +71,7 @@ export function CustomSelect<T = string>({
   menuClassName,
 }: CustomSelectProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
-  const [focusedIndex, setFocusedIndex] = useState(-1);
   const containerRef = useRef<HTMLDivElement>(null);
-  const listboxRef = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
   const listboxId = useId();
 
   const normalizedOptions = normalizeSelectOptions(options);
@@ -86,105 +80,17 @@ export function CustomSelect<T = string>({
   useEffect(() => {
     if (!isOpen) return;
 
-    const handlePointerDownOutside = (e: MouseEvent | TouchEvent) => {
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setIsOpen(false);
       }
     };
 
-    document.addEventListener("pointerdown", handlePointerDownOutside);
+    document.addEventListener("pointerdown", handleClickOutside);
     return () => {
-      document.removeEventListener("pointerdown", handlePointerDownOutside);
+      document.removeEventListener("pointerdown", handleClickOutside);
     };
   }, [isOpen]);
-
-  const findFirstEnabledIndex = (items: SelectOption<T>[]) =>
-    items.findIndex((opt) => !opt.disabled);
-
-  const findLastEnabledIndex = (items: SelectOption<T>[]) => {
-    for (let i = items.length - 1; i >= 0; i--) {
-      if (!items[i].disabled) return i;
-    }
-    return -1;
-  };
-
-  const handleToggleOpen = () => {
-    if (disabled) return;
-    setIsOpen((prev) => !prev);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (disabled) return;
-
-    if (e.key === "Escape") {
-      if (isOpen) {
-        e.preventDefault();
-        setIsOpen(false);
-        triggerRef.current?.focus();
-      }
-      return;
-    }
-
-    if (!isOpen) {
-      if (["Enter", " ", "ArrowDown", "ArrowUp"].includes(e.key)) {
-        e.preventDefault();
-        setIsOpen(true);
-        const currentIdx = normalizedOptions.findIndex(
-          (opt) => opt.value === value && !opt.disabled
-        );
-        const firstEnabled = findFirstEnabledIndex(normalizedOptions);
-        setFocusedIndex(currentIdx >= 0 ? currentIdx : firstEnabled);
-      }
-      return;
-    }
-
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      setFocusedIndex((prev) => {
-        let next = prev + 1;
-        while (next < normalizedOptions.length && normalizedOptions[next].disabled) {
-          next++;
-        }
-        return next < normalizedOptions.length ? next : prev;
-      });
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setFocusedIndex((prev) => {
-        let next = prev - 1;
-        while (next >= 0 && normalizedOptions[next].disabled) {
-          next--;
-        }
-        return next >= 0 ? next : prev;
-      });
-    } else if (e.key === "Home") {
-      e.preventDefault();
-      setFocusedIndex(findFirstEnabledIndex(normalizedOptions));
-    } else if (e.key === "End") {
-      e.preventDefault();
-      setFocusedIndex(findLastEnabledIndex(normalizedOptions));
-    } else if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      if (focusedIndex >= 0 && focusedIndex < normalizedOptions.length) {
-        const target = normalizedOptions[focusedIndex];
-        if (!target.disabled) {
-          onChange?.(target.value);
-          setIsOpen(false);
-          triggerRef.current?.focus();
-        }
-      }
-    } else if (e.key === "Tab") {
-      setIsOpen(false);
-    }
-  };
-
-  useEffect(() => {
-    if (isOpen && focusedIndex >= 0 && listboxRef.current) {
-      const activeEl = listboxRef.current.children[focusedIndex] as HTMLElement;
-      if (activeEl && typeof activeEl.scrollIntoView === "function") {
-        activeEl.scrollIntoView({ block: "nearest" });
-      }
-    }
-  }, [focusedIndex, isOpen]);
 
   const sizeClasses = {
     sm: "h-8 px-2.5 text-xs rounded-xl gap-1.5",
@@ -198,18 +104,16 @@ export function CustomSelect<T = string>({
     lg: "w-4 h-4",
   }[size];
 
-  const activeOptionId =
-    isOpen && focusedIndex >= 0 ? `${listboxId}-option-${focusedIndex}` : undefined;
-
   return (
     <div
       ref={containerRef}
-      className={cn(
-        "relative inline-block text-left select-none font-sans w-full",
-        className,
-        isOpen && "z-40"
-      )}
-      onKeyDown={handleKeyDown}
+      className={cn("relative inline-block text-left select-none font-sans w-full", className, isOpen && "z-40")}
+      onKeyDown={(e) => {
+        if (e.key === "Escape" && isOpen) {
+          e.preventDefault();
+          setIsOpen(false);
+        }
+      }}
     >
       {label && (
         <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-1">
@@ -218,20 +122,17 @@ export function CustomSelect<T = string>({
       )}
 
       <button
-        ref={triggerRef}
         type="button"
         disabled={disabled}
-        onClick={handleToggleOpen}
+        onClick={() => !disabled && setIsOpen((prev) => !prev)}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
-        aria-controls={listboxId}
-        aria-activedescendant={activeOptionId}
         aria-label={ariaLabel || (typeof label === "string" ? label : placeholder)}
         className={cn(
           "w-full bg-white dark:bg-zinc-950 border text-zinc-900 dark:text-zinc-100 flex items-center justify-between transition-all duration-150 cursor-pointer shadow-xs active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/50 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-950",
           sizeClasses,
           error
-            ? "border-red-500 focus:border-red-500 ring-1 ring-red-500/20"
+            ? "border-red-500 ring-1 ring-red-500/20"
             : isOpen
             ? "border-rose-500 ring-2 ring-rose-500/20"
             : "border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700",
@@ -263,10 +164,7 @@ export function CustomSelect<T = string>({
       {isOpen && (
         <div
           id={listboxId}
-          ref={listboxRef}
           role="listbox"
-          tabIndex={-1}
-          aria-activedescendant={activeOptionId}
           data-lenis-prevent
           className={cn(
             "absolute top-full mt-1.5 w-full min-w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-2xl shadow-xl p-1.5 z-50 max-h-60 overflow-y-auto animate-in fade-in zoom-in-95 duration-150",
@@ -281,13 +179,9 @@ export function CustomSelect<T = string>({
           ) : (
             normalizedOptions.map((opt, idx) => {
               const isSelected = opt.value === value;
-              const isFocused = idx === focusedIndex;
-              const optionId = `${listboxId}-option-${idx}`;
-
               return (
                 <div
                   key={`${String(opt.value)}-${idx}`}
-                  id={optionId}
                   role="option"
                   aria-selected={isSelected}
                   aria-disabled={opt.disabled}
@@ -295,10 +189,6 @@ export function CustomSelect<T = string>({
                     if (opt.disabled) return;
                     onChange?.(opt.value);
                     setIsOpen(false);
-                    triggerRef.current?.focus();
-                  }}
-                  onMouseEnter={() => {
-                    if (!opt.disabled) setFocusedIndex(idx);
                   }}
                   className={cn(
                     "w-full text-left px-2.5 py-2 rounded-xl text-xs font-medium flex items-center justify-between gap-2 transition-colors cursor-pointer",
@@ -306,8 +196,6 @@ export function CustomSelect<T = string>({
                       ? "opacity-40 cursor-not-allowed"
                       : isSelected
                       ? "bg-rose-500/10 dark:bg-rose-600/20 text-rose-600 dark:text-rose-400 font-semibold"
-                      : isFocused
-                      ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
                       : "text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100/80 dark:hover:bg-zinc-800/60"
                   )}
                 >
@@ -329,9 +217,7 @@ export function CustomSelect<T = string>({
                         {opt.badge}
                       </span>
                     )}
-                    {isSelected && (
-                      <Check className="w-3.5 h-3.5 text-rose-500 font-bold shrink-0" />
-                    )}
+                    {isSelected && <Check className="w-3.5 h-3.5 text-rose-500 font-bold shrink-0" />}
                   </div>
                 </div>
               );

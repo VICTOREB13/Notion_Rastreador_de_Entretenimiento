@@ -635,6 +635,8 @@ El sistema utiliza un monolito modular con persistencia embebida en **SQLite 3**
       "completionRate": 26.56,
       "totalMovies": 86,
       "watchedMovies": 62,
+      "estimatedWatchTimeHours": 124.0,
+      "movieCompletionRate": 72.09,
       "currentStreakDays": 5
     },
     "recentSessions": [
@@ -693,6 +695,67 @@ El sistema utiliza un monolito modular con persistencia embebida en **SQLite 3**
       "durationMs": 850
     },
     "timestamp": "2026-10-28T20:00:00.000Z"
+  }
+}
+```
+
+---
+
+### 7. Enriquecimiento Masivo y Respaldo Snapshot: `/api/enrich` & `/api/backup`
+
+#### `POST /api/enrich/batch`
+- **Descripción:** Procesa secuencialmente el enriquecimiento con IA para títulos pendientes de videojuegos y/o películas, respetando rate limits mediante pausas entre llamadas y emitiendo progreso en tiempo real vía Server-Sent Events (`enrichment_progress`).
+- **Autenticación:** Pública / Local daemon.
+- **Body JSON (Opcional):**
+  - `limit?: number` (Default: `10`, Max: `100`)
+  - `delayMs?: number` (Default: `1000`, Max: `5000`)
+  - `targetType?: "ALL" | "GAME" | "MOVIE"` (Default: `"ALL"`)
+  - `force?: boolean` (Default: `false`)
+  - `model?: string` (Modelo opcional de IA)
+- **Respuesta 200 OK:**
+```json
+{
+  "success": true,
+  "data": {
+    "totalPending": 5,
+    "processed": 5,
+    "success": 5,
+    "errors": 0,
+    "details": [
+      {
+        "id": "cuid_game_1",
+        "title": "Portal 2",
+        "type": "GAME",
+        "success": true
+      }
+    ]
+  }
+}
+```
+
+#### `GET /api/backup/export`
+- **Descripción:** Genera un snapshot completo y estructurado de la base de datos local SQLite (`games`, `movies`, `game_sessions`, `daily_playtime`, `ai_enrichments`, `ai_settings`), descargable directamente como archivo adjunto JSON con credenciales sensibles de IA enmascaradas.
+- **Headers:** `Content-Type: application/json; charset=utf-8`, `Content-Disposition: attachment; filename="notion-entertainment-backup.json"`
+- **Respuesta 200 OK:**
+```json
+{
+  "version": "1.0",
+  "exportedAt": "2026-11-01T18:00:00.000Z",
+  "counts": {
+    "games": 117,
+    "movies": 45,
+    "gameSessions": 120,
+    "dailyPlaytime": 90,
+    "aiEnrichments": 55,
+    "aiSettings": 1
+  },
+  "data": {
+    "games": [],
+    "movies": [],
+    "gameSessions": [],
+    "dailyPlaytime": [],
+    "aiEnrichments": [],
+    "aiSettings": []
   }
 }
 ```

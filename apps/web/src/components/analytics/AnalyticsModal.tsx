@@ -97,8 +97,8 @@ export function AnalyticsModal({
         {/* Main Content */}
         {!isLoading && !isError && (
           <>
-            {/* Metric Cards Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {/* Metric Cards Grid: Videojuegos & Cinefilia */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               {/* Card 1: Total Horas Jugadas */}
               <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950/70 border border-zinc-200 dark:border-white/10 flex flex-col justify-between shadow-2xs hover:border-amber-500/30 transition-colors duration-200">
                 <div className="flex items-center justify-between">
@@ -148,8 +148,29 @@ export function AnalyticsModal({
                   <div className="text-2xl font-bold font-mono text-zinc-900 dark:text-zinc-100 tracking-tight">
                     {summary?.totalMovies ?? 0}
                   </div>
+                  <div className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3 text-sky-500 shrink-0" />
+                    <span>
+                      {summary?.watchedMovies ?? 0} vistas ({summary?.movieCompletionRate ?? (summary?.totalMovies ? Math.round(((summary?.watchedMovies ?? 0) / summary.totalMovies) * 100) : 0)}%)
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 4: Horas de Cine Estimadas */}
+              <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950/70 border border-zinc-200 dark:border-white/10 flex flex-col justify-between shadow-2xs hover:border-purple-500/30 transition-colors duration-200">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Horas de Cine</span>
+                  <div className="p-2 rounded-xl bg-purple-500/10 text-purple-500">
+                    <Clock className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <div className="text-2xl font-bold font-mono text-zinc-900 dark:text-zinc-100 tracking-tight">
+                    {summary?.estimatedWatchTimeHours ? `${summary.estimatedWatchTimeHours}h` : `${(summary?.watchedMovies ?? 0) * 2}h`}
+                  </div>
                   <div className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
-                    {summary?.watchedMovies ?? 0} visualizadas
+                    Estimado en pantalla grande
                   </div>
                 </div>
               </div>
@@ -254,11 +275,11 @@ export function AnalyticsModal({
                 <div className="flex items-center gap-2">
                   <Layers className="w-4 h-4 text-sky-500" />
                   <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-900 dark:text-zinc-100">
-                    Desglose de Géneros Destacados
+                    Desglose de Géneros Destacados (Juegos & Cine)
                   </h4>
                 </div>
                 <span className="text-[10px] font-mono text-zinc-400 dark:text-zinc-500">
-                  {genreDistribution.length} categorías
+                  {genreDistribution.length} categorías unificadas
                 </span>
               </div>
 

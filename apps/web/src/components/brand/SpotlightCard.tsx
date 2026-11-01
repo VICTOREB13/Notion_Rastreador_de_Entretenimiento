@@ -19,7 +19,6 @@ export function SpotlightCard({
   ...props
 }: SpotlightCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isHovered, setIsHovered] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
 
@@ -37,14 +36,17 @@ export function SpotlightCard({
     if (reducedMotion || !cardRef.current) return;
     if (e.pointerType === "touch") return;
     const rect = cardRef.current.getBoundingClientRect();
-    setPosition({
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
-    });
+    cardRef.current.style.setProperty("--mouse-x", `${e.clientX - rect.left}px`);
+    cardRef.current.style.setProperty("--mouse-y", `${e.clientY - rect.top}px`);
   };
 
   const handlePointerEnter = (e: React.PointerEvent<HTMLDivElement>) => {
     if (reducedMotion || e.pointerType === "touch") return;
+    if (cardRef.current) {
+      const rect = cardRef.current.getBoundingClientRect();
+      cardRef.current.style.setProperty("--mouse-x", `${e.clientX - rect.left}px`);
+      cardRef.current.style.setProperty("--mouse-y", `${e.clientY - rect.top}px`);
+    }
     setIsHovered(true);
   };
 
@@ -73,7 +75,7 @@ export function SpotlightCard({
           className="pointer-events-none absolute -inset-px transition-opacity duration-300 z-10"
           style={{
             opacity: isHovered ? 1 : 0,
-            background: `radial-gradient(${spotlightSize}px circle at ${position.x}px ${position.y}px, ${activeColor}, transparent 70%)`,
+            background: `radial-gradient(${spotlightSize}px circle at var(--mouse-x, -999px) var(--mouse-y, -999px), ${activeColor}, transparent 70%)`,
           }}
           aria-hidden="true"
         />

@@ -113,45 +113,7 @@
   }
 }
 
-/* Shiny Text Kinetic Effect */
-@keyframes shiny-text-shimmer {
-  0% {
-    background-position: 200% 0;
-  }
-  100% {
-    background-position: -200% 0;
-  }
-}
 
-.shiny-text-animation {
-  background: linear-gradient(
-    90deg,
-    #52525b 0%,
-    #18181b 25%,
-    #e11d48 50%,
-    #18181b 75%,
-    #52525b 100%
-  );
-  background-size: 200% 100%;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: shiny-text-shimmer var(--shiny-speed, 5s) linear infinite;
-  display: inline-block;
-}
-
-.dark .shiny-text-animation {
-  background: linear-gradient(
-    90deg,
-    #a1a1aa 0%,
-    #fafafa 25%,
-    #ef4444 50%,
-    #fafafa 75%,
-    #a1a1aa 100%
-  );
-  background-size: 200% 100%;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
 
 /* Scrollbar sutil y minimalista adaptativo */
 ::-webkit-scrollbar {

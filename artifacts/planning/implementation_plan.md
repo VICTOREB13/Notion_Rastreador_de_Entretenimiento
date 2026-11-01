@@ -127,6 +127,18 @@ Al iniciar el contenedor, el demonio esperaba 120 segundos para su primer ciclo 
 
 ---
 
+## Fase 11: Poda Masiva de LoC, Anti-Slop, Hero Contextual, Batch AI y Respaldo Snapshot (v2.5.0)
+
+### Diagnóstico y Objetivos
+1. **Reducción de Código y Anti-Slop:** Poda de componentes sobrediseñados (`MorphButton`, `CustomSelect`), optimización de `SpotlightCard` con variables CSS para 0ms de costo JS a 120 FPS, y unificación del motor de Notion en `notion-props.helper.ts`.
+2. **Hero Contextual Inteligente (Funcionalidad 1):** Adaptar el Hero superior a la categoría activa (Juegos, Películas o Todo) con navegación interactiva al modal de detalle.
+3. **Analítica Unificada con Cine (Funcionalidad 5):** Unificación de géneros entre juegos y películas, y métricas de cinefilia en `AnalyticsModal`.
+4. **Enriquecimiento IA en Lote (Funcionalidad 6):** Endpoint `POST /api/enrich/batch` con rate limit defensivo y disparador en la UI.
+5. **Snapshot de Respaldo en un Clic (Funcionalidad 7):** Endpoint `GET /api/backup/export` con dump JSON completo descargable desde la web.
+6. **RFC Multi-Proveedor IA (Funcionalidad 8):** Especificación técnica documentada en `artifacts/architecture/rfc_multi_ai_provider.md`.
+
+---
+
 ## Matriz de Validacion y Quality Gate
 
 | Fase | Verificacion Determinista | Herramienta | Resultado Requerido |
@@ -137,6 +149,7 @@ Al iniciar el contenedor, el demonio esperaba 120 segundos para su primer ciclo 
 | Fase 4 | Auditoria de contraste Dark/Light y slider | Revision de DOM | Transicion fluida y estilos consistentes |
 | Fase 5 | Hidratacion de base de datos en arranque | Logs de Daemon | Sincronizacion inicial ejecutada en bootstrap |
 | Fase 10 | Resiliencia daemon, fecha películas y analíticas | `bun test`, `bun run web:build` | 100% pruebas en verde y build limpio |
+| Fase 11 | Poda LoC, Hero contextual, Batch AI y Snapshot | `bun test`, `bun run validate` | 256 pruebas en verde, SDD paridad 100% |
 
 ---
 
