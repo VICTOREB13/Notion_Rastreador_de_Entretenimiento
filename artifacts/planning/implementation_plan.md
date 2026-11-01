@@ -1,10 +1,10 @@
 ---
 tipo: implementation_plan
 proyecto: Notion_Rastreador_de_Entretenimiento
-iteracion: 3
-fecha: 2026-10-31
+iteracion: 4
+fecha: 2026-11-01
 estado: activo
-tags: [plan, refactorizacion, brand-components, telemetry, dark-mode, light-mode, error-handling]
+tags: [plan, refactorizacion, brand-components, telemetry, dark-mode, light-mode, error-handling, v2.5.0]
 ---
 
 # Plan de Implementacion Integral: Resolucion de Errores en Produccion, Telemetria Soberana y Diseno Canónico
@@ -139,6 +139,34 @@ Al iniciar el contenedor, el demonio esperaba 120 segundos para su primer ciclo 
 
 ---
 
+## Fase 12: Resiliencia de Gateway Proxy, Sincronización de Versión v2.5.0 en UI y Actualización de Artefactos
+
+### Diagnóstico Forense y Causa Raíz
+1. **Colisión de Proxy Rewrites en Next.js:**
+   - En `apps/web/next.config.mjs`, se definieron `rewrites()` como un array plano, asignándolos automáticamente a la fase `afterFiles` de Next.js.
+   - En Next.js App Router, `afterFiles` se evalúa antes de las rutas dinámicas catch-all (`apps/web/src/app/api/[...path]/route.ts`).
+   - Cuando el microservicio daemon en el puerto 3001 no estaba activo o se ejecutaba en entornos con resolución dispar, el proxy interno de Next.js abortaba con error no capturado `Failed to proxy http://127.0.0.1:3001/api/... Error: connect ECONNREFUSED 127.0.0.1:3001`.
+   - El manejador en runtime (`route.ts`) —equipado con streaming SSE, bufferización defensiva y respuestas JSON 502 elegantes— quedaba completamente puenteado y sin ejecutarse.
+2. **Desalineación de URL Base por Defecto:**
+   - En `apps/web/src/app/api/[...path]/route.ts`, el fallback por defecto apuntaba a `http://daemon-api:3001` (host interno de Docker), mientras que `next.config.mjs` y `apps/web/src/lib/api.ts` utilizaban `http://127.0.0.1:3001`, causando fallos de resolución ENOTFOUND en ejecuciones locales fuera de contenedores.
+3. **Versión Desactualizada en Interfaz Web:**
+   - `apps/web/src/app/page.tsx` mantenía `version="v2.4.0"` hardcodeado al instanciar `BrandHeader`, a pesar de haber publicado la versión `v2.5.0`.
+
+### Acciones Específicas:
+1. **Adopción de Rewrites en Modo `fallback`:**
+   - En `apps/web/next.config.mjs`, estructurar el retorno de `rewrites()` bajo `{ beforeFiles: [], afterFiles: [], fallback: [...] }`.
+   - Con este patrón, Next.js otorga precedencia a las rutas dinámicas del App Router (`/api/[...path]`), permitiendo que el proxy dinámico intercepte todas las llamadas a la API, gestione el streaming de eventos y devuelva un código HTTP 502 estructurado ante caídas del backend sin hacer crashear el servidor Next.js.
+2. **Alineación de `INTERNAL_API_URL`:**
+   - Estandarizar el valor predeterminado a `(process.env.INTERNAL_API_URL && process.env.INTERNAL_API_URL.trim()) || "http://127.0.0.1:3001"` en `route.ts`. En entornos Docker, `docker-compose.yml` suministra soberanamente `INTERNAL_API_URL=http://daemon-api:3001`.
+3. **Sincronización Uniforme de Versión:**
+   - Actualizar `BrandHeader.tsx` para admitir `version = process.env.NEXT_PUBLIC_APP_VERSION || "v2.5.0"`.
+   - Conectar `version={process.env.NEXT_PUBLIC_APP_VERSION || "v2.5.0"}` en `apps/web/src/app/page.tsx`.
+4. **Actualización Integral de Artefactos y Changelog:**
+   - Actualizar `changelog_v1.md` con las notas técnicas de `v2.5.0` y el historial completo de versiones semánticas.
+   - Sincronizar artefactos vivos (`project_overview.md`, `architecture.md`, `task.md` e `implementation_plan.md`).
+
+---
+
 ## Matriz de Validacion y Quality Gate
 
 | Fase | Verificacion Determinista | Herramienta | Resultado Requerido |
@@ -150,6 +178,7 @@ Al iniciar el contenedor, el demonio esperaba 120 segundos para su primer ciclo 
 | Fase 5 | Hidratacion de base de datos en arranque | Logs de Daemon | Sincronizacion inicial ejecutada en bootstrap |
 | Fase 10 | Resiliencia daemon, fecha películas y analíticas | `bun test`, `bun run web:build` | 100% pruebas en verde y build limpio |
 | Fase 11 | Poda LoC, Hero contextual, Batch AI y Snapshot | `bun test`, `bun run validate` | 256 pruebas en verde, SDD paridad 100% |
+| Fase 12 | Gateway proxy resiliente, versión v2.5.0 y artefactos | `bun test`, `bun run validate`, `bun run typecheck` | 100% tests en verde, SDD al 100%, paridad de esquemas |
 
 ---
 

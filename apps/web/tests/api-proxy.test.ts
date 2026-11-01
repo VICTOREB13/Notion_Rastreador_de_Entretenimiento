@@ -153,6 +153,7 @@ describe("Runtime API Proxy (/api/[...path]/route.ts)", () => {
 
     const res = await GET(req, context);
     expect(res.status).toBe(502);
+    expect(res.headers.get("Cache-Control")).toBe("no-store, no-cache, must-revalidate");
 
     const json = await res.json();
     expect(json.success).toBe(false);
@@ -161,6 +162,37 @@ describe("Runtime API Proxy (/api/[...path]/route.ts)", () => {
 
     // Restore URL
     process.env.INTERNAL_API_URL = `http://localhost:${upstreamPort}`;
+  });
+
+  it("should handle empty or undefined path parameter gracefully without double slashes", async () => {
+    const req = new NextRequest(`http://localhost:3000/api`);
+    const context = { params: Promise.resolve({ path: [] as string[] }) };
+
+    // With upstream having no /api handler, it returns 404 from upstream
+    const res = await GET(req, context);
+    expect(res.status).toBe(404);
+  });
+
+  it("should forward POST request with empty body without duplex error", async () => {
+    const req = new NextRequest(`http://localhost:3000/api/echo`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
+    const context = { params: Promise.resolve({ path: ["echo"] }) };
+
+    const res = await POST(req, context);
+    expect(res.status).toBe(200);
+
+    const json = await res.json();
+    expect(json.echoed).toBe("");
+  });
+
+  it("should preserve complex query string parameters during forwarding", async () => {
+    const req = new NextRequest(`http://localhost:3000/api/games?limit=200&offset=0&filter=cyber%20neon`);
+    const context = { params: Promise.resolve({ path: ["games"] }) };
+
+    const res = await GET(req, context);
+    expect(res.status).toBe(200);
   });
 
   it("should strip hop-by-hop headers like connection and keep-alive to protect undici socket pool", async () => {

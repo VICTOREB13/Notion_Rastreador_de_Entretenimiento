@@ -1,10 +1,10 @@
 ---
 tipo: task_list
 proyecto: Notion_Rastreador_de_Entretenimiento
-iteracion: 3
-fecha: 2026-10-31
+iteracion: 4
+fecha: 2026-11-01
 estado: activo
-tags: [tareas, refactorizacion, brand-components, telemetry, dark-mode, light-mode, error-handling]
+tags: [tareas, refactorizacion, brand-components, telemetry, dark-mode, light-mode, error-handling, v2.5.0]
 ---
 
 # Desglose de Tareas: Plan de Resolucion de Errores en Produccion y Telemetria Soberana
@@ -76,6 +76,12 @@ tags: [tareas, refactorizacion, brand-components, telemetry, dark-mode, light-mo
 - [x] `TASK-340`: Implementar Snapshot / Respaldo en un Clic (Funcionalidad 7) con `GET /api/backup/export` y botón de descarga directa en `TelemetryModal.tsx`.
 - [x] `TASK-341`: Documentar RFC técnico para soporte multi-proveedor de IA en `artifacts/architecture/rfc_multi_ai_provider.md` (Funcionalidad 8 futura).
 - [x] `TASK-342`: Validación integral (`bun test`, `bun run typecheck`, `bun run validate`, `bun run web:build`), bump a v2.5.0, commit semántico, tag release y push a `origin/main` y `origin/v2.5.0`.
+
+### Fase 12: Resiliencia de Gateway Proxy, Sincronización de Versión v2.5.0 en UI y Actualización de Artefactos
+- [x] `TASK-343`: Actualizar `apps/web/src/app/page.tsx` y `apps/web/src/components/brand/BrandHeader.tsx` para sincronizar `version` con `process.env.NEXT_PUBLIC_APP_VERSION || "v2.5.0"`.
+- [x] `TASK-344`: Resolver colisión de `rewrites()` en `apps/web/next.config.mjs` con `apps/web/src/app/api/[...path]/route.ts` adoptando `fallback` rewrites y alineando `INTERNAL_API_URL` a `http://127.0.0.1:3001` con captura resiliente 502.
+- [x] `TASK-345`: Actualizar `artifacts/planning/changelog_v1.md` con las notas exhaustivas de la versión `v2.5.0` y sincronizar artefactos vivos (`project_overview.md`, `architecture.md`, `implementation_plan.md`, `task.md`).
+- [x] `TASK-346`: Ejecutar validación determinista (`bun test`, `bun run typecheck`, `bun run validate`).
 
 ---
 

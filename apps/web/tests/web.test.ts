@@ -912,11 +912,22 @@ describe("Frontend Web Utilities (@repo/web)", () => {
     expect(telemetryModalContent).toContain("getBackupDownloadUrl");
     expect(telemetryModalContent).toContain("Descargar Respaldo JSON");
 
-    // 5. next.config.mjs proxies /api to internal daemon
+    // 5. next.config.mjs proxies /api to internal daemon with fallback rewrites
     const nextConfigPath = path.resolve(__dirname, "../next.config.mjs");
     const nextConfigContent = fs.readFileSync(nextConfigPath, "utf-8");
     expect(nextConfigContent).toContain("rewrites");
     expect(nextConfigContent).toContain('source: "/api/:path*"');
+    expect(nextConfigContent).toContain("fallback");
+
+    // 6. Version badge defaults to v2.5.0 and supports NEXT_PUBLIC_APP_VERSION
+    const brandPath = path.resolve(__dirname, "../src/components/brand/BrandHeader.tsx");
+    const brandContent = fs.readFileSync(brandPath, "utf-8");
+    expect(brandContent).toContain("NEXT_PUBLIC_APP_VERSION");
+    expect(brandContent).toContain("v2.5.0");
+
+    expect(pageContent).toContain("NEXT_PUBLIC_APP_VERSION");
+    expect(pageContent).toContain("v2.5.0");
+    expect(pageContent).not.toContain('version="v2.4.0"');
   });
 });
 

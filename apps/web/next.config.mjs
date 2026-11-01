@@ -43,12 +43,16 @@ const nextConfig = {
   output: "standalone",
   async rewrites() {
     const apiTarget = process.env.INTERNAL_API_URL || "http://127.0.0.1:3001";
-    return [
-      {
-        source: "/api/:path*",
-        destination: `${apiTarget}/api/:path*`,
-      },
-    ];
+    return {
+      beforeFiles: [],
+      afterFiles: [],
+      fallback: [
+        {
+          source: "/api/:path*",
+          destination: `${apiTarget}/api/:path*`,
+        },
+      ],
+    };
   },
 };
 

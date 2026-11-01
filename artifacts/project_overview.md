@@ -1,38 +1,44 @@
 ---
 tipo: overview
 proyecto: Notion_Rastreador_de_Entretenimiento
-version: v2.0.0
+version: v2.5.0
 estado: activo
-fecha: 2026-10-28
-tags: [proyecto, overview, artefacto, master-index, docker, hono, nextjs16, sqlite]
+fecha: 2026-11-01
+tags: [proyecto, overview, artefacto, master-index, docker, hono, nextjs16, sqlite, v2.5.0]
 ---
 
 # 🚀 Visión General del Proyecto: Notion Rastreador de Entretenimiento
 
-> **Rol del Documento (SSoT del Negocio):** Mantiene la visión de negocio y el estado funcional del proyecto. Aquí es donde reside formalmente la versión global del proyecto (`version: v2.0.0`). Actúa como índice maestro navegable para Obsidian y agentes autónomos bajo el estándar SDLC V8.
+> **Rol del Documento (SSoT del Negocio):** Mantiene la visión de negocio y el estado funcional del proyecto. Aquí es donde reside formalmente la versión global del proyecto (`version: v2.5.0`). Actúa como índice maestro navegable para Obsidian y agentes autónomos bajo el estándar SDLC V8.
 
 ## 📖 ¿Qué hace el proyecto?
 
-**Notion Rastreador de Entretenimiento** es un ecosistema de monolito modular contenedorizado diseñado para sincronizar, consolidar, enriquecer con IA y visualizar colecciones personales de **Videojuegos** y **Películas**. Integra bases de datos relacionales de **Notion**, la API de **Steam**, **Prisma ORM** sobre **SQLite embebido** en modo WAL, un microservicio backend reactivo con **Hono RPC** en Bun 1.4+, enriquecimiento contextual inteligente con **Gemini 2.5 Flash**, y un frontend personal de **Showcase Web** en **Next.js 16** con Bento Grid y dock flotante interactivo.
+**Notion Rastreador de Entretenimiento** es un ecosistema de monolito modular contenedorizado diseñado para sincronizar, consolidar, enriquecer con IA y visualizar colecciones personales de **Videojuegos** y **Películas**. Integra bases de datos relacionales de **Notion**, la API de **Steam**, **Prisma ORM** sobre **SQLite embebido** en modo WAL, un microservicio backend reactivo con **Hono RPC** en Bun 1.4+, enriquecimiento contextual inteligente con **Gemini 2.5 Flash**, y un frontend personal de **Showcase Web** en **Next.js 16** con Bento Grid, Hero Contextual, analítica unificada de cinefilia, dock flotante interactivo y reverse proxy resiliente con Server-Sent Events (SSE).
 
 ### Capacidades Nucleares:
 1. **Microservicio Backend Daemon (`@repo/server`):**
    - Servidor Hono con exportación de `AppType` para Hono RPC totalmente tipado de extremo a extremo.
-   - Sincronización incremental bidireccional con Notion respetando candados manuales de usuario.
+   - Sincronización incremental bidireccional con Notion respetando candados manuales de usuario y coalescencia anti-split-brain.
    - Monitoreo en tiempo real de Steam (sesiones de juego activas con debounce de gracia de 3 min).
-   - Agregación de series de tiempo para analíticas diarias de tiempo jugado.
+   - Agregación de series de tiempo para analíticas diarias de tiempo jugado y métricas unificadas de cinefilia (`estimatedWatchTimeHours`, `movieCompletionRate`, top géneros cruzados).
+   - Pipeline de enriquecimiento masivo en lote (`POST /api/enrich/batch`) con rate-limiting distributivo.
+   - Exportación de snapshots / copias de seguridad en JSON (`GET /api/backup/export`).
 2. **Capa de Persistencia Local-First (`@repo/database`):**
    - SQLite embebido (`./data/entertainment.db`) con Prisma ORM 6.4 y pragmas de alta concurrencia WAL (`journal_mode = WAL`, `busy_timeout = 5000`).
    - Esquemas relacionales normalizados para `games`, `movies`, `game_sessions`, `daily_playtime`, `ai_enrichments` y `ai_settings`.
 3. **Pipeline de Enriquecimiento con Gemini 2.5 Flash:**
    - Análisis contextual y generación estructurada con `@google/genai` (vibeTags, personalizedPitch, thematicTropes, completionEstimateWeeks).
-   - Prevención estricta de consultas N+1 mediante caché local en SQLite y batching con `findManyByTargets`.
+   - Prevención estricta de consultas N+1 mediante caché relacional local en SQLite y batching con `findManyByTargets`.
 4. **Showcase Web Personal (`@repo/web`):**
    - Aplicación web responsiva en Next.js 16 (App Router con Turbopack), Tailwind CSS v4, Motion y Lucide React.
    - Bento Grid con vista unificada de Videojuegos, Películas, Estado en Vivo y recomendaciones IA.
+   - Hero Contextual Inteligente (`AiRecommendationHero`) polimórfico adaptativo según filtro activo (juegos/cine) con click-through a modal.
+   - Modal Drawer de Analíticas unificadas y modal de Telemetría con disparo de Batch Enrich y descarga de respaldo JSON.
+   - Reverse proxy dinámico en runtime (`/api/[...path]/route.ts`) con streaming SSE (`/api/events`) y fallback resiliente 502 ante cortes del daemon.
+   - Atajos de teclado accesibles (`/`, `Ctrl+K`, `Escape`, `T`).
    - Presupuesto DOM estrictamente controlado (< 800 nodos en vista principal).
 5. **Contenerización y Despliegue en Dokploy:**
-   - Orquestación lista para producción con `docker-compose.yml` usando imágenes GHCR pre-compiladas multi-stage.
+   - Orquestación lista para producción con `docker-compose.yml` usando imágenes GHCR pre-compiladas multi-stage con pipeline de release estricto en tags `v*`.
 
 ---
 
@@ -48,5 +54,5 @@ tags: [proyecto, overview, artefacto, master-index, docker, hono, nextjs16, sqli
 ### 🟡 Artefactos Delta (Iteración Activa)
 - **Plan de Implementación:** [[PRJ_Notion_Rastreador_de_Entretenimiento_implementation_plan|Plan de Implementación (Migración VSA)]]
 - **Checklist de Tareas:** [[PRJ_Notion_Rastreador_de_Entretenimiento_task|Checklist de Tareas Atómicas]]
-- **Historial de Cambios SemVer:** [[PRJ_Notion_Rastreador_de_Entretenimiento_changelog_v1|Changelog Oficial v2.0.0]]
+- **Historial de Cambios SemVer:** [[PRJ_Notion_Rastreador_de_Entretenimiento_changelog_v1|Changelog Oficial v2.5.0]]
 - **Último Quality Gate:** [[PRJ_Notion_Rastreador_de_Entretenimiento_audit_report|Reporte de Auditoría y Quality Gate]]

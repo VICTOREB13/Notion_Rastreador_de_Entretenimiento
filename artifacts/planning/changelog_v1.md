@@ -1,9 +1,9 @@
 ---
 tipo: changelog
 proyecto: Notion_Rastreador_de_Entretenimiento
-version: v2.0.1
+version: v2.5.0
 estado: activo
-fecha: 2026-10-31
+fecha: 2026-11-01
 tags: [proyecto, changelog, versiones, release, quality-gate, v2, docker, nextjs16, hono, fix]
 ---
 
@@ -15,6 +15,105 @@ Todos los cambios notables de este proyecto se documentarán en este archivo sig
 > 1. Este archivo es la **fuente única de verdad** para los cortes de versión y las notas oficiales de **GitHub Releases** (`gh release create`).
 > 2. Mantén un estándar técnico riguroso (Anti-Slop): incluye métricas cuantitativas, rutas exactas de archivos, clases y justificación de la causa raíz.
 > 3. Queda prohibido el uso de viñetas genéricas como "mejoras varias" o "bugs corregidos".
+
+---
+
+## [2.5.0] - 2026-11-01 (Poda Masiva, Hero Contextual, Analítica Cinefilia, Batch AI, Snapshot Backup y Resiliencia Gateway)
+
+### Added & Modularized
+- **Hero Contextual Inteligente (`apps/web/src/components/catalog/AiRecommendationHero.tsx` & `apps/web/src/app/page.tsx`):**
+  - Soporte polimórfico adaptativo según filtro activo en catálogo (`ALL`, `GAMES`, `MOVIES`).
+  - Despliegue dinámico de "Selección Cinematográfica IA" para películas y "Recomendación Contextual IA" para videojuegos o catálogo completo.
+  - Interacción a nivel de tarjeta (`role="button"`, `tabIndex={0}`, `cursor-pointer`, `onKeyDown` accesible) que abre directamente el modal de detalle (`ItemDetailModal`) preservando el flujo táctil y de teclado.
+- **Analítica Unificada con Métricas de Cinefilia (`packages/server/src/controllers/analytics.controller.ts` & `apps/web/src/components/analytics/AnalyticsModal.tsx`):**
+  - Incorporadas métricas específicas de cine en el endpoint `/api/analytics`: `totalMovies`, `estimatedWatchTimeHours` (calculado con fallback a 105 min por film cuando no hay duración explícita) y `movieCompletionRate`.
+  - Agregador unificado de géneros (`topGenres`) consolidando videojuegos y películas en un ranking armónico con badges temáticos Crimson y Slate.
+- **Enriquecimiento Masivo IA en Lote (`packages/server/src/controllers/enrich.controller.ts` & `apps/web/src/components/settings/TelemetryModal.tsx`):**
+  - Nuevo endpoint `POST /api/enrich/batch` con filtrado por tipo (`ALL`, `GAME`, `MOVIE`), balanceo distributivo y concurrencia controlada para proteger la cuota de la API de Google Gemini.
+  - Botón "Enriquecimiento Masivo en Lote" en el modal de telemetría con estado reactivo, spinners y confirmación visual.
+- **Snapshot y Respaldo en un Clic (`packages/server/src/controllers/backup.controller.ts` & `apps/web/src/components/settings/TelemetryModal.tsx`):**
+  - Nuevo endpoint `GET /api/backup/export` con exportación completa de SQLite a formato JSON estructurado (`entertainment_backup_YYYY-MM-DD.json`).
+  - Enlace directo de descarga en `TelemetryModal.tsx` para copias de seguridad inmediatas sin requerir acceso SSH o manipulación manual del volumen Docker.
+
+### Fixed & Architecture Hardening
+- **Resiliencia de Gateway Proxy en Next.js (`apps/web/next.config.mjs` y `apps/web/src/app/api/[...path]/route.ts`):**
+  - Resuelta la colisión crítica entre `rewrites()` estáticos de `next.config.mjs` y el catch-all reverse proxy en runtime (`route.ts`).
+  - Configurados `rewrites` en modo `fallback: [...]` permitiendo que el handler dinámico de Next.js App Router tome precedencia absoluta para gestionar SSE (`/api/events`), streaming y captura elegante de errores con código HTTP 502 JSON (`Gateway connection error to daemon backend`) en lugar de fallos no capturados `ECONNREFUSED` del proxy interno de Next.js.
+  - Alineado el fallback de `INTERNAL_API_URL` a `http://127.0.0.1:3001` de forma uniforme entre runtime, tests y utilidades cliente.
+- **Sincronización Uniforme de Versión en Frontend (`apps/web/src/app/page.tsx` y `BrandHeader.tsx`):**
+  - Corregida la versión hardcodeada `v2.4.0` en `page.tsx`, conectando `BrandHeader` a `process.env.NEXT_PUBLIC_APP_VERSION || "v2.5.0"`.
+
+### Removed & Optimized (Anti-Slop)
+- **Poda Masiva de 1,160 Líneas de Código:**
+  - Desacoplado y simplificado `CustomSelect.tsx` (-140 LoC) y `MorphButton.tsx` (-169 LoC), erradicando micro-estados obsoletos.
+  - Optimizado `SpotlightCard.tsx` mediante variables CSS nativas (`--mouse-x`, `--mouse-y`), eliminando re-renders y 0ms de carga en el thread principal de JavaScript.
+  - Creado `notion-props.helper.ts` (+297 LoC) para unificar la extracción segura de propiedades Notion, reduciendo `notion-sync.service.ts` (-387 LoC) y erradicando duplicidad y complejidad ciclomática.
+
+### Quality Gate & DevOps
+- **Pipeline de Release Unificado Estricto en Tags (`.github/workflows/release.yml`):**
+  - Limitada la ejecución automática de publicación de contenedores GHCR y corte de GitHub Releases a tags semánticos anotados (`tags: ['v*']`) y `workflow_dispatch`, erradicando releases erróneas ante commits intermedios de desarrollo en `main`.
+- **Certificación de Pirámide de Pruebas:**
+  - 256 pruebas unitarias y de integración aprobadas (`bun test`).
+  - Validación de contratos SDD y esquemas de artefactos al 100% (`bun run validate`).
+
+---
+
+## [2.4.0] - 2026-11-01 (Resiliencia Daemon, Fecha Película Notion, Atajos Web y Drawer Analíticas)
+
+### Added & Enhanced
+- **Atajos de Teclado Globales (`apps/web/src/lib/useKeyboardShortcuts.ts`):**
+  - Implementado listener accesible para `/` o `Ctrl+K` para foco en búsqueda, `Escape` para cierre de modales y `T` para alternancia de tema, ignorando inputs y textareas editables.
+- **Fecha de Visualización de Películas (`MovieCard.tsx` & `ItemDetailModal.tsx`):**
+  - Extracción de fecha de compleción desde Notion (`completionDate`), formateador defensivo `formatDate` y badge con icono `CalendarCheck`.
+- **Drawer Visual de Analíticas (`AnalyticsModal.tsx`):**
+  - Modal accesible con distribución de géneros, ratio de finalización y compatibilidad responsive para resoluciones móviles (<640px).
+
+### Fixed & Hardening
+- **Timeouts Defensivos en Clientes HTTP Daemon:**
+  - Añadido `AbortSignal.timeout(8000)` en `steam.client.ts`, `tmdb.client.ts` y `hltb.client.ts`.
+- **Coalescencia Anti-Split-Brain en Sincronización:**
+  - Matching robusto de videojuegos por `cleanTitle` para evitar registros duplicados en SQLite.
+
+---
+
+## [2.3.0] - 2026-10-31 (Ordenamiento Multicriterio, Filtro Dinámico de Géneros y Prompt Anti-Slop)
+
+### Added & Enhanced
+- **Ordenamiento Multicriterio (`CatalogHeader.tsx` & `BentoCatalogGrid.tsx`):**
+  - Opciones de ordenación: "Jugados recientemente", "Más jugados", "Mejor calificados" y "Alfabético (A-Z)".
+- **Filtro Dinámico de Géneros:**
+  - Extracción en caliente de géneros activos en la biblioteca y barra de filtrado por píldoras con botón de limpieza.
+- **Prompt Anti-Slop para Gemini:**
+  - Reducción de temperatura a 0.35 y directivas negativas para impedir clichés narrativos redundantes en los análisis de Vibe.
+
+---
+
+## [2.2.2] - 2026-10-31 (Microinteracciones en Modales, Feedback de Búsqueda y Animaciones)
+
+### Added & Enhanced
+- **Microinteracciones en UI:**
+  - Animación de rotación en botones de cierre, elevación de enlaces externos y rotación de re-análisis IA en `ItemDetailModal.tsx`.
+  - Micro-desplazamiento de flechas en `AiRecommendationHero.tsx` y botón de limpieza de búsqueda cuando no hay resultados.
+
+---
+
+## [2.2.1] - 2026-10-31 (Skeleton Shimmer, Hover Lift y Feedback Reactivo)
+
+### Added & Enhanced
+- **Loading States con Shimmer (`BentoCatalogGrid.tsx`):**
+  - Reemplazo de spinners planos por skeletons animados con barrido shimmer conectados a TanStack Query.
+- **Feedback Reactivo de Tarjetas:**
+  - Efectos de hover lift (`hover:-translate-y-1.5`), borde luminoso carmesí (`hover:border-rose-500/40`) y escala de imagen (`group-hover:scale-106`).
+
+---
+
+## [2.2.0] - 2026-10-31 (Enriquecimiento Notion, Calificación 1-5, Fechas de Culminación y Pulido UI)
+
+### Added & Enhanced
+- **Soporte de Calificaciones y Fechas en Esquema SQLite:**
+  - Campos `rating`, `completionDate` y `summary` en modelos `Game` y `Movie`.
+  - Extractores resilientes para estrellas y fracciones en `notion-sync.service.ts`.
+  - Rediseño de `ItemDetailModal.tsx` con despliegue de estrellas 1-5 y resumen personal.
 
 ---
 
@@ -58,7 +157,7 @@ Todos los cambios notables de este proyecto se documentarán en este archivo sig
 
 ### Contenerización & DevOps (Fase 7)
 - **Docker Multi-Stage & Orquestación Docker Compose para Dokploy:**
-  - `docker-compose.yml`: Estandarizado como archivo único y canónico para despliegue sin compilación local en Dokploy o VPS, consumiendo directamente las imágenes de GHCR (`ghcr.io/victoreb13/notion-entertainment-daemon-api:latest` y `ghcr.io/victoreb13/notion-entertainment-showcase-web:latest`) con mapeo de puertos 3000/3001, volumen persistente `./data:/app/data` y healthchecks activos. Se eliminó la duplicidad de archivos eliminando `docker-compose.prod.yml`.
+  - `docker-compose.yml`: Estandarizado como archivo único y canónico para despliegue sin compilación local en Dokploy o VPS, consumiendo directamente las imágenes de GHCR (`ghcr.io/victoreb13/notion-entertainment-daemon-api:latest` y `ghcr.io/victoreb13/notion-entertainment-showcase-web:latest`) con mapeo de puertos 3000/3001, volumen persistente `./data:/app/data` y healthchecks activos.
   - `packages/server/Dockerfile`: Contenedor Alpine optimizado (`oven/bun:1.4-alpine`) con binarios OpenSSL y SQLite musl, persistencia en volumen montado `/app/data` y healthcheck en `/healthz`.
   - `apps/web/Dockerfile`: Contenedor de producción Next.js 16 en modo `standalone` con base ligera `node:22-alpine` y usuario sin privilegios `nextjs:nodejs` (UID 1001).
   - `.github/workflows/docker-build.yml`: Flujo de integración continua para construcción multi-plataforma (linux/amd64) y publicación automática en GitHub Container Registry (GHCR) en pushes y tags `v*`.

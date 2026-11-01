@@ -23,14 +23,20 @@ const HOP_BY_HOP_HEADERS = new Set([
 
 async function proxyRequest(
   request: NextRequest,
-  context: { params: Promise<{ path: string[] }> }
+  context: { params: Promise<{ path?: string[] }> }
 ) {
-  const { path } = await context.params;
-  const rawBase = process.env.INTERNAL_API_URL || "http://daemon-api:3001";
+  const { path } = (await context.params) || {};
+  const rawBase =
+    (process.env.INTERNAL_API_URL && process.env.INTERNAL_API_URL.trim()) ||
+    "http://127.0.0.1:3001";
   const targetBase = rawBase.replace(/\/+$/, "");
   const search = request.nextUrl ? request.nextUrl.search : new URL(request.url).search;
-  const subPath = Array.isArray(path) ? path.join("/") : "";
-  const targetUrl = `${targetBase}/api/${subPath}${search}`;
+  const subPath = Array.isArray(path)
+    ? path.filter(Boolean).join("/")
+    : typeof path === "string" && path
+    ? path
+    : "";
+  const targetUrl = `${targetBase}/api${subPath ? `/${subPath}` : ""}${search}`;
 
   const headers = new Headers();
   request.headers.forEach((value, key) => {
@@ -42,7 +48,17 @@ async function proxyRequest(
 
   const method = request.method;
   const hasBody = method !== "GET" && method !== "HEAD";
-  const body = hasBody ? await request.arrayBuffer() : undefined;
+  let body: ArrayBuffer | undefined = undefined;
+  if (hasBody) {
+    try {
+      const buf = await request.arrayBuffer();
+      if (buf && buf.byteLength > 0) {
+        body = buf;
+      }
+    } catch {
+      // Body may be absent or empty
+    }
+  }
 
   try {
     const upstreamRes = await fetch(targetUrl, {
@@ -50,7 +66,7 @@ async function proxyRequest(
       headers,
       body,
       // @ts-ignore - Node fetch duplex flag for streaming bodies
-      duplex: hasBody ? "half" : undefined,
+      duplex: body ? "half" : undefined,
       cache: "no-store",
       signal: request.signal,
     });
@@ -171,7 +187,12 @@ async function proxyRequest(
         targetUrl,
         details: error?.message || String(error),
       },
-      { status: 502 }
+      {
+        status: 502,
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate",
+        },
+      }
     );
   }
 }
