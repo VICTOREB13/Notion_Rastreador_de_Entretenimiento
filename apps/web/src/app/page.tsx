@@ -16,6 +16,7 @@ import { TelemetryModal } from "@/components/settings/TelemetryModal";
 import { AnalyticsModal } from "@/components/analytics/AnalyticsModal";
 import { useKeyboardShortcuts } from "@/lib/useKeyboardShortcuts";
 import { useTheme } from "@/lib/theme";
+import { APP_VERSION } from "@/lib/version";
 import {
   useLiveStatusQuery,
   useAnalyticsQuery,
@@ -171,7 +172,7 @@ export default function EntertainmentShowcasePage() {
     <main className="min-h-screen bg-zinc-50 dark:bg-[#09090B] text-zinc-900 dark:text-zinc-100 pb-32 sm:pb-36 pt-6 sm:pt-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto transition-colors duration-200">
       {/* Brand Header with Authentic Vectors, Crimson Border & Version Badge */}
       <BrandHeader
-        version={process.env.NEXT_PUBLIC_APP_VERSION || "v2.5.1"}
+        version={APP_VERSION}
         onOpenTelemetry={() => setIsTelemetryOpen(true)}
         actions={
           <div className="flex items-center gap-2">

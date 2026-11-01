@@ -60,7 +60,7 @@ services:
       - PORT=3000
       - INTERNAL_API_URL=http://daemon-api:3001
       - NEXT_PUBLIC_API_URL=/api
-      - NEXT_PUBLIC_APP_VERSION=${NEXT_PUBLIC_APP_VERSION:-v2.5.1}
+      - NEXT_PUBLIC_APP_VERSION=${NEXT_PUBLIC_APP_VERSION:-}
     depends_on:
       daemon-api:
         condition: service_healthy

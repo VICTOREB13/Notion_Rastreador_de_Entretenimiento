@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { APP_VERSION } from "@/lib/version";
  
 export const alt = "Victor Engineer - Rastreador de Entretenimiento";
 export const size = {
@@ -66,7 +67,7 @@ export default async function Image() {
             }}
           >
             <span style={{ width: "8px", height: "8px", borderRadius: "9999px", backgroundColor: "#ef4444" }} />
-            <span>v2.0.2 • Live Telemetry</span>
+            <span>{APP_VERSION} • Live Telemetry</span>
           </div>
         </div>
 

@@ -529,10 +529,10 @@ describe("Frontend Web Utilities (@repo/web)", () => {
     expect(movieContent).toContain("hover:border-rose-500/40");
     expect(movieContent).toContain("group-hover:scale-106");
 
-    // BrandHeader version v2.3.0
+    // BrandHeader dynamic version badge
     const brandPath = path.resolve(__dirname, "../src/components/brand/BrandHeader.tsx");
     const brandContent = fs.readFileSync(brandPath, "utf-8");
-    expect(brandContent).toContain("v2.3.0");
+    expect(brandContent).toContain("APP_VERSION");
 
     // ItemDetailModal microinteractions (close button, external link, re-enrich)
     const modalPath = path.resolve(__dirname, "../src/components/detail/ItemDetailModal.tsx");
@@ -919,15 +919,58 @@ describe("Frontend Web Utilities (@repo/web)", () => {
     expect(nextConfigContent).toContain('source: "/api/:path*"');
     expect(nextConfigContent).toContain("fallback");
 
-    // 6. Version badge defaults to v2.5.1 and supports NEXT_PUBLIC_APP_VERSION
+    // 6. Dynamic Version SSoT: APP_VERSION reads from package.json and supports NEXT_PUBLIC_APP_VERSION
     const brandPath = path.resolve(__dirname, "../src/components/brand/BrandHeader.tsx");
     const brandContent = fs.readFileSync(brandPath, "utf-8");
-    expect(brandContent).toContain("NEXT_PUBLIC_APP_VERSION");
-    expect(brandContent).toContain("v2.5.1");
+    expect(brandContent).toContain("APP_VERSION");
+    expect(brandContent).toContain("@/lib/version");
 
-    expect(pageContent).toContain("NEXT_PUBLIC_APP_VERSION");
-    expect(pageContent).toContain("v2.5.1");
-    expect(pageContent).not.toContain('version="v2.4.0"');
+    const versionPath = path.resolve(__dirname, "../src/lib/version.ts");
+    expect(fs.existsSync(versionPath)).toBe(true);
+    const versionContent = fs.readFileSync(versionPath, "utf-8");
+    expect(versionContent).toContain("NEXT_PUBLIC_APP_VERSION");
+    expect(versionContent).toContain("packageJson.version");
+    expect(versionContent).toContain("APP_VERSION");
+
+    expect(nextConfigContent).toContain("NEXT_PUBLIC_APP_VERSION");
+    expect(nextConfigContent).toContain("packageJson.version");
+
+    expect(pageContent).toContain("APP_VERSION");
+    expect(pageContent).toContain("@/lib/version");
+
+    // Dynamic SSoT check against apps/web/package.json
+    const pkgPath = path.resolve(__dirname, "../package.json");
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
+    const { APP_VERSION } = await import("../src/lib/version");
+    expect(APP_VERSION).toBe(`v${pkg.version}`);
+
+    // Verify opengraph-image.tsx uses APP_VERSION from @/lib/version without hardcoding
+    const ogPath = path.resolve(__dirname, "../src/app/opengraph-image.tsx");
+    const ogContent = fs.readFileSync(ogPath, "utf-8");
+    expect(ogContent).toContain("APP_VERSION");
+    expect(ogContent).toContain("@/lib/version");
+    expect(ogContent).not.toContain("v2.0.2");
+
+    // Verify NEXT_PUBLIC_APP_VERSION takes precedence over package.json when provided
+    const evaluateVersionSSoT = (customEnv?: string) => {
+      const orig = process.env.NEXT_PUBLIC_APP_VERSION;
+      try {
+        if (customEnv !== undefined) {
+          process.env.NEXT_PUBLIC_APP_VERSION = customEnv;
+        } else {
+          delete process.env.NEXT_PUBLIC_APP_VERSION;
+        }
+        return process.env.NEXT_PUBLIC_APP_VERSION || ("v" + pkg.version);
+      } finally {
+        if (orig !== undefined) {
+          process.env.NEXT_PUBLIC_APP_VERSION = orig;
+        } else {
+          delete process.env.NEXT_PUBLIC_APP_VERSION;
+        }
+      }
+    };
+    expect(evaluateVersionSSoT()).toBe(`v${pkg.version}`);
+    expect(evaluateVersionSSoT("v3.0.0-custom")).toBe("v3.0.0-custom");
   });
 });
 
