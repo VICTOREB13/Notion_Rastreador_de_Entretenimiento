@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
-import { Sliders, Activity, Sparkles } from "lucide-react";
+import { Sliders, Activity, Sparkles, BarChart3 } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { useTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
@@ -12,6 +12,7 @@ export interface BrandHeaderProps {
   version?: string;
   onOpenTelemetry?: () => void;
   onOpenSettings?: () => void;
+  onOpenAnalytics?: () => void;
   actions?: React.ReactNode;
   className?: string;
 }
@@ -20,6 +21,7 @@ export function BrandHeader({
   version = APP_VERSION,
   onOpenTelemetry,
   onOpenSettings,
+  onOpenAnalytics,
   actions,
   className,
 }: BrandHeaderProps) {
@@ -95,6 +97,20 @@ export function BrandHeader({
 
         {/* Dark / Light Mode Toggle */}
         <ThemeToggle />
+
+        {/* Analytics & Trends Button */}
+        {onOpenAnalytics && (
+          <button
+            type="button"
+            onClick={onOpenAnalytics}
+            title="Analíticas & Métricas"
+            aria-label="Abrir modal de Analíticas y Métricas"
+            className="group flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white hover:bg-zinc-100 text-zinc-800 border border-zinc-200 hover:border-rose-500/30 dark:bg-zinc-900 dark:hover:bg-zinc-800 dark:text-zinc-200 dark:border-white/10 dark:hover:border-rose-500/30 shadow-xs transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 active:scale-95 cursor-pointer"
+          >
+            <BarChart3 className="w-3.5 h-3.5 text-rose-500 group-hover:scale-110 transition-transform duration-200" />
+            <span className="hidden sm:inline">Analíticas</span>
+          </button>
+        )}
 
         {/* Telemetry & System Button */}
         {handleOpenTelemetry && (

@@ -95,8 +95,9 @@ export function CatalogHeader({
               type="text"
               value={search}
               onChange={(e) => onSearchChange(e.target.value)}
-              placeholder="Buscar por título, género o notas... (Ctrl+K o /)"
-              className="w-full pl-10 pr-14 py-2 rounded-full bg-zinc-100 dark:bg-zinc-900/80 border border-zinc-200 dark:border-white/10 text-xs text-zinc-900 dark:text-zinc-200 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-hidden focus:border-rose-500/60 focus:ring-2 focus:ring-rose-500/20 transition-all duration-200 shadow-inner"
+              placeholder="Buscar títulos, géneros o notas..."
+              aria-label="Buscar títulos, géneros o notas... (Ctrl+K o /)"
+              className="w-full pl-10 pr-16 py-2 rounded-full bg-zinc-100 dark:bg-zinc-900/80 border border-zinc-200 dark:border-white/10 text-xs text-zinc-900 dark:text-zinc-200 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-hidden focus:border-rose-500/60 focus:ring-2 focus:ring-rose-500/20 transition-all duration-200 shadow-inner"
             />
             {search ? (
               <button
@@ -121,85 +122,90 @@ export function CatalogHeader({
         </div>
       </div>
 
-      {/* Secondary Status Filters */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs scrollbar-none">
-        <span className="text-zinc-400 dark:text-zinc-500 text-[11px] font-mono uppercase tracking-wider mr-1 hidden sm:inline shrink-0">
-          Estado:
-        </span>
-        {[
-          { id: "ALL" as const, label: "Todos" },
-          { id: "PLAYING" as const, label: "En Curso / Jugando" },
-          { id: "TODO" as const, label: "Pendientes / Por Disfrutar" },
-          { id: "COMPLETED" as const, label: "Completados / Vistos" },
-        ].map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => onStatusChange(item.id)}
-            className={cn(
-              "px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap border transition-all duration-200 cursor-pointer active:scale-95 hover:-translate-y-0.5 shrink-0",
-              status === item.id
-                ? "bg-zinc-900 text-white dark:bg-white/10 dark:text-zinc-100 border-zinc-900 dark:border-white/20 font-semibold shadow-xs ring-1 ring-zinc-900/10 dark:ring-white/10"
-                : "bg-transparent text-zinc-600 dark:text-zinc-400 border-transparent hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-zinc-200/60 dark:hover:bg-zinc-800/80 hover:border-zinc-300/50 dark:hover:border-white/5"
-            )}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Dynamic Genre Filter Pill Bar */}
-      {availableGenres.length > 0 && (
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs scrollbar-none pt-0.5">
-          <span className="text-zinc-400 dark:text-zinc-500 text-[11px] font-mono uppercase tracking-wider mr-1 shrink-0 flex items-center gap-1">
-            <Filter className="w-3 h-3 text-rose-500/70" />
-            Género:
+      {/* Level 2: Contextual Filters (Status & Dynamic Genres) */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pt-1">
+        {/* Status Filter Pills (Ergonomic py-1.5, flex-wrap responsive without vertical clipping) */}
+        <div className="flex items-center gap-1.5 flex-wrap py-1.5 px-0.5 text-xs">
+          <span className="text-zinc-400 dark:text-zinc-500 text-[11px] font-mono uppercase tracking-wider mr-1 hidden sm:inline shrink-0">
+            Estado:
           </span>
-          <button
-            type="button"
-            onClick={() => onGenreChange(null)}
-            className={cn(
-              "px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap border transition-all duration-200 cursor-pointer active:scale-95 shrink-0",
-              selectedGenre === null
-                ? "bg-zinc-900 text-white dark:bg-white/10 dark:text-zinc-100 border-zinc-900 dark:border-white/20 font-semibold shadow-xs ring-1 ring-zinc-900/10 dark:ring-white/10"
-                : "bg-transparent text-zinc-600 dark:text-zinc-400 border-transparent hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-zinc-200/60 dark:hover:bg-zinc-800/80 hover:border-zinc-300/50 dark:hover:border-white/5"
-            )}
-          >
-            Todos
-          </button>
-          {availableGenres.map((genre) => {
-            const isSelected = selectedGenre?.toLowerCase() === genre.toLowerCase();
-            return (
+          {[
+            { id: "ALL" as const, label: "Todos" },
+            { id: "PLAYING" as const, label: "En Curso / Jugando" },
+            { id: "TODO" as const, label: "Pendientes / Por Disfrutar" },
+            { id: "COMPLETED" as const, label: "Completados / Vistos" },
+          ].map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => onStatusChange(item.id)}
+              className={cn(
+                "px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border transition-all duration-200 cursor-pointer active:scale-95 hover:-translate-y-0.5 shrink-0",
+                status === item.id
+                  ? "bg-zinc-900 text-white dark:bg-white/10 dark:text-zinc-100 border-zinc-900 dark:border-white/20 font-semibold shadow-xs ring-1 ring-zinc-900/10 dark:ring-white/10"
+                  : "bg-transparent text-zinc-600 dark:text-zinc-400 border-transparent hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-zinc-200/60 dark:hover:bg-zinc-800/80 hover:border-zinc-300/50 dark:hover:border-white/5"
+              )}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Dynamic Genre Filter Pill Bar with lateral fade mask and clear button */}
+        {availableGenres.length > 0 && (
+          <div className="relative flex items-center min-w-0 md:max-w-xl lg:max-w-2xl">
+            <div className="flex items-center gap-1.5 overflow-x-auto py-1.5 px-0.5 text-xs scrollbar-none [-webkit-mask-image:linear-gradient(to_right,black_calc(100%-32px),transparent_100%)] [mask-image:linear-gradient(to_right,black_calc(100%-32px),transparent_100%)]">
+              <span className="text-zinc-400 dark:text-zinc-500 text-[11px] font-mono uppercase tracking-wider mr-1 shrink-0 flex items-center gap-1">
+                <Filter className="w-3 h-3 text-rose-500/70" />
+                Género:
+              </span>
               <button
-                key={genre}
                 type="button"
-                onClick={() => onGenreChange(isSelected ? null : genre)}
+                onClick={() => onGenreChange(null)}
                 className={cn(
-                  "px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap border transition-all duration-200 cursor-pointer active:scale-95 shrink-0",
-                  isSelected
-                    ? "bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/40 font-semibold shadow-xs ring-1 ring-rose-500/20"
+                  "px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border transition-all duration-200 cursor-pointer active:scale-95 shrink-0",
+                  selectedGenre === null
+                    ? "bg-zinc-900 text-white dark:bg-white/10 dark:text-zinc-100 border-zinc-900 dark:border-white/20 font-semibold shadow-xs ring-1 ring-zinc-900/10 dark:ring-white/10"
                     : "bg-transparent text-zinc-600 dark:text-zinc-400 border-transparent hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-zinc-200/60 dark:hover:bg-zinc-800/80 hover:border-zinc-300/50 dark:hover:border-white/5"
                 )}
               >
-                {genre}
+                Todos
               </button>
-            );
-          })}
+              {availableGenres.map((genre) => {
+                const isSelected = selectedGenre?.toLowerCase() === genre.toLowerCase();
+                return (
+                  <button
+                    key={genre}
+                    type="button"
+                    onClick={() => onGenreChange(isSelected ? null : genre)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border transition-all duration-200 cursor-pointer active:scale-95 shrink-0",
+                      isSelected
+                        ? "bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/40 font-semibold shadow-xs ring-1 ring-rose-500/20"
+                        : "bg-transparent text-zinc-600 dark:text-zinc-400 border-transparent hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-zinc-200/60 dark:hover:bg-zinc-800/80 hover:border-zinc-300/50 dark:hover:border-white/5"
+                    )}
+                  >
+                    {genre}
+                  </button>
+                );
+              })}
+            </div>
 
-          {/* Quick Clear Genre Filter Button */}
-          {selectedGenre !== null && (
-            <button
-              type="button"
-              onClick={() => onGenreChange(null)}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-rose-600 dark:text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 transition-all cursor-pointer active:scale-95 shrink-0 ml-1"
-              title="Limpiar filtro de género"
-            >
-              <X className="w-3 h-3" />
-              <span>Limpiar filtro</span>
-            </button>
-          )}
-        </div>
-      )}
+            {/* Quick Clear Genre Filter Button */}
+            {selectedGenre !== null && (
+              <button
+                type="button"
+                onClick={() => onGenreChange(null)}
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-medium text-rose-600 dark:text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 transition-all cursor-pointer active:scale-95 shrink-0 ml-2"
+                title="Limpiar filtro de género"
+              >
+                <X className="w-3 h-3" />
+                <span className="hidden sm:inline">Limpiar filtro</span>
+              </button>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

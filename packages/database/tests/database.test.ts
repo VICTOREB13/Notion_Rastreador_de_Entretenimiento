@@ -10,6 +10,7 @@ import {
   cleanNotionDatabaseId,
   cleanNotionToken,
   cleanAiModelName,
+  formatLocalDate,
   gameRepository,
   movieRepository,
   sessionRepository,
@@ -362,7 +363,7 @@ describe("SQLite Database & Prisma Repositories", () => {
 
   describe("SessionRepository & DailyPlaytimeRepository (Cascade)", () => {
     let sessionId: string;
-    const testDate = "2026-10-25";
+    const testDate = formatLocalDate(new Date());
 
     it("should start and close a live session and calculate duration on orphan sessions", async () => {
       // 1. Iniciar primera sesión

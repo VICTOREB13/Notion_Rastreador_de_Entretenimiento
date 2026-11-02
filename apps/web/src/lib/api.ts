@@ -110,6 +110,12 @@ export async function triggerManualSync() {
   return await res.json();
 }
 
+export async function triggerNotionSync() {
+  const res = await (client.api.sync as any).notion.$post();
+  if (!res.ok) throw new Error("Error triggering Notion synchronization");
+  return await res.json();
+}
+
 export async function triggerBatchEnrich(options: {
   limit?: number;
   delayMs?: number;

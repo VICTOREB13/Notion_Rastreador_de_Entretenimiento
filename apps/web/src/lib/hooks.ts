@@ -13,6 +13,7 @@ import {
   enrichMovie,
   fetchSystemSettings,
   triggerManualSync,
+  triggerNotionSync,
   triggerBatchEnrich,
 } from "./api";
 
@@ -107,6 +108,20 @@ export function useTriggerSyncMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: triggerManualSync,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["games"] });
+      queryClient.invalidateQueries({ queryKey: ["movies"] });
+      queryClient.invalidateQueries({ queryKey: ["analytics"] });
+      queryClient.invalidateQueries({ queryKey: ["liveStatus"] });
+      queryClient.invalidateQueries({ queryKey: ["systemSettings"] });
+    },
+  });
+}
+
+export function useSyncNotionMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: triggerNotionSync,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["games"] });
       queryClient.invalidateQueries({ queryKey: ["movies"] });

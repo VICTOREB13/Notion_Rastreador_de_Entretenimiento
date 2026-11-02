@@ -97,81 +97,83 @@ export function AnalyticsModal({
         {/* Main Content */}
         {!isLoading && !isError && (
           <>
-            {/* Metric Cards Grid: Videojuegos & Cinefilia */}
+            {/* Metric Cards Grid: Videojuegos & Cinefilia (Symmetrical min-h-[145px]) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               {/* Card 1: Total Horas Jugadas */}
-              <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950/70 border border-zinc-200 dark:border-white/10 flex flex-col justify-between shadow-2xs hover:border-amber-500/30 transition-colors duration-200">
+              <div className="flex flex-col justify-between h-full min-h-[145px] p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950/70 border border-zinc-200 dark:border-white/10 shadow-2xs hover:border-amber-500/30 transition-colors duration-200">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Total Horas</span>
+                  <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Total Horas</span>
                   <div className="p-2 rounded-xl bg-amber-500/10 text-amber-500">
                     <Clock className="w-4 h-4" />
                   </div>
                 </div>
-                <div className="mt-3">
-                  <div className="text-2xl font-bold font-mono text-zinc-900 dark:text-zinc-100 tracking-tight">
+                <div className="my-auto py-2">
+                  <div className="text-3xl font-extrabold font-mono text-zinc-900 dark:text-zinc-100 tracking-tight">
                     {formatHours(summary?.totalPlaytimeHours)}
                   </div>
-                  <div className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
-                    Tiempo acumulado en Steam
-                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 text-[11px] text-zinc-500 dark:text-zinc-400 font-mono">
+                  <TrendingUp className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                  <span className="truncate">Tiempo en Steam</span>
                 </div>
               </div>
 
               {/* Card 2: Total Juegos */}
-              <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950/70 border border-zinc-200 dark:border-white/10 flex flex-col justify-between shadow-2xs hover:border-rose-500/30 transition-colors duration-200">
+              <div className="flex flex-col justify-between h-full min-h-[145px] p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950/70 border border-zinc-200 dark:border-white/10 shadow-2xs hover:border-rose-500/30 transition-colors duration-200">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Total Juegos</span>
+                  <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Total Juegos</span>
                   <div className="p-2 rounded-xl bg-rose-500/10 text-rose-500">
                     <Gamepad2 className="w-4 h-4" />
                   </div>
                 </div>
-                <div className="mt-3">
-                  <div className="text-2xl font-bold font-mono text-zinc-900 dark:text-zinc-100 tracking-tight">
+                <div className="my-auto py-2">
+                  <div className="text-3xl font-extrabold font-mono text-zinc-900 dark:text-zinc-100 tracking-tight">
                     {summary?.totalGames ?? 0}
                   </div>
-                  <div className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3 text-emerald-500 shrink-0" />
-                    <span>{summary?.completedGames ?? 0} completados ({summary?.completionRate ?? 0}%)</span>
-                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 text-[11px] text-zinc-500 dark:text-zinc-400 font-mono">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                  <span className="truncate">{summary?.completedGames ?? 0} completados ({summary?.completionRate ?? 0}%)</span>
                 </div>
               </div>
 
               {/* Card 3: Total Películas */}
-              <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950/70 border border-zinc-200 dark:border-white/10 flex flex-col justify-between shadow-2xs hover:border-sky-500/30 transition-colors duration-200">
+              <div className="flex flex-col justify-between h-full min-h-[145px] p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950/70 border border-zinc-200 dark:border-white/10 shadow-2xs hover:border-sky-500/30 transition-colors duration-200">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Total Películas</span>
+                  <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Total Películas</span>
                   <div className="p-2 rounded-xl bg-sky-500/10 text-sky-500">
                     <Film className="w-4 h-4" />
                   </div>
                 </div>
-                <div className="mt-3">
-                  <div className="text-2xl font-bold font-mono text-zinc-900 dark:text-zinc-100 tracking-tight">
+                <div className="my-auto py-2">
+                  <div className="text-3xl font-extrabold font-mono text-zinc-900 dark:text-zinc-100 tracking-tight">
                     {summary?.totalMovies ?? 0}
                   </div>
-                  <div className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3 text-sky-500 shrink-0" />
-                    <span>
-                      {summary?.watchedMovies ?? 0} vistas ({summary?.movieCompletionRate ?? (summary?.totalMovies ? Math.round(((summary?.watchedMovies ?? 0) / summary.totalMovies) * 100) : 0)}%)
-                    </span>
-                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 text-[11px] text-zinc-500 dark:text-zinc-400 font-mono">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-sky-500 shrink-0" />
+                  <span className="truncate">
+                    {summary?.watchedMovies ?? 0} vistas ({summary?.movieCompletionRate ?? (summary?.totalMovies ? Math.round(((summary?.watchedMovies ?? 0) / summary.totalMovies) * 100) : 0)}%)
+                  </span>
                 </div>
               </div>
 
               {/* Card 4: Horas de Cine Estimadas */}
-              <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950/70 border border-zinc-200 dark:border-white/10 flex flex-col justify-between shadow-2xs hover:border-purple-500/30 transition-colors duration-200">
+              <div className="flex flex-col justify-between h-full min-h-[145px] p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950/70 border border-zinc-200 dark:border-white/10 shadow-2xs hover:border-purple-500/30 transition-colors duration-200">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Horas de Cine</span>
+                  <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Horas de Cine</span>
                   <div className="p-2 rounded-xl bg-purple-500/10 text-purple-500">
                     <Clock className="w-4 h-4" />
                   </div>
                 </div>
-                <div className="mt-3">
-                  <div className="text-2xl font-bold font-mono text-zinc-900 dark:text-zinc-100 tracking-tight">
-                    {summary?.estimatedWatchTimeHours ? `${summary.estimatedWatchTimeHours}h` : `${(summary?.watchedMovies ?? 0) * 2}h`}
+                <div className="my-auto py-2">
+                  <div className="text-3xl font-extrabold font-mono text-zinc-900 dark:text-zinc-100 tracking-tight">
+                    {summary?.estimatedWatchTimeHours ? `${summary.estimatedWatchTimeHours} hrs` : `${(summary?.watchedMovies ?? 0) * 2} hrs`}
                   </div>
-                  <div className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
-                    Estimado en pantalla grande
-                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 text-[11px] text-zinc-500 dark:text-zinc-400 font-mono">
+                  <Sparkles className="w-3.5 h-3.5 text-purple-500 shrink-0" />
+                  <span className="truncate">Estimado en pantalla</span>
                 </div>
               </div>
             </div>

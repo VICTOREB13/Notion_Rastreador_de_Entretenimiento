@@ -35,4 +35,18 @@ describe("Steam & Notion Sync Endpoints (/api/settings & /api/sync/trigger)", ()
     expect(body.data.games).toBeDefined();
     expect(body.data.movies).toBeDefined();
   });
+
+  it("POST /api/sync/notion: Dispara reconciliación Notion ➔ SQLite y devuelve 200", async () => {
+    const res = await app.request("/api/sync/notion", {
+      method: "POST",
+    });
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    expect(body.success).toBe(true);
+    expect(body.message).toContain("Notion");
+    expect(body.data).toBeDefined();
+    expect(body.data.games).toBeDefined();
+    expect(body.data.movies).toBeDefined();
+  });
 });

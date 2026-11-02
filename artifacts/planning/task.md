@@ -83,6 +83,16 @@ tags: [tareas, refactorizacion, brand-components, telemetry, dark-mode, light-mo
 - [x] `TASK-345`: Actualizar `artifacts/planning/changelog_v1.md` con las notas exhaustivas de la versión `v2.5.0` y sincronizar artefactos vivos (`project_overview.md`, `architecture.md`, `implementation_plan.md`, `task.md`).
 - [x] `TASK-346`: Ejecutar validación determinista (`bun test`, `bun run typecheck`, `bun run validate`).
 
+### Fase 13: Refactorización UI/UX, Sincronización Notion y Ergonomía Visual (v2.6.0)
+- [x] `TASK-347`: Implementar endpoint `POST /api/sync/notion` en `sync.controller.ts` para reconciliación bidireccional Notion ➔ SQLite y botón en `TelemetryModal.tsx`.
+- [x] `TASK-348`: Resolver corte vertical en píldoras de Estado (`CatalogHeader.tsx`) ajustando padding/altura y eliminando clipping por `overflow-x-auto`.
+- [x] `TASK-349`: Rediseñar la barra de filtros en `CatalogHeader.tsx` en un esquema de 2 niveles compacto (búsqueda, sort y filtros contextuales).
+- [x] `TASK-350`: Corregir la barra de búsqueda en `CatalogHeader.tsx` separando el texto placeholder de la insignia `<kbd>Ctrl+K</kbd>` para erradicar superposiciones.
+- [x] `TASK-351`: Estandarizar la cuadrícula de KPIs en `AnalyticsModal.tsx` con estructura simétrica `min-h-[145px]`, tipografía unificada y footers alineados.
+- [x] `TASK-352`: Eliminar la redundancia del ratio de finalización en `ConsolidatedMetricBand.tsx` reemplazándolo por Racha Activa de Juego (`streakDays`).
+- [x] `TASK-353`: Reorganizar la navegación integrando acceso a Analíticas en `BrandHeader.tsx` y retirando el dock flotante inferior (`FloatingIslandNavDock.tsx`).
+- [x] `TASK-354`: Validación integral (`bun test`, `bun run typecheck`, `bun run validate`, `bun run web:build`), bump a v2.6.0, commit semántico y tag release.
+
 ---
 
 ## Referencias

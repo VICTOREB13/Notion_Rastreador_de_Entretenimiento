@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { TrendingUp, Gamepad2, Clock, CheckCircle2, Film } from "lucide-react";
+import { TrendingUp, Gamepad2, Clock, Flame, CheckCircle2, Film } from "lucide-react";
 import { CountUp } from "@/components/ui/CountUp";
 import { cn } from "@/lib/utils";
 
@@ -36,11 +36,11 @@ export function ConsolidatedMetricBand({ columns, className }: ConsolidatedMetri
       caption: "Tiempo de vida en Steam",
     },
     {
-      id: "completion",
-      icon: <CheckCircle2 className="w-4 h-4 text-emerald-500" />,
-      label: "Tasa de Finalización",
-      value: "0%",
-      caption: "Juegos terminados",
+      id: "streak",
+      icon: <Flame className="w-4 h-4 text-orange-500" />,
+      label: "Racha Activa",
+      value: "0 días",
+      caption: "Días consecutivos jugando",
     },
     {
       id: "movies",
@@ -56,6 +56,7 @@ export function ConsolidatedMetricBand({ columns, className }: ConsolidatedMetri
   const defaultIconMap: Record<string, React.ReactNode> = {
     games: <Gamepad2 className="w-4 h-4 text-rose-500" />,
     hours: <Clock className="w-4 h-4 text-amber-500" />,
+    streak: <Flame className="w-4 h-4 text-orange-500" />,
     completion: <CheckCircle2 className="w-4 h-4 text-emerald-500" />,
     movies: <Film className="w-4 h-4 text-sky-500" />,
   };
@@ -70,6 +71,12 @@ export function ConsolidatedMetricBand({ columns, className }: ConsolidatedMetri
     } else if (str.endsWith("%")) {
       suffix = "%";
       decimals = str.includes(".") ? 1 : 0;
+    } else if (str.endsWith("días")) {
+      suffix = " días";
+      decimals = 0;
+    } else if (str.endsWith("día")) {
+      suffix = " día";
+      decimals = 0;
     }
     return <CountUp to={val} suffix={suffix} decimals={decimals} duration={1.2} />;
   };

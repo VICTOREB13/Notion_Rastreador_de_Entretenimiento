@@ -1,10 +1,10 @@
 ---
 tipo: changelog
 proyecto: Notion_Rastreador_de_Entretenimiento
-version: v2.5.1
+version: v2.6.0
 estado: activo
 fecha: 2026-11-01
-tags: [proyecto, changelog, versiones, release, quality-gate, v2, docker, nextjs16, hono, fix]
+tags: [proyecto, changelog, versiones, release, quality-gate, v2, docker, nextjs16, hono, v2.6.0]
 ---
 
 # Registro de Cambios (Changelog) - Notion Rastreador de Entretenimiento
@@ -15,6 +15,28 @@ Todos los cambios notables de este proyecto se documentarán en este archivo sig
 > 1. Este archivo es la **fuente única de verdad** para los cortes de versión y las notas oficiales de **GitHub Releases** (`gh release create`).
 > 2. Mantén un estándar técnico riguroso (Anti-Slop): incluye métricas cuantitativas, rutas exactas de archivos, clases y justificación de la causa raíz.
 > 3. Queda prohibido el uso de viñetas genéricas como "mejoras varias" o "bugs corregidos".
+
+---
+
+## [2.6.0] - 2026-11-01 (Refactorización UI/UX, Sincronización Notion y Ergonomía Visual)
+
+### Added
+- **Sincronización Notion ➔ App (`POST /api/sync/notion` & `TelemetryModal.tsx`):**
+  - Endpoint dedicado para reconciliar y forzar la importación manual de videojuegos y películas desde Notion hacia la base de datos local (SQLite).
+  - Tarjeta y botón "Sincronizar Notion ahora" en el modal de telemetría, simétrico a la acción existente de Steam.
+
+### Changed & Refactored
+- **Rediseño de Barra de Filtros y Corrección de Estados (`CatalogHeader.tsx`):**
+  - Eliminado el clipping vertical que cortaba las píldoras de Estado (`En Curso / Jugando`, `Pendientes`, `Completados`) debido a `overflow-x-auto` ajustado.
+  - Consolidada la barra de control en un diseño cohesivo de 2 niveles: nivel superior para navegación de categorías y búsqueda, y nivel inferior para estados y carrusel de géneros.
+- **Corrección Quirúrgica de Barra de Búsqueda (`CatalogHeader.tsx`):**
+  - Limpiado el placeholder para eliminar la duplicidad `(Ctrl+K o /)`, permitiendo que la insignia `<kbd>Ctrl+K</kbd>` flote en el extremo derecho sin solaparse sobre el texto.
+- **Simetría y Balance de KPIs en Analíticas (`AnalyticsModal.tsx`):**
+  - Cuadrícula de 4 tarjetas de métricas estandarizada con `min-h-[145px]`, etiquetas y cajas de iconos unificadas, números principales monoespaciados y footers alineados.
+- **Eliminación de Redundancia en Ratio de Finalización (`ConsolidatedMetricBand.tsx`):**
+  - Sustituida la columna duplicada de finalización por la métrica de Racha Activa de Juego (`streakDays` días consecutivos), reservando la barra de progreso segmentada interactiva para `SegmentedProgressCard`.
+- **Evolución de Navegación y Retiro de Barra Flotante Inferior (`FloatingIslandNavDock.tsx`):**
+  - Reubicado el acceso directo a Analíticas en el `BrandHeader` superior y retirado el dock flotante fijo inferior para despejar el 100% del área de catálogo sin obstrucciones visuales.
 
 ---
 

@@ -1,12 +1,11 @@
 "use client";
 
 import React, { useState } from "react";
-import { Gamepad2, Clock, CheckCircle2, Film } from "lucide-react";
+import { Gamepad2, Clock, Flame, CheckCircle2, Film } from "lucide-react";
 import { BrandHeader } from "@/components/brand/BrandHeader";
 import { ConsolidatedMetricBand } from "@/components/brand/ConsolidatedMetricBand";
 import { DarkIslandSplineCard } from "@/components/brand/DarkIslandSplineCard";
 import { SegmentedProgressCard } from "@/components/brand/SegmentedProgressCard";
-import { FloatingIslandNavDock } from "@/components/brand/FloatingIslandNavDock";
 import { LiveGamingBadge } from "@/components/live/LiveGamingBadge";
 import { CatalogHeader, type CategoryFilter, type StatusFilter, type SortOption } from "@/components/catalog/CatalogHeader";
 import { BentoCatalogGrid } from "@/components/catalog/BentoCatalogGrid";
@@ -174,6 +173,7 @@ export default function EntertainmentShowcasePage() {
       <BrandHeader
         version={APP_VERSION}
         onOpenTelemetry={() => setIsTelemetryOpen(true)}
+        onOpenAnalytics={() => setIsAnalyticsOpen(true)}
         actions={
           <div className="flex items-center gap-2">
             <LiveGamingBadge status={liveStatus} isLoading={isLiveLoading} />
@@ -209,11 +209,14 @@ export default function EntertainmentShowcasePage() {
               caption: "Tiempo acumulado",
             },
             {
-              id: "completion",
-              icon: <CheckCircle2 className="w-4 h-4 text-emerald-500" />,
-              label: "Tasa de Finalización",
-              value: `${summary?.completionRate ?? 0}%`,
-              caption: "Ratio de catálogo",
+              id: "streak",
+              icon: <Flame className="w-4 h-4 text-orange-500" />,
+              label: "Racha Activa",
+              value:
+                (summary?.currentStreakDays ?? 0) === 1
+                  ? "1 día"
+                  : `${summary?.currentStreakDays ?? 0} días`,
+              caption: "Días consecutivos",
             },
             {
               id: "movies",
@@ -307,38 +310,6 @@ export default function EntertainmentShowcasePage() {
           onSelectMovie={(m) => setSelectedItem({ item: m, type: "MOVIE" })}
         />
       </section>
-
-      {/* Floating Island Navigation Dock */}
-      <FloatingIslandNavDock
-        activeId={category === "ALL" ? "coleccion" : category === "GAMES" ? "juegos" : "peliculas"}
-        onItemClick={(id) => {
-          const scrollToTarget = (targetId: string) => {
-            const targetEl = document.getElementById(targetId);
-            if (!targetEl) return;
-            const lenis = (window as unknown as { __lenis?: { scrollTo: (target: HTMLElement) => void } }).__lenis;
-            if (lenis) {
-              lenis.scrollTo(targetEl);
-            } else {
-              targetEl.scrollIntoView({ behavior: "smooth" });
-            }
-          };
-
-          if (id === "coleccion") {
-            setCategory("ALL");
-            scrollToTarget("catalogo");
-          } else if (id === "juegos") {
-            setCategory("GAMES");
-            scrollToTarget("catalogo");
-          } else if (id === "peliculas") {
-            setCategory("MOVIES");
-            scrollToTarget("catalogo");
-          } else if (id === "ritmo") {
-            scrollToTarget("ritmo");
-          }
-        }}
-        onOpenSettings={() => setIsTelemetryOpen(true)}
-        onOpenAnalytics={() => setIsAnalyticsOpen(true)}
-      />
 
       {/* Detail Modal / Drawer */}
       <ItemDetailModal

@@ -972,6 +972,66 @@ describe("Frontend Web Utilities (@repo/web)", () => {
     expect(evaluateVersionSSoT()).toBe(`v${pkg.version}`);
     expect(evaluateVersionSSoT("v3.0.0-custom")).toBe("v3.0.0-custom");
   });
+
+  test("v2.6.0: Notion Sync, Header-First Navigation, Filter Bar Ergonomics & Symmetric KPIs", async () => {
+    const fs = await import("fs");
+    const path = await import("path");
+
+    // 1. Notion Sync API & Hooks (TASK-347)
+    const apiPath = path.resolve(__dirname, "../src/lib/api.ts");
+    const apiContent = fs.readFileSync(apiPath, "utf-8");
+    expect(apiContent).toContain("triggerNotionSync");
+
+    const hooksPath = path.resolve(__dirname, "../src/lib/hooks.ts");
+    const hooksContent = fs.readFileSync(hooksPath, "utf-8");
+    expect(hooksContent).toContain("useSyncNotionMutation");
+    expect(hooksContent).toContain("triggerNotionSync");
+
+    const telemetryModalPath = path.resolve(__dirname, "../src/components/settings/TelemetryModal.tsx");
+    const telemetryModalContent = fs.readFileSync(telemetryModalPath, "utf-8");
+    expect(telemetryModalContent).toContain("Sincronización Notion ➔ App");
+    expect(telemetryModalContent).toContain("useSyncNotionMutation");
+    expect(telemetryModalContent).toContain("handleTriggerNotionSync");
+    expect(telemetryModalContent).toContain("Notion ➔ SQLite");
+    expect(telemetryModalContent).toContain("Steam ➔ Notion");
+
+    // 2. Filter Bar & Unclipped Status Pills (TASK-348, TASK-349, TASK-350)
+    const catalogHeaderPath = path.resolve(__dirname, "../src/components/catalog/CatalogHeader.tsx");
+    const catalogHeaderContent = fs.readFileSync(catalogHeaderPath, "utf-8");
+    expect(catalogHeaderContent).toContain("placeholder=\"Buscar títulos, géneros o notas...\"");
+    expect(catalogHeaderContent).toContain("pr-16");
+    expect(catalogHeaderContent).toContain("flex-wrap py-1.5");
+    expect(catalogHeaderContent).toContain("mask-image");
+    expect(catalogHeaderContent).toContain("-webkit-mask-image");
+
+    // 3. Symmetric KPI Grid in Analytics (TASK-351)
+    const analyticsModalPath = path.resolve(__dirname, "../src/components/analytics/AnalyticsModal.tsx");
+    const analyticsContent = fs.readFileSync(analyticsModalPath, "utf-8");
+    expect(analyticsContent).toContain("min-h-[145px]");
+    expect(analyticsContent).toContain("text-3xl font-extrabold font-mono");
+    expect(analyticsContent).toContain("TrendingUp className=\"w-3.5 h-3.5 text-amber-500 shrink-0\"");
+    expect(analyticsContent).toContain("Sparkles className=\"w-3.5 h-3.5 text-purple-500 shrink-0\"");
+
+    // 4. Streak Metric in ConsolidatedMetricBand (TASK-352)
+    const metricBandPath = path.resolve(__dirname, "../src/components/brand/ConsolidatedMetricBand.tsx");
+    const metricBandContent = fs.readFileSync(metricBandPath, "utf-8");
+    expect(metricBandContent).toContain("Racha Activa");
+    expect(metricBandContent).toContain("Flame");
+    expect(metricBandContent).toContain("días");
+    expect(metricBandContent).toContain("día");
+
+    // 5. Header-First Navigation & Dock Retirement (TASK-353)
+    const brandHeaderPath = path.resolve(__dirname, "../src/components/brand/BrandHeader.tsx");
+    const brandHeaderContent = fs.readFileSync(brandHeaderPath, "utf-8");
+    expect(brandHeaderContent).toContain("onOpenAnalytics");
+    expect(brandHeaderContent).toContain("Analíticas");
+
+    const pagePath = path.resolve(__dirname, "../src/app/page.tsx");
+    const pageContent = fs.readFileSync(pagePath, "utf-8");
+    expect(pageContent).toContain("onOpenAnalytics={() => setIsAnalyticsOpen(true)}");
+    expect(pageContent).not.toContain("<FloatingIslandNavDock");
+    expect(pageContent).not.toContain("import { FloatingIslandNavDock }");
+  });
 });
 
 

@@ -699,6 +699,31 @@ El sistema utiliza un monolito modular con persistencia embebida en **SQLite 3**
 }
 ```
 
+#### `POST /api/sync/notion`
+- **Descripción:** Disparo manual de reconciliación bidireccional desde Notion hacia SQLite local (juegos y películas) y emisión del evento SSE `catalog_updated`.
+- **Respuesta 200 OK:**
+```json
+{
+  "success": true,
+  "message": "Sincronización Notion ➔ App completada con éxito.",
+  "data": {
+    "games": {
+      "gamesProcessed": 117,
+      "gamesCreated": 0,
+      "gamesUpdated": 117,
+      "durationMs": 950
+    },
+    "movies": {
+      "moviesProcessed": 45,
+      "moviesCreated": 0,
+      "moviesUpdated": 45,
+      "durationMs": 420
+    },
+    "timestamp": "2026-11-01T20:00:00.000Z"
+  }
+}
+```
+
 ---
 
 ### 7. Enriquecimiento Masivo y Respaldo Snapshot: `/api/enrich` & `/api/backup`
