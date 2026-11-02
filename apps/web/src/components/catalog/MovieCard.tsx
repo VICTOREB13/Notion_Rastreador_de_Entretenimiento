@@ -48,6 +48,7 @@ export function MovieCard({ movie, onClick, className, aspectRatio = "poster" }:
               }}
               onLoad={() => setImageLoaded(true)}
               onError={() => setImageError(true)}
+              style={{ transition: "opacity 300ms ease, transform 700ms ease-out" }}
               className={cn(
                 "w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-106 motion-reduce:transform-none transition-opacity duration-300",
                 imageLoaded ? "opacity-100" : "opacity-0"
