@@ -1,14 +1,136 @@
 "use client";
 
-import React from "react";
-import { Search, X, ArrowUpDown, Sparkles, Filter } from "lucide-react";
+import React, { useMemo } from "react";
+import { Search, X, ArrowUpDown, Filter, Calendar, RotateCcw } from "lucide-react";
 import { SpringSegmentedControl } from "@/components/ui/SpringSegmentedControl";
-import { CustomSelect } from "@/components/ui/CustomSelect";
+import { CustomSelect, type SelectOption } from "@/components/ui/CustomSelect";
 import { cn } from "@/lib/utils";
 
 export type CategoryFilter = "ALL" | "GAMES" | "MOVIES";
 export type StatusFilter = "ALL" | "PLAYING" | "TODO" | "COMPLETED";
 export type SortOption = "recent" | "playtime" | "rating" | "alphabetical";
+export type DateRangeFilter =
+  | "ALL"
+  | "2026"
+  | "2025"
+  | "2024"
+  | "2020-2023"
+  | "2010-2019"
+  | "CLASSIC";
+
+export type GenreEntry = string | { name: string; count?: number };
+
+export const DATE_RANGE_OPTIONS: SelectOption<DateRangeFilter>[] = [
+  { value: "ALL", label: "Cualquier año" },
+  { value: "2026", label: "2026", description: "Lanzamientos o actividad 2026" },
+  { value: "2025", label: "2025", description: "Lanzamientos o actividad 2025" },
+  { value: "2024", label: "2024", description: "Lanzamientos o actividad 2024" },
+  { value: "2020-2023", label: "2020 - 2023", description: "Años 2020 a 2023" },
+  { value: "2010-2019", label: "2010 - 2019", description: "Década 2010-2019" },
+  { value: "CLASSIC", label: "Clásicos (<2010)", description: "Títulos previos a 2010" },
+];
+
+export function getItemYears(item: {
+  year?: number | string | null;
+  releaseYear?: number | string | null;
+  completionDate?: string | null;
+  completedAt?: string | null;
+  lastPlayedAt?: string | null;
+  startDate?: string | null;
+  createdAt?: string | Date | null;
+}): number[] {
+  const years = new Set<number>();
+
+  const extractYear = (val: number | string | Date | null | undefined): number | null => {
+    if (val === null || val === undefined) return null;
+    if (typeof val === "number" && !isNaN(val)) {
+      if (val > 1800 && val < 2100) return Math.floor(val);
+      return null;
+    }
+    if (val instanceof Date && !isNaN(val.getTime())) {
+      const y = val.getFullYear();
+      if (y > 1800 && y < 2100) return y;
+      return null;
+    }
+    if (typeof val === "string") {
+      const trimmed = val.trim();
+      const match = trimmed.match(/^(\d{4})/);
+      if (match) {
+        const num = parseInt(match[1], 10);
+        if (num > 1800 && num < 2100) return num;
+      }
+      const parsed = new Date(trimmed);
+      if (!isNaN(parsed.getTime())) {
+        const y = parsed.getFullYear();
+        if (y > 1800 && y < 2100) return y;
+      }
+    }
+    return null;
+  };
+
+  // 1. Release year (movie.year or item.releaseYear)
+  const relYear = extractYear(item.year) ?? extractYear(item.releaseYear);
+  if (relYear) years.add(relYear);
+
+  // 2. Completion date
+  const compYear = extractYear(item.completionDate) || extractYear(item.completedAt);
+  if (compYear) years.add(compYear);
+
+  // 3. Start date or last played
+  const startYear = extractYear(item.startDate);
+  if (startYear) years.add(startYear);
+
+  const playedYear = extractYear(item.lastPlayedAt);
+  if (playedYear) years.add(playedYear);
+
+  // 4. Fallback to createdAt if no other year is known
+  if (years.size === 0) {
+    const createdYear = extractYear(item.createdAt);
+    if (createdYear) years.add(createdYear);
+  }
+
+  return Array.from(years);
+}
+
+export function isYearInDateRange(year: number, range: DateRangeFilter): boolean {
+  if (typeof year !== "number" || isNaN(year) || year < 1800) return false;
+  switch (range) {
+    case "ALL":
+      return true;
+    case "2026":
+      return year === 2026;
+    case "2025":
+      return year === 2025;
+    case "2024":
+      return year === 2024;
+    case "2020-2023":
+      return year >= 2020 && year <= 2023;
+    case "2010-2019":
+      return year >= 2010 && year <= 2019;
+    case "CLASSIC":
+      return year < 2010;
+    default:
+      return true;
+  }
+}
+
+export function matchesDateRange(
+  item: {
+    year?: number | string | null;
+    releaseYear?: number | string | null;
+    completionDate?: string | null;
+    completedAt?: string | null;
+    lastPlayedAt?: string | null;
+    startDate?: string | null;
+    createdAt?: string | Date | null;
+  },
+  range?: DateRangeFilter | null
+): boolean {
+  if (!range || range === "ALL") return true;
+  const years = getItemYears(item);
+  if (years.length === 0) return false;
+  return years.some((y) => isYearInDateRange(y, range));
+}
 
 export interface CatalogHeaderProps {
   category: CategoryFilter;
@@ -19,7 +141,10 @@ export interface CatalogHeaderProps {
   onSortByChange: (sort: SortOption) => void;
   selectedGenre: string | null;
   onGenreChange: (genre: string | null) => void;
-  availableGenres?: string[];
+  availableGenres?: GenreEntry[];
+  dateRange?: DateRangeFilter;
+  onDateRangeChange?: (range: DateRangeFilter) => void;
+  onResetFilters?: () => void;
   search: string;
   onSearchChange: (search: string) => void;
   searchInputRef?: React.Ref<HTMLInputElement>;
@@ -38,6 +163,9 @@ export function CatalogHeader({
   selectedGenre,
   onGenreChange,
   availableGenres = [],
+  dateRange = "ALL",
+  onDateRangeChange,
+  onResetFilters,
   search,
   onSearchChange,
   searchInputRef,
@@ -45,10 +173,65 @@ export function CatalogHeader({
   totalMovies = 0,
   className,
 }: CatalogHeaderProps) {
+  // Normalizar los géneros disponibles a formato { name, count }
+  const normalizedGenres = useMemo(() => {
+    return availableGenres.map((g) => {
+      if (typeof g === "string") {
+        return { name: g, count: undefined };
+      }
+      return g;
+    });
+  }, [availableGenres]);
+
+  // Generar opciones para el selector desplegable de géneros
+  const genreOptions = useMemo<SelectOption<string>[]>(() => {
+    const totalCount =
+      category === "GAMES"
+        ? totalGames
+        : category === "MOVIES"
+        ? totalMovies
+        : totalGames + totalMovies;
+
+    const allOption: SelectOption<string> = {
+      value: "ALL",
+      label: "Todos los géneros",
+      badge: totalCount > 0 ? String(totalCount) : undefined,
+    };
+
+    const genreSelectOptions: SelectOption<string>[] = normalizedGenres.map((g) => ({
+      value: g.name,
+      label: g.name,
+      badge: g.count !== undefined ? String(g.count) : undefined,
+    }));
+
+    return [allOption, ...genreSelectOptions];
+  }, [category, totalGames, totalMovies, normalizedGenres]);
+
+  // Contabilizar filtros activos para el botón de limpieza
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (status !== "ALL") count++;
+    if (selectedGenre !== null && selectedGenre !== "ALL") count++;
+    if (dateRange && dateRange !== "ALL") count++;
+    if (search.trim().length > 0) count++;
+    return count;
+  }, [status, selectedGenre, dateRange, search]);
+
+  const handleResetFilters = () => {
+    if (onResetFilters) {
+      onResetFilters();
+    } else {
+      onStatusChange("ALL");
+      onGenreChange(null);
+      if (onDateRangeChange) onDateRangeChange("ALL");
+      onSearchChange("");
+    }
+  };
+
   return (
-    <div className={cn("space-y-4", className)}>
-      {/* Primary Bar: Category Switcher, Sort Control & Search Input */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+    <div className={cn("relative z-20 space-y-3.5", className)}>
+      {/* Fila Principal: Selector de Categorías (Izquierda) + Ordenamiento y Buscador (Derecha) */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-4">
         {/* Category SpringSegmentedControl */}
         <SpringSegmentedControl
           options={[
@@ -63,10 +246,10 @@ export function CatalogHeader({
           className="self-start shadow-xs shrink-0"
         />
 
-        {/* Right side: Sort Selector & Search Bar */}
+        {/* Lado derecho: Selector de Ordenamiento + Buscador Global */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full lg:w-auto">
           {/* Sort By Select */}
-          <div className="w-full sm:w-56 shrink-0">
+          <div className="w-full sm:w-52 lg:w-56 shrink-0">
             <CustomSelect<SortOption>
               value={sortBy}
               onChange={onSortByChange}
@@ -82,7 +265,7 @@ export function CatalogHeader({
             />
           </div>
 
-          {/* Search Input Bar (Organic, integrated, with subtle shortcut indicators) */}
+          {/* Search Input Bar (Orgánico, con shortcut Ctrl+K / indicador) */}
           <div className="group/search relative w-full sm:w-72 lg:w-80">
             <Search
               className={cn(
@@ -122,89 +305,81 @@ export function CatalogHeader({
         </div>
       </div>
 
-      {/* Level 2: Contextual Filters (Status & Dynamic Genres) */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pt-1">
-        {/* Status Filter Pills (Ergonomic py-1.5, flex-wrap responsive without vertical clipping) */}
-        <div className="flex items-center gap-1.5 flex-wrap py-1.5 px-0.5 text-xs">
-          <span className="text-zinc-400 dark:text-zinc-500 text-[11px] font-mono uppercase tracking-wider mr-1 hidden sm:inline shrink-0">
+      {/* Fila Secundaria: Barra de Filtros Avanzados (Estado Cohesivo + Géneros Desplegables + Rango Fechas + Reset) */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pt-2 border-t border-zinc-200/60 dark:border-white/5">
+        {/* Filtro de Estado: Bloque cohesivo que nunca se desarticula */}
+        <div className="flex items-center gap-2 overflow-x-auto scrollbar-none py-0.5">
+          <span className="text-zinc-400 dark:text-zinc-500 text-[11px] font-mono uppercase tracking-wider hidden sm:inline shrink-0">
             Estado:
           </span>
-          {[
-            { id: "ALL" as const, label: "Todos" },
-            { id: "PLAYING" as const, label: "En Curso / Jugando" },
-            { id: "TODO" as const, label: "Pendientes / Por Disfrutar" },
-            { id: "COMPLETED" as const, label: "Completados / Vistos" },
-          ].map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => onStatusChange(item.id)}
-              className={cn(
-                "px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border transition-all duration-200 cursor-pointer active:scale-95 hover:-translate-y-0.5 shrink-0",
-                status === item.id
-                  ? "bg-zinc-900 text-white dark:bg-white/10 dark:text-zinc-100 border-zinc-900 dark:border-white/20 font-semibold shadow-xs ring-1 ring-zinc-900/10 dark:ring-white/10"
-                  : "bg-transparent text-zinc-600 dark:text-zinc-400 border-transparent hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-zinc-200/60 dark:hover:bg-zinc-800/80 hover:border-zinc-300/50 dark:hover:border-white/5"
-              )}
-            >
-              {item.label}
-            </button>
-          ))}
+          <SpringSegmentedControl
+            options={[
+              { id: "ALL", label: "Todos" },
+              { id: "PLAYING", label: "En Curso" },
+              { id: "TODO", label: "Pendientes" },
+              { id: "COMPLETED", label: "Completados" },
+            ]}
+            value={status}
+            onChange={(val) => onStatusChange(val as StatusFilter)}
+            size="sm"
+            ariaLabel="Filtro por estado de progreso"
+            className="shrink-0 shadow-xs"
+          />
         </div>
 
-        {/* Dynamic Genre Filter Pill Bar with lateral fade mask and clear button */}
-        {availableGenres.length > 0 && (
-          <div className="relative flex items-center min-w-0 md:max-w-xl lg:max-w-2xl">
-            <div className="flex items-center gap-1.5 overflow-x-auto py-1.5 px-0.5 text-xs scrollbar-none [-webkit-mask-image:linear-gradient(to_right,black_calc(100%-32px),transparent_100%)] [mask-image:linear-gradient(to_right,black_calc(100%-32px),transparent_100%)]">
-              <span className="text-zinc-400 dark:text-zinc-500 text-[11px] font-mono uppercase tracking-wider mr-1 shrink-0 flex items-center gap-1">
-                <Filter className="w-3 h-3 text-rose-500/70" />
-                Género:
-              </span>
-              <button
-                type="button"
-                onClick={() => onGenreChange(null)}
-                className={cn(
-                  "px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border transition-all duration-200 cursor-pointer active:scale-95 shrink-0",
-                  selectedGenre === null
-                    ? "bg-zinc-900 text-white dark:bg-white/10 dark:text-zinc-100 border-zinc-900 dark:border-white/20 font-semibold shadow-xs ring-1 ring-zinc-900/10 dark:ring-white/10"
-                    : "bg-transparent text-zinc-600 dark:text-zinc-400 border-transparent hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-zinc-200/60 dark:hover:bg-zinc-800/80 hover:border-zinc-300/50 dark:hover:border-white/5"
-                )}
-              >
-                Todos
-              </button>
-              {availableGenres.map((genre) => {
-                const isSelected = selectedGenre?.toLowerCase() === genre.toLowerCase();
-                return (
-                  <button
-                    key={genre}
-                    type="button"
-                    onClick={() => onGenreChange(isSelected ? null : genre)}
-                    className={cn(
-                      "px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border transition-all duration-200 cursor-pointer active:scale-95 shrink-0",
-                      isSelected
-                        ? "bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/40 font-semibold shadow-xs ring-1 ring-rose-500/20"
-                        : "bg-transparent text-zinc-600 dark:text-zinc-400 border-transparent hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-zinc-200/60 dark:hover:bg-zinc-800/80 hover:border-zinc-300/50 dark:hover:border-white/5"
-                    )}
-                  >
-                    {genre}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Quick Clear Genre Filter Button */}
-            {selectedGenre !== null && (
-              <button
-                type="button"
-                onClick={() => onGenreChange(null)}
-                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-medium text-rose-600 dark:text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 transition-all cursor-pointer active:scale-95 shrink-0 ml-2"
-                title="Limpiar filtro de género"
-              >
-                <X className="w-3 h-3" />
-                <span className="hidden sm:inline">Limpiar filtro</span>
-              </button>
-            )}
+        {/* Controles de Filtro Avanzado: Selector de Géneros, Selector de Rango de Fechas y Limpiar Filtros */}
+        <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
+          {/* Selector Ergonómico de Géneros (Dropdown con búsqueda integrada, badges y ancho holgado) */}
+          <div className="w-full sm:w-48 lg:w-52 shrink-0">
+            <CustomSelect<string>
+              value={selectedGenre || "ALL"}
+              onChange={(val) => onGenreChange(val === "ALL" ? null : val)}
+              options={genreOptions}
+              size="sm"
+              icon={Filter}
+              placeholder="Todos los géneros"
+              ariaLabel="Filtrar por género"
+              searchable
+              searchPlaceholder="Buscar género..."
+              active={Boolean(selectedGenre && selectedGenre !== "ALL")}
+              menuClassName="min-w-[15rem] sm:min-w-[16rem]"
+              disabled={genreOptions.length <= 1 && totalGames + totalMovies === 0}
+            />
           </div>
-        )}
+
+          {/* Selector de Rango de Fechas / Año */}
+          {onDateRangeChange && (
+            <div className="w-full sm:w-44 lg:w-48 shrink-0">
+              <CustomSelect<DateRangeFilter>
+                value={dateRange}
+                onChange={(val) => onDateRangeChange(val as DateRangeFilter)}
+                options={DATE_RANGE_OPTIONS}
+                size="sm"
+                icon={Calendar}
+                placeholder="Cualquier año"
+                ariaLabel="Filtrar por rango de fechas o año"
+                active={Boolean(dateRange && dateRange !== "ALL")}
+              />
+            </div>
+          )}
+
+          {/* Botón Discreto de Limpiar Filtros con Badge Numérico Activo */}
+          {activeFiltersCount > 0 && (
+            <button
+              type="button"
+              onClick={handleResetFilters}
+              aria-label="Limpiar todos los filtros aplicados"
+              className="h-8 inline-flex items-center gap-1.5 px-3 rounded-xl text-xs font-semibold text-rose-600 dark:text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 hover:border-rose-500/50 transition-all duration-150 cursor-pointer active:scale-95 shadow-2xs shrink-0 animate-in fade-in duration-200"
+              title="Restablecer filtros activos"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Limpiar filtros</span>
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-rose-500/20 text-rose-600 dark:text-rose-300">
+                {activeFiltersCount}
+              </span>
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

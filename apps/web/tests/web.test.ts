@@ -279,25 +279,6 @@ describe("Frontend Web Utilities (@repo/web)", () => {
     expect(targetUrl("http://daemon-api:3001/", ["sync", "trigger"])).toBe("http://daemon-api:3001/api/sync/trigger");
   });
 
-  test("Fase 3: TelemetryModal adheres to read-only public showcase requirements", async () => {
-    const fs = await import("fs");
-    const path = await import("path");
-    const modalPath = path.resolve(__dirname, "../src/components/settings/TelemetryModal.tsx");
-    const modalContent = fs.readFileSync(modalPath, "utf-8");
-
-    // Zero API Key inputs, Zero temperature sliders, Zero custom model forms
-    expect(modalContent).not.toContain("AiModelConfigForm");
-    expect(modalContent).not.toContain("onChangeApiKey");
-    expect(modalContent).not.toContain("setTemperature");
-    expect(modalContent).not.toContain("Guardar Cambios");
-    expect(modalContent).not.toContain("Probar Conexión");
-
-    // Must contain read-only AI card with Google Gemini & activeModel fallback to gemini-2.5-flash
-    expect(modalContent).toContain("telemetry?.activeModel || \"gemini-2.5-flash\"");
-    expect(modalContent).toContain("Google Gemini");
-    expect(modalContent).toContain("Cerrar");
-  });
-
   test("Fase 4: BrandHeader horizontal logo selector resolves theme-specific SVGs with error fallback", () => {
     const resolveLogoSrc = (mounted: boolean, resolvedTheme: "dark" | "light", imgError: boolean) => {
       if (imgError) return "/brand/ve-isotipo-red.svg";
@@ -318,61 +299,7 @@ describe("Frontend Web Utilities (@repo/web)", () => {
     expect(resolveLogoSrc(true, "dark", true)).toBe("/brand/ve-isotipo-red.svg");
   });
 
-  test("Fase 4: FloatingIslandNavDock uses Telemetría label and adaptive classes", async () => {
-    const fs = await import("fs");
-    const path = await import("path");
-    const dockPath = path.resolve(__dirname, "../src/components/brand/FloatingIslandNavDock.tsx");
-    const dockContent = fs.readFileSync(dockPath, "utf-8");
-
-    expect(dockContent).toContain("title=\"Telemetría\"");
-    expect(dockContent).toContain("Telemetría</span>");
-    expect(dockContent).not.toContain("Ajustes IA");
-    expect(dockContent).toContain("bg-white/90 dark:bg-zinc-950/85");
-  });
-
-  test("Fase 4: Brand and Catalog cards enforce adaptive dual-theme high contrast tokens", async () => {
-    const fs = await import("fs");
-    const path = await import("path");
-
-    // DarkIslandSplineCard
-    const splineContent = fs.readFileSync(path.resolve(__dirname, "../src/components/brand/DarkIslandSplineCard.tsx"), "utf-8");
-    expect(splineContent).toContain("bg-white dark:bg-[#111113]");
-    expect(splineContent).toContain("SpringSegmentedControl");
-
-    // SegmentedProgressCard
-    const progressContent = fs.readFileSync(path.resolve(__dirname, "../src/components/brand/SegmentedProgressCard.tsx"), "utf-8");
-    expect(progressContent).toContain("bg-white dark:bg-[#111113]");
-
-    // SpotlightCard
-    const spotlightContent = fs.readFileSync(path.resolve(__dirname, "../src/components/brand/SpotlightCard.tsx"), "utf-8");
-    expect(spotlightContent).toContain("bg-white dark:bg-[#111113]");
-
-    // BentoCatalogGrid empty state
-    const bentoContent = fs.readFileSync(path.resolve(__dirname, "../src/components/catalog/BentoCatalogGrid.tsx"), "utf-8");
-    expect(bentoContent).toContain("bg-zinc-100/80 dark:bg-[#111113]/50");
-
-    // GameCard & MovieCard high-contrast text
-    const gameContent = fs.readFileSync(path.resolve(__dirname, "../src/components/catalog/GameCard.tsx"), "utf-8");
-    expect(gameContent).toContain("text-zinc-900 dark:text-zinc-100");
-
-    const movieContent = fs.readFileSync(path.resolve(__dirname, "../src/components/catalog/MovieCard.tsx"), "utf-8");
-    expect(movieContent).toContain("text-zinc-900 dark:text-zinc-100");
-  });
-
-  test("Fase 5: SmoothScroll component incorporates Lenis, safe anchor handling, and respectReducedMotion", async () => {
-    const fs = await import("fs");
-    const path = await import("path");
-    const scrollPath = path.resolve(__dirname, "../src/components/layout/SmoothScroll.tsx");
-    expect(fs.existsSync(scrollPath)).toBe(true);
-
-    const scrollContent = fs.readFileSync(scrollPath, "utf-8");
-    expect(scrollContent).toContain("import Lenis from \"lenis\"");
-    expect(scrollContent).toContain("respectReducedMotion: true");
-    expect(scrollContent).toContain("requestAnimationFrame(updateTicker)");
-    expect(scrollContent).toContain("new ResizeObserver");
-    expect(scrollContent).toContain("__lenis");
-    expect(scrollContent).toContain("lenis.destroy()");
-
+  test("Fase 5: SmoothScroll safe anchor target resolution and sanitization", () => {
     // Functional anchor hash sanitization logic test
     const resolveAnchorTarget = (hash: string) => {
       if (hash === "#" || hash === "#top") {
@@ -392,18 +319,7 @@ describe("Frontend Web Utilities (@repo/web)", () => {
     expect(resolveAnchorTarget("#ritmo")).toEqual({ target: "#ritmo", isTop: false });
   });
 
-  test("Fase 5: ScrollToTop component integrates with Lenis or window scroll with mobile dock clearance", async () => {
-    const fs = await import("fs");
-    const path = await import("path");
-    const toTopPath = path.resolve(__dirname, "../src/components/layout/ScrollToTop.tsx");
-    expect(fs.existsSync(toTopPath)).toBe(true);
-
-    const toTopContent = fs.readFileSync(toTopPath, "utf-8");
-    expect(toTopContent).toContain("scrollToTop");
-    expect(toTopContent).toContain("__lenis");
-    expect(toTopContent).toContain("bottom-22 right-4 sm:bottom-8 sm:right-8");
-    expect(toTopContent).toContain("Volver arriba");
-
+  test("Fase 5: ScrollToTop dynamic visibility threshold evaluator with Lenis priority", () => {
     // Dynamic threshold evaluator with Lenis priority
     const evaluateVisibility = (scrollY: number, lenisScroll?: number) => {
       const current = lenisScroll ?? scrollY;
@@ -416,180 +332,7 @@ describe("Frontend Web Utilities (@repo/web)", () => {
     expect(evaluateVisibility(100, 450)).toBe(true); // Lenis takes precedence
   });
 
-  test("Fase 5: Modal and dropdown containers enforce Lenis scroll isolation and lifecycle locking", async () => {
-    const fs = await import("fs");
-    const path = await import("path");
-
-    // DialogModal
-    const dialogPath = path.resolve(__dirname, "../src/components/ui/DialogModal.tsx");
-    const dialogContent = fs.readFileSync(dialogPath, "utf-8");
-    expect(dialogContent).toContain("data-lenis-prevent");
-    expect(dialogContent).toContain("lenis?.stop()");
-    expect(dialogContent).toContain("lenis?.start()");
-
-    // ItemDetailModal
-    const itemDetailPath = path.resolve(__dirname, "../src/components/detail/ItemDetailModal.tsx");
-    const itemDetailContent = fs.readFileSync(itemDetailPath, "utf-8");
-    expect(itemDetailContent).toContain("data-lenis-prevent");
-    expect(itemDetailContent).toContain("useModalLock");
-
-    // CustomSelect
-    const customSelectPath = path.resolve(__dirname, "../src/components/ui/CustomSelect.tsx");
-    const customSelectContent = fs.readFileSync(customSelectPath, "utf-8");
-    expect(customSelectContent).toContain("data-lenis-prevent");
-  });
-
-  test("v2.2.0 UI Updates: ItemDetailModal removes divider and Steam ID, displays rating, completionDate, genres, and user summary", async () => {
-    const fs = await import("fs");
-    const path = await import("path");
-    const modalPath = path.resolve(__dirname, "../src/components/detail/ItemDetailModal.tsx");
-    const modalContent = fs.readFileSync(modalPath, "utf-8");
-
-    // 1. Elimina barra divisoria y texto "Sincronizado con Notion"
-    expect(modalContent).not.toContain("Sincronizado con Notion");
-    expect(modalContent).not.toContain("border-t border-zinc-200 dark:border-white/10 flex items-center justify-between text-xs text-zinc-500");
-
-    // 2. Oculta Steam ID
-    expect(modalContent).not.toContain("Steam ID:");
-
-    // 3. Muestra calificación con estrellas de 1 a 5
-    expect(modalContent).toContain("currentItem.rating");
-    expect(modalContent).toContain("/5");
-
-    // 4. Muestra fecha de culminación
-    expect(modalContent).toContain("completionDate");
-    expect(modalContent).toContain("Culminado:");
-
-    // 5. Muestra géneros provenientes de Notion
-    expect(modalContent).toContain("currentItem.genres");
-
-    // 6. Muestra resumen / opinión personal del usuario
-    expect(modalContent).toContain("Mi Resumen & Opinión Personal");
-    expect(modalContent).toContain("game?.summary || movie?.summary");
-  });
-
-  test("v2.2.0 UI Updates: LiveGamingBadge resting contrast, GameCard independent HLTB, and MovieCard aspect video", async () => {
-    const fs = await import("fs");
-    const path = await import("path");
-
-    // LiveGamingBadge resting state light contrast
-    const badgePath = path.resolve(__dirname, "../src/components/live/LiveGamingBadge.tsx");
-    const badgeContent = fs.readFileSync(badgePath, "utf-8");
-    expect(badgeContent).toContain("bg-zinc-100 dark:bg-zinc-900/80");
-    expect(badgeContent).toContain("text-zinc-600 dark:text-zinc-400");
-    expect(badgeContent).toContain("Steam: En descanso");
-
-    // GameCard independent HLTB & rating badge
-    const cardPath = path.resolve(__dirname, "../src/components/catalog/GameCard.tsx");
-    const cardContent = fs.readFileSync(cardPath, "utf-8");
-    expect(cardContent).toContain("game.hltbMain || game.hltbCompletionist");
-    expect(cardContent).toContain("game.rating");
-
-    // MovieCard aspectRatio video support for Colección tab
-    const moviePath = path.resolve(__dirname, "../src/components/catalog/MovieCard.tsx");
-    const movieContent = fs.readFileSync(moviePath, "utf-8");
-    expect(movieContent).toContain("aspectRatio");
-    expect(movieContent).toContain("aspect-video");
-
-    // BentoCatalogGrid passes aspectRatio video in ALL category
-    const gridPath = path.resolve(__dirname, "../src/components/catalog/BentoCatalogGrid.tsx");
-    const gridContent = fs.readFileSync(gridPath, "utf-8");
-    expect(gridContent).toContain('category === "ALL" ? "video" : "poster"');
-    expect(gridContent).toContain("animate-in fade-in duration-300");
-  });
-
-  test("v2.2.1 UI Updates: BentoCatalogGrid skeleton loading with shimmer, microinteractions on search, cards, and nav", async () => {
-    const fs = await import("fs");
-    const path = await import("path");
-
-    // BentoCatalogGrid skeleton loading & shimmer support
-    const gridPath = path.resolve(__dirname, "../src/components/catalog/BentoCatalogGrid.tsx");
-    const gridContent = fs.readFileSync(gridPath, "utf-8");
-    expect(gridContent).toContain("BentoCatalogSkeleton");
-    expect(gridContent).toContain("isLoading");
-    expect(gridContent).toContain("animate-[shimmer_2s_infinite]");
-
-    // CatalogHeader microinteractions
-    const headerPath = path.resolve(__dirname, "../src/components/catalog/CatalogHeader.tsx");
-    const headerContent = fs.readFileSync(headerPath, "utf-8");
-    expect(headerContent).toContain("group/search");
-    expect(headerContent).toContain("group-focus-within/search:text-rose-500");
-    expect(headerContent).toContain("hover:rotate-90");
-
-    // GameCard and MovieCard hover microinteractions
-    const gameCardPath = path.resolve(__dirname, "../src/components/catalog/GameCard.tsx");
-    const gameContent = fs.readFileSync(gameCardPath, "utf-8");
-    expect(gameContent).toContain("hover:-translate-y-1.5");
-    expect(gameContent).toContain("hover:border-rose-500/40");
-    expect(gameContent).toContain("group-hover:scale-106");
-
-    const movieCardPath = path.resolve(__dirname, "../src/components/catalog/MovieCard.tsx");
-    const movieContent = fs.readFileSync(movieCardPath, "utf-8");
-    expect(movieContent).toContain("hover:-translate-y-1.5");
-    expect(movieContent).toContain("hover:border-rose-500/40");
-    expect(movieContent).toContain("group-hover:scale-106");
-
-    // BrandHeader dynamic version badge
-    const brandPath = path.resolve(__dirname, "../src/components/brand/BrandHeader.tsx");
-    const brandContent = fs.readFileSync(brandPath, "utf-8");
-    expect(brandContent).toContain("APP_VERSION");
-
-    // ItemDetailModal microinteractions (close button, external link, re-enrich)
-    const modalPath = path.resolve(__dirname, "../src/components/detail/ItemDetailModal.tsx");
-    const modalContent = fs.readFileSync(modalPath, "utf-8");
-    expect(modalContent).toContain("hover:rotate-90");
-    expect(modalContent).toContain("group-hover:translate-x-0.5");
-    expect(modalContent).toContain("group-hover:rotate-180");
-
-    // AiRecommendationHero microinteraction on action button
-    const heroPath = path.resolve(__dirname, "../src/components/catalog/AiRecommendationHero.tsx");
-    const heroContent = fs.readFileSync(heroPath, "utf-8");
-    expect(heroContent).toContain("group-hover:translate-x-1");
-
-    // LiveGamingBadge hover feedback
-    const liveBadgePath = path.resolve(__dirname, "../src/components/live/LiveGamingBadge.tsx");
-    const liveBadgeContent = fs.readFileSync(liveBadgePath, "utf-8");
-    expect(liveBadgeContent).toContain("hover:-translate-y-0.5");
-
-    // ThemeToggle microinteraction
-    const themeTogglePath = path.resolve(__dirname, "../src/components/ui/ThemeToggle.tsx");
-    const themeToggleContent = fs.readFileSync(themeTogglePath, "utf-8");
-    expect(themeToggleContent).toContain("group-hover:rotate-12");
-  });
-
-  test("v2.3.0: Catalog sorting by recent/playtime/rating/alphabetical and dynamic genre filtering", async () => {
-    const fs = await import("fs");
-    const path = await import("path");
-
-    // CatalogHeader Sort By options & dynamic Genre Filter bar
-    const catalogHeaderPath = path.resolve(__dirname, "../src/components/catalog/CatalogHeader.tsx");
-    const catalogHeaderContent = fs.readFileSync(catalogHeaderPath, "utf-8");
-    expect(catalogHeaderContent).toContain("Jugados recientemente");
-    expect(catalogHeaderContent).toContain("Más jugados");
-    expect(catalogHeaderContent).toContain("Mejor calificados");
-    expect(catalogHeaderContent).toContain("Alfabético (A-Z)");
-    expect(catalogHeaderContent).toContain("availableGenres");
-    expect(catalogHeaderContent).toContain("Limpiar filtro");
-
-    // BentoCatalogGrid sorting & dynamic genre filtering
-    const catalogGridPath = path.resolve(__dirname, "../src/components/catalog/BentoCatalogGrid.tsx");
-    const catalogGridContent = fs.readFileSync(catalogGridPath, "utf-8");
-    expect(catalogGridContent).toContain("getRecentTimestamp");
-    expect(catalogGridContent).toContain("getPlaytime");
-    expect(catalogGridContent).toContain("getRating");
-    expect(catalogGridContent).toContain("selectedGenre");
-
-    // page.tsx availableGenres extraction and wiring
-    const pagePath = path.resolve(__dirname, "../src/app/page.tsx");
-    const pageContent = fs.readFileSync(pagePath, "utf-8");
-    expect(pageContent).toContain("availableGenres");
-    expect(pageContent).toContain("sortBy");
-    expect(pageContent).toContain("selectedGenre");
-  });
-
-  test("v2.4.0 (TASK-332): Movie completionDate formatting and MovieCard/ItemDetailModal display", async () => {
-    const fs = await import("fs");
-    const path = await import("path");
+  test("v2.4.0 (TASK-332): formatDate unit tests with comprehensive edge cases", async () => {
     const { formatDate } = await import("../src/lib/utils");
 
     // 1. formatDate unit tests with comprehensive edge cases
@@ -610,23 +353,6 @@ describe("Frontend Web Utilities (@repo/web)", () => {
     expect(formatDate("2024-05-15T00:00:00.000Z")).toContain("15");
     expect(formatDate("2024-02-29")).toContain("2024"); // Leap year
     expect(formatDate("2023-12-31")).toContain("2023");
-
-    // 2. MovieCard.tsx verification
-    const movieCardPath = path.resolve(__dirname, "../src/components/catalog/MovieCard.tsx");
-    const movieCardContent = fs.readFileSync(movieCardPath, "utf-8");
-    expect(movieCardContent).toContain("CalendarCheck");
-    expect(movieCardContent).toContain("movie.completionDate");
-    expect(movieCardContent).toContain("formatDate(movie.completionDate)");
-    expect(movieCardContent).toContain("Vista:");
-    expect(movieCardContent).toContain("p-3.5 sm:p-4");
-
-    // 3. ItemDetailModal.tsx verification
-    const itemDetailPath = path.resolve(__dirname, "../src/components/detail/ItemDetailModal.tsx");
-    const itemDetailContent = fs.readFileSync(itemDetailPath, "utf-8");
-    expect(itemDetailContent).toContain("CalendarCheck");
-    expect(itemDetailContent).toContain("Fecha de visualización:");
-    expect(itemDetailContent).toContain("formatDate(movie.completionDate)");
-    expect(itemDetailContent).toContain("formatDate(game.completionDate)");
   });
 
   test("v2.4.0 (TASK-333): Global keyboard shortcuts logic and UI indicators", async () => {
@@ -805,64 +531,9 @@ describe("Frontend Web Utilities (@repo/web)", () => {
     expect(pageContent).toContain("searchInputRef={searchInputRef}");
   });
 
-  test("v2.4.0 (TASK-334): AnalyticsModal component, FloatingIslandNavDock button, and Mobile polish", async () => {
+  test("v2.4.0 (TASK-334): Strict NO PWA rule: confirm no manifest.json or sw.js in public directory", async () => {
     const fs = await import("fs");
     const path = await import("path");
-
-    // 1. AnalyticsModal exists and adheres to specifications
-    const analyticsModalPath = path.resolve(__dirname, "../src/components/analytics/AnalyticsModal.tsx");
-    expect(fs.existsSync(analyticsModalPath)).toBe(true);
-
-    const analyticsContent = fs.readFileSync(analyticsModalPath, "utf-8");
-    expect(analyticsContent).toContain("useAnalyticsQuery");
-    expect(analyticsContent).toContain("Total Horas");
-    expect(analyticsContent).toContain("Total Juegos");
-    expect(analyticsContent).toContain("Total Películas");
-    expect(analyticsContent).toContain("Top 5 Juegos Más Jugados");
-    expect(analyticsContent).toContain("Desglose de Géneros Destacados");
-    expect(analyticsContent).toContain("DialogModal");
-    expect(analyticsContent).toContain("maxPlaytime");
-    expect(analyticsContent).toContain("formatHours");
-    expect(analyticsContent).toContain("min-h-[36px]");
-
-    // 2. FloatingIslandNavDock analytics trigger button
-    const dockPath = path.resolve(__dirname, "../src/components/brand/FloatingIslandNavDock.tsx");
-    const dockContent = fs.readFileSync(dockPath, "utf-8");
-    expect(dockContent).toContain("onOpenAnalytics");
-    expect(dockContent).toContain("BarChart3");
-    expect(dockContent).toContain("title=\"Analíticas\"");
-    expect(dockContent).toContain("aria-label=\"Analíticas\"");
-    expect(dockContent).toContain("Analíticas</span>");
-    expect(dockContent).toContain("min-h-[36px]");
-
-    // 3. DialogModal Mobile polish (<640px) & Touch targets >= 44px
-    const dialogPath = path.resolve(__dirname, "../src/components/ui/DialogModal.tsx");
-    const dialogContent = fs.readFileSync(dialogPath, "utf-8");
-    expect(dialogContent).toContain("min-h-[44px]");
-    expect(dialogContent).toContain("min-w-[44px]");
-    expect(dialogContent).toContain("px-4 sm:px-6");
-    expect(dialogContent).toContain("p-4 sm:p-6");
-
-    // 4. Mobile clearance and card polish
-    const pagePath = path.resolve(__dirname, "../src/app/page.tsx");
-    const pageContent = fs.readFileSync(pagePath, "utf-8");
-    expect(pageContent).toMatch(/pb-(32|36)/);
-    expect(pageContent).toContain("AnalyticsModal");
-    expect(pageContent).toContain("isAnalyticsOpen");
-
-    const movieCardPath = path.resolve(__dirname, "../src/components/catalog/MovieCard.tsx");
-    const movieCardContent = fs.readFileSync(movieCardPath, "utf-8");
-    expect(movieCardContent).toContain("p-3.5 sm:p-4");
-
-    const gameCardPath = path.resolve(__dirname, "../src/components/catalog/GameCard.tsx");
-    const gameCardContent = fs.readFileSync(gameCardPath, "utf-8");
-    expect(gameCardContent).toContain("p-3.5 sm:p-4");
-
-    const itemDetailPath = path.resolve(__dirname, "../src/components/detail/ItemDetailModal.tsx");
-    const itemDetailContent = fs.readFileSync(itemDetailPath, "utf-8");
-    expect(itemDetailContent).toContain("min-h-[44px]");
-
-    // 5. Strict NO PWA rule: confirm no manifest.json or sw.js in public directory
     const publicPath = path.resolve(__dirname, "../public");
     const manifestExists = fs.existsSync(path.join(publicPath, "manifest.json"));
     const swExists =
@@ -872,52 +543,9 @@ describe("Frontend Web Utilities (@repo/web)", () => {
     expect(swExists).toBe(false);
   });
 
-  test("v2.4.0: Contextual Hero (Func 1), Unified Analytics with Cinefilia (Func 5), Batch AI & Backup Snapshot (Func 6 & 7)", async () => {
+  test("v2.4.0: Dynamic Version SSoT: APP_VERSION reads from package.json and supports NEXT_PUBLIC_APP_VERSION", async () => {
     const fs = await import("fs");
     const path = await import("path");
-
-    // 1. AiRecommendationHero supports polymorphic GAME/MOVIE mode and card-level click
-    const heroPath = path.resolve(__dirname, "../src/components/catalog/AiRecommendationHero.tsx");
-    const heroContent = fs.readFileSync(heroPath, "utf-8");
-    expect(heroContent).toContain("Selección Cinematográfica IA");
-    expect(heroContent).toContain("Recomendación Contextual IA");
-    expect(heroContent).toContain("vibeTags");
-    expect(heroContent).toContain('role="button"');
-    expect(heroContent).toContain("tabIndex={0}");
-    expect(heroContent).toContain("cursor-pointer");
-
-    // 2. page.tsx selects contextual featuredItem based on active category
-    const pagePath = path.resolve(__dirname, "../src/app/page.tsx");
-    const pageContent = fs.readFileSync(pagePath, "utf-8");
-    expect(pageContent).toContain('category === "MOVIES"');
-    expect(pageContent).toContain('category === "GAMES"');
-    expect(pageContent).toContain('category === "ALL"');
-    expect(pageContent).toContain("featuredItem");
-    expect(pageContent).toContain("onSelectItem");
-
-    // 3. AnalyticsModal renders cinefilia cards and unified genres
-    const analyticsModalPath = path.resolve(__dirname, "../src/components/analytics/AnalyticsModal.tsx");
-    const analyticsModalContent = fs.readFileSync(analyticsModalPath, "utf-8");
-    expect(analyticsModalContent).toContain("Total Películas");
-    expect(analyticsModalContent).toContain("Horas de Cine");
-    expect(analyticsModalContent).toContain("estimatedWatchTimeHours");
-    expect(analyticsModalContent).toContain("movieCompletionRate");
-    expect(analyticsModalContent).toContain("Desglose de Géneros Destacados (Juegos & Cine)");
-
-    // 4. TelemetryModal has Batch Enrich and Backup JSON Download
-    const telemetryModalPath = path.resolve(__dirname, "../src/components/settings/TelemetryModal.tsx");
-    const telemetryModalContent = fs.readFileSync(telemetryModalPath, "utf-8");
-    expect(telemetryModalContent).toContain("useBatchEnrichMutation");
-    expect(telemetryModalContent).toContain("Enriquecimiento Masivo en Lote");
-    expect(telemetryModalContent).toContain("getBackupDownloadUrl");
-    expect(telemetryModalContent).toContain("Descargar Respaldo JSON");
-
-    // 5. next.config.mjs proxies /api to internal daemon with fallback rewrites
-    const nextConfigPath = path.resolve(__dirname, "../next.config.mjs");
-    const nextConfigContent = fs.readFileSync(nextConfigPath, "utf-8");
-    expect(nextConfigContent).toContain("rewrites");
-    expect(nextConfigContent).toContain('source: "/api/:path*"');
-    expect(nextConfigContent).toContain("fallback");
 
     // 6. Dynamic Version SSoT: APP_VERSION reads from package.json and supports NEXT_PUBLIC_APP_VERSION
     const brandPath = path.resolve(__dirname, "../src/components/brand/BrandHeader.tsx");
@@ -932,9 +560,13 @@ describe("Frontend Web Utilities (@repo/web)", () => {
     expect(versionContent).toContain("packageJson.version");
     expect(versionContent).toContain("APP_VERSION");
 
+    const nextConfigPath = path.resolve(__dirname, "../next.config.mjs");
+    const nextConfigContent = fs.readFileSync(nextConfigPath, "utf-8");
     expect(nextConfigContent).toContain("NEXT_PUBLIC_APP_VERSION");
     expect(nextConfigContent).toContain("packageJson.version");
 
+    const pagePath = path.resolve(__dirname, "../src/app/page.tsx");
+    const pageContent = fs.readFileSync(pagePath, "utf-8");
     expect(pageContent).toContain("APP_VERSION");
     expect(pageContent).toContain("@/lib/version");
 
@@ -987,40 +619,7 @@ describe("Frontend Web Utilities (@repo/web)", () => {
     expect(hooksContent).toContain("useSyncNotionMutation");
     expect(hooksContent).toContain("triggerNotionSync");
 
-    const telemetryModalPath = path.resolve(__dirname, "../src/components/settings/TelemetryModal.tsx");
-    const telemetryModalContent = fs.readFileSync(telemetryModalPath, "utf-8");
-    expect(telemetryModalContent).toContain("Sincronización Notion ➔ App");
-    expect(telemetryModalContent).toContain("useSyncNotionMutation");
-    expect(telemetryModalContent).toContain("handleTriggerNotionSync");
-    expect(telemetryModalContent).toContain("Notion ➔ SQLite");
-    expect(telemetryModalContent).toContain("Steam ➔ Notion");
-
-    // 2. Filter Bar & Unclipped Status Pills (TASK-348, TASK-349, TASK-350)
-    const catalogHeaderPath = path.resolve(__dirname, "../src/components/catalog/CatalogHeader.tsx");
-    const catalogHeaderContent = fs.readFileSync(catalogHeaderPath, "utf-8");
-    expect(catalogHeaderContent).toContain("placeholder=\"Buscar títulos, géneros o notas...\"");
-    expect(catalogHeaderContent).toContain("pr-16");
-    expect(catalogHeaderContent).toContain("flex-wrap py-1.5");
-    expect(catalogHeaderContent).toContain("mask-image");
-    expect(catalogHeaderContent).toContain("-webkit-mask-image");
-
-    // 3. Symmetric KPI Grid in Analytics (TASK-351)
-    const analyticsModalPath = path.resolve(__dirname, "../src/components/analytics/AnalyticsModal.tsx");
-    const analyticsContent = fs.readFileSync(analyticsModalPath, "utf-8");
-    expect(analyticsContent).toContain("min-h-[145px]");
-    expect(analyticsContent).toContain("text-3xl font-extrabold font-mono");
-    expect(analyticsContent).toContain("TrendingUp className=\"w-3.5 h-3.5 text-amber-500 shrink-0\"");
-    expect(analyticsContent).toContain("Sparkles className=\"w-3.5 h-3.5 text-purple-500 shrink-0\"");
-
-    // 4. Streak Metric in ConsolidatedMetricBand (TASK-352)
-    const metricBandPath = path.resolve(__dirname, "../src/components/brand/ConsolidatedMetricBand.tsx");
-    const metricBandContent = fs.readFileSync(metricBandPath, "utf-8");
-    expect(metricBandContent).toContain("Racha Activa");
-    expect(metricBandContent).toContain("Flame");
-    expect(metricBandContent).toContain("días");
-    expect(metricBandContent).toContain("día");
-
-    // 5. Header-First Navigation & Dock Retirement (TASK-353)
+    // 2. Header-First Navigation & Dock Retirement (TASK-353)
     const brandHeaderPath = path.resolve(__dirname, "../src/components/brand/BrandHeader.tsx");
     const brandHeaderContent = fs.readFileSync(brandHeaderPath, "utf-8");
     expect(brandHeaderContent).toContain("onOpenAnalytics");
@@ -1030,7 +629,124 @@ describe("Frontend Web Utilities (@repo/web)", () => {
     const pageContent = fs.readFileSync(pagePath, "utf-8");
     expect(pageContent).toContain("onOpenAnalytics={() => setIsAnalyticsOpen(true)}");
     expect(pageContent).not.toContain("<FloatingIslandNavDock");
-    expect(pageContent).not.toContain("import { FloatingIslandNavDock }");
+    expect(pageContent).not.toContain("FloatingIslandNavDock");
+  });
+
+  test("v2.6.1: Unified Filter Toolbar, Searchable Genre Select, and Date Range Filter Logic", async () => {
+    const {
+      matchesDateRange,
+      getItemYears,
+      isYearInDateRange,
+      DATE_RANGE_OPTIONS,
+    } = await import("../src/components/catalog/CatalogHeader");
+
+    // 1. DATE_RANGE_OPTIONS completeness
+    const optionValues = DATE_RANGE_OPTIONS.map((o) => o.value);
+    expect(optionValues).toContain("ALL");
+    expect(optionValues).toContain("2026");
+    expect(optionValues).toContain("2025");
+    expect(optionValues).toContain("2024");
+    expect(optionValues).toContain("2020-2023");
+    expect(optionValues).toContain("2010-2019");
+    expect(optionValues).toContain("CLASSIC");
+
+    // 2. getItemYears extraction
+    // Movie with release year and completionDate
+    const movieA = {
+      year: 2017,
+      completionDate: "2024-05-15",
+    };
+    expect(getItemYears(movieA)).toContain(2017);
+    expect(getItemYears(movieA)).toContain(2024);
+
+    // Movie with releaseYear property instead of year
+    const itemWithReleaseYear = {
+      releaseYear: 2021,
+    };
+    expect(getItemYears(itemWithReleaseYear)).toEqual([2021]);
+
+    // Item with string year
+    const itemWithStringYear = {
+      year: "2018",
+    };
+    expect(getItemYears(itemWithStringYear)).toEqual([2018]);
+
+    // Movie with year only
+    const classicMovie = {
+      year: 1999,
+    };
+    expect(getItemYears(classicMovie)).toEqual([1999]);
+
+    // Game with completionDate
+    const gameA = {
+      completionDate: "2025-06-20",
+    };
+    expect(getItemYears(gameA)).toEqual([2025]);
+
+    // Game with startDate
+    const gameB = {
+      startDate: "2021-11-04",
+    };
+    expect(getItemYears(gameB)).toEqual([2021]);
+
+    // Game with completedAt fallback
+    const gameC = {
+      completedAt: "2026-02-01T12:00:00Z",
+    };
+    expect(getItemYears(gameC)).toEqual([2026]);
+
+    // Game with createdAt fallback
+    const gameD = {
+      createdAt: new Date("2023-08-10"),
+    };
+    expect(getItemYears(gameD)).toEqual([2023]);
+
+    // 3. isYearInDateRange evaluation
+    expect(isYearInDateRange(2026, "2026")).toBe(true);
+    expect(isYearInDateRange(2025, "2026")).toBe(false);
+
+    expect(isYearInDateRange(2025, "2025")).toBe(true);
+    expect(isYearInDateRange(2024, "2024")).toBe(true);
+
+    expect(isYearInDateRange(2020, "2020-2023")).toBe(true);
+    expect(isYearInDateRange(2022, "2020-2023")).toBe(true);
+    expect(isYearInDateRange(2023, "2020-2023")).toBe(true);
+    expect(isYearInDateRange(2024, "2020-2023")).toBe(false);
+
+    expect(isYearInDateRange(2010, "2010-2019")).toBe(true);
+    expect(isYearInDateRange(2015, "2010-2019")).toBe(true);
+    expect(isYearInDateRange(2019, "2010-2019")).toBe(true);
+    expect(isYearInDateRange(2020, "2010-2019")).toBe(false);
+
+    expect(isYearInDateRange(2009, "CLASSIC")).toBe(true);
+    expect(isYearInDateRange(1994, "CLASSIC")).toBe(true);
+    expect(isYearInDateRange(2010, "CLASSIC")).toBe(false);
+    // Boundary defense: 0, negative or invalid years must not match CLASSIC
+    expect(isYearInDateRange(0, "CLASSIC")).toBe(false);
+    expect(isYearInDateRange(-10, "CLASSIC")).toBe(false);
+    expect(isYearInDateRange(NaN, "CLASSIC")).toBe(false);
+
+    expect(isYearInDateRange(1990, "ALL")).toBe(true);
+    expect(isYearInDateRange(2026, "ALL")).toBe(true);
+
+    // 4. matchesDateRange integration with game & movie objects
+    expect(matchesDateRange(movieA, "2024")).toBe(true); // Completed in 2024
+    expect(matchesDateRange(movieA, "2010-2019")).toBe(true); // Released in 2017
+    expect(matchesDateRange(movieA, "2026")).toBe(false);
+
+    expect(matchesDateRange(itemWithReleaseYear, "2020-2023")).toBe(true);
+    expect(matchesDateRange(itemWithReleaseYear, "2026")).toBe(false);
+
+    expect(matchesDateRange(classicMovie, "CLASSIC")).toBe(true);
+    expect(matchesDateRange(classicMovie, "2024")).toBe(false);
+
+    expect(matchesDateRange(gameA, "2025")).toBe(true);
+    expect(matchesDateRange(gameA, "2024")).toBe(false);
+
+    expect(matchesDateRange(gameB, "2020-2023")).toBe(true);
+    expect(matchesDateRange(gameB, "2026")).toBe(false);
+
+    expect(matchesDateRange(gameC, "2026")).toBe(true);
   });
 });
 

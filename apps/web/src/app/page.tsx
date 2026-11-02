@@ -7,7 +7,7 @@ import { ConsolidatedMetricBand } from "@/components/brand/ConsolidatedMetricBan
 import { DarkIslandSplineCard } from "@/components/brand/DarkIslandSplineCard";
 import { SegmentedProgressCard } from "@/components/brand/SegmentedProgressCard";
 import { LiveGamingBadge } from "@/components/live/LiveGamingBadge";
-import { CatalogHeader, type CategoryFilter, type StatusFilter, type SortOption } from "@/components/catalog/CatalogHeader";
+import { CatalogHeader, type CategoryFilter, type StatusFilter, type SortOption, type DateRangeFilter } from "@/components/catalog/CatalogHeader";
 import { BentoCatalogGrid } from "@/components/catalog/BentoCatalogGrid";
 import { AiRecommendationHero } from "@/components/catalog/AiRecommendationHero";
 import { ItemDetailModal } from "@/components/detail/ItemDetailModal";
@@ -31,6 +31,7 @@ export default function EntertainmentShowcasePage() {
   const [status, setStatus] = useState<StatusFilter>("ALL");
   const [sortBy, setSortBy] = useState<SortOption>("recent");
   const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
+  const [dateRange, setDateRange] = useState<DateRangeFilter>("ALL");
   const [search, setSearch] = useState("");
 
   const [selectedItem, setSelectedItem] = useState<{
@@ -112,7 +113,7 @@ export default function EntertainmentShowcasePage() {
 
     return Array.from(genreMap.entries())
       .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "es"))
-      .map(([genre]) => genre);
+      .map(([genre, count]) => ({ name: genre, count }));
   }, [category, games, movies]);
 
   // Item recomendado contextual para el Hero según categoría activa
@@ -168,7 +169,7 @@ export default function EntertainmentShowcasePage() {
   }, [category, games, movies]);
 
   return (
-    <main className="min-h-screen bg-zinc-50 dark:bg-[#09090B] text-zinc-900 dark:text-zinc-100 pb-32 sm:pb-36 pt-6 sm:pt-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto transition-colors duration-200">
+    <main className="min-h-screen bg-zinc-50 dark:bg-[#09090B] text-zinc-900 dark:text-zinc-100 pb-16 pt-6 sm:pt-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto transition-colors duration-200">
       {/* Brand Header with Authentic Vectors, Crimson Border & Version Badge */}
       <BrandHeader
         version={APP_VERSION}
@@ -274,6 +275,7 @@ export default function EntertainmentShowcasePage() {
           onCategoryChange={(cat) => {
             setCategory(cat);
             setSelectedGenre(null);
+            setDateRange("ALL");
           }}
           status={status}
           onStatusChange={setStatus}
@@ -282,6 +284,14 @@ export default function EntertainmentShowcasePage() {
           selectedGenre={selectedGenre}
           onGenreChange={setSelectedGenre}
           availableGenres={availableGenres}
+          dateRange={dateRange}
+          onDateRangeChange={setDateRange}
+          onResetFilters={() => {
+            setStatus("ALL");
+            setSelectedGenre(null);
+            setDateRange("ALL");
+            setSearch("");
+          }}
           search={search}
           onSearchChange={setSearch}
           searchInputRef={searchInputRef}
@@ -295,6 +305,7 @@ export default function EntertainmentShowcasePage() {
           search={search}
           sortBy={sortBy}
           selectedGenre={selectedGenre}
+          dateRange={dateRange}
           games={games}
           movies={movies}
           isLoading={
@@ -306,6 +317,13 @@ export default function EntertainmentShowcasePage() {
           }
           onClearSearch={() => setSearch("")}
           onClearGenre={() => setSelectedGenre(null)}
+          onClearDateRange={() => setDateRange("ALL")}
+          onResetFilters={() => {
+            setStatus("ALL");
+            setSelectedGenre(null);
+            setDateRange("ALL");
+            setSearch("");
+          }}
           onSelectGame={(g) => setSelectedItem({ item: g, type: "GAME" })}
           onSelectMovie={(m) => setSelectedItem({ item: m, type: "MOVIE" })}
         />

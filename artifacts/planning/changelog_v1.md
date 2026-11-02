@@ -1,10 +1,10 @@
 ---
 tipo: changelog
 proyecto: Notion_Rastreador_de_Entretenimiento
-version: v2.6.0
+version: v2.6.1
 estado: activo
 fecha: 2026-11-01
-tags: [proyecto, changelog, versiones, release, quality-gate, v2, docker, nextjs16, hono, v2.6.0]
+tags: [proyecto, changelog, versiones, release, quality-gate, v2, docker, nextjs16, hono, v2.6.1]
 ---
 
 # Registro de Cambios (Changelog) - Notion Rastreador de Entretenimiento
@@ -15,6 +15,48 @@ Todos los cambios notables de este proyecto se documentarán en este archivo sig
 > 1. Este archivo es la **fuente única de verdad** para los cortes de versión y las notas oficiales de **GitHub Releases** (`gh release create`).
 > 2. Mantén un estándar técnico riguroso (Anti-Slop): incluye métricas cuantitativas, rutas exactas de archivos, clases y justificación de la causa raíz.
 > 3. Queda prohibido el uso de viñetas genéricas como "mejoras varias" o "bugs corregidos".
+
+---
+
+## [2.6.1] - 2026-11-01 (Barra Unificada de Filtros, Selector de Géneros, Filtro de Fechas, Poda Masiva de 2,000+ LoC y Microinteracciones)
+
+### Added
+- **Selector Ergonómico y Buscable de Géneros (`CustomSelect.tsx` & `CatalogHeader.tsx`):**
+  - Desplegable ergonómico con caja de búsqueda en tiempo real (`searchable`), contador de títulos por género en badges numéricos, y ancho responsive (`min-w-[15rem]`) que erradica por completo el desbordamiento horizontal de decenas de píldoras.
+  - Cierre inmediato con tecla `Escape` y memoización estricta de opciones con `useMemo`.
+- **Filtro Avanzado de Rangos de Fechas y Años (`DATE_RANGE_OPTIONS`):**
+  - Nuevo selector desplegable con opciones preconfiguradas: `"ALL"` (Cualquier año), `"2026"`, `"2025"`, `"2024"`, `"2020-2023"`, `"2010-2019"` y `"CLASSIC"` (Clásicos <2010 con cota inferior `>= 1800`).
+  - Funciones puras de extracción y filtrado: `getItemYears`, `isYearInDateRange` y `matchesDateRange` con soporte de `releaseYear`, `year`, `completionDate`, `startDate` y `createdAt`.
+- **Botón Reactivo de Limpieza de Filtros:**
+  - Botón integrado "Limpiar filtros" con badge numérico del total de filtros activos (`activeFiltersCount`), que restablece simultáneamente estado, género, año y búsqueda.
+- **Microinteracciones y Microanimaciones Táctiles (Anti-Slop / High-Craft):**
+  - Feedback táctil elástico al pulsar tarjetas: `active:scale-[0.985]` en `GameCard.tsx` y `MovieCard.tsx`.
+  - Transición progresiva de carga de imágenes con shimmer y cross-fade suave (`transition-opacity duration-300`).
+  - Respeto riguroso de accesibilidad con `motion-reduce:transform-none` en tarjetas y animaciones.
+
+### Changed & Refactored
+- **Reestructuración Cohesiva de la Barra de Herramientas (`CatalogHeader.tsx`):**
+  - Diseño de 2 niveles simétricos estilo Linear/Raycast/Notion:
+    - **Fila Principal:** `SpringSegmentedControl` de categorías a la izquierda; Selector de Ordenamiento y Buscador (`<kbd>Ctrl+K</kbd>`) a la derecha.
+    - **Fila Secundaria:** `SpringSegmentedControl` de Estado indivisible (`Todos`, `En Curso`, `Pendientes`, `Completados`); Selector de Géneros con búsqueda; Selector de Fechas; y Botón de Reseteo.
+    - Breakpoints alineados a `lg:flex-row` para evitar saltos asimétricos entre tablet y escritorio.
+- **Ilustración Contextual de Estados Vacíos (`BentoCatalogGrid.tsx`):**
+  - Muestra icono `Film` para películas y `Gamepad2` para videojuegos cuando un filtro no arroja resultados.
+- **Ergonomía de Layout Canvas Limpio (`page.tsx` & `ScrollToTop.tsx`):**
+  - Reducido el padding inferior de `page.tsx` de `pb-28 sm:pb-32` a `pb-16` tras el retiro del dock flotante.
+  - Reposicionado el botón flotante `ScrollToTop` a `bottom-8` en lugar de `bottom-24`.
+- **Centralización Inteligente de Versión (Sin Hardcoding):**
+  - Elevada la versión a `2.6.1` en `package.json` y `@repo/web`, consumida globalmente a través de `apps/web/src/lib/version.ts` (`APP_VERSION`).
+
+### Removed (Poda Masiva de >2,000 LoC de Slop y Código Basura)
+- **Scripts Huérfanos en `scripts/` (-1,280 LoC):**
+  - Eliminados físicamente: `scripts/worktree_core.ts` (307 LoC), `scripts/worktree_helpers.ts` (263 LoC), `scripts/pack_task_helpers.ts` (324 LoC), `scripts/verify_recursive_loop_heuristics.ts` (323 LoC) y `scripts/verify_recursive_loop_types.ts` (63 LoC).
+- **Componente Huérfano Retirado (-152 LoC):**
+  - Eliminado `apps/web/src/components/brand/FloatingIslandNavDock.tsx`.
+- **Slop de Pruebas Estáticas (`apps/web/tests/web.test.ts`) (~650 LoC):**
+  - Depuradas aserciones estáticas de lectura de strings CSS obsoletas de fases previas, preservando 100% de la cobertura lógica, funcional y de contratos.
+- **Estilos Huérfanos (`globals.css`):**
+  - Purgadas las variables `--glow-crimson` y la clase `.glow-crimson`.
 
 ---
 

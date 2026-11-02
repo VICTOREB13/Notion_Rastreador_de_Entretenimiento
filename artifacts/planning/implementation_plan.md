@@ -92,3 +92,30 @@ Perfeccionar la experiencia de usuario (UX) e interfaz gráfica (UI) de la aplic
 2. Verificación de contratos SDD (`bun run lint:contracts`) y validación de esquemas (`bun run validate`).
 3. Chequeo estricto de tipos (`bun run typecheck`) y compilación de producción Next.js (`bun run web:build`).
 4. Bump a `v2.6.0` en `package.json` (gracias al SSoT centralizado en `version.ts`), actualización de changelog, commit semántico, tag y push a GitHub.
+
+---
+
+### Fase 8: Barra Unificada de Filtros, Selector Ergonómico de Géneros, Filtro de Fechas, Poda Masiva (-2,000+ LoC) y Microinteracciones Táctiles (v2.6.1)
+- **Problemas Identificados:**
+  1. `CatalogHeader.tsx`: La hilera horizontal de decenas de géneros desbordaba la pantalla, haciendo que `ESTADO:` y `GÉNERO:` compartieran fila y provocaran que opciones como `Completados / Vistos` se cortaran a una tercera línea solitaria.
+  2. Falta de filtrado por rango de fechas/años para consultar lanzamientos o actividad temporal.
+  3. Acumulación de código huérfano y slop (>2,000 LoC en scripts obsoletos, componente dock retirado y aserciones estáticas de CSS).
+  4. Carencia de micro-feedback táctil elástico en las tarjetas de catálogo y excesivo padding residual por el dock retirado.
+- **Acciones Técnicas:**
+  1. **Barra Unificada de Filtros (2 niveles simétricos):**
+     - Nivel 1: SegmentedControl de categorías (`Colección`, `Videojuegos`, `Películas`) a la izquierda; Buscador (`<kbd>Ctrl+K</kbd>`) y Selector de Ordenamiento (`CustomSelect`) a la derecha.
+     - Nivel 2: SegmentedControl indivisible de Estado (`Todos`, `En Curso`, `Pendientes`, `Completados`); selector desplegable de géneros con búsqueda integrada (`searchable`), badges de conteo y ancho responsive; selector de rango de fecha/año (`DATE_RANGE_OPTIONS`); y botón reactivo "Limpiar filtros" con badge contador.
+  2. **Lógica de Fechas Pura:** Funciones `getItemYears`, `isYearInDateRange` y `matchesDateRange` conectadas a `BentoCatalogGrid.tsx` y `page.tsx`.
+  3. **Poda Masiva (-2,000+ LoC):**
+     - Eliminación de scripts muertos en `scripts/` (1,280 LoC).
+     - Eliminación de `FloatingIslandNavDock.tsx` (152 LoC).
+     - Limpieza de tests estáticos en `apps/web/tests/web.test.ts` (~650 LoC).
+  4. **Microinteracciones y Microanimaciones:**
+     - Feedback táctil `active:scale-[0.985]` en `GameCard` y `MovieCard`.
+     - Transición suave de carga de portadas (`transition-opacity duration-300`).
+     - Respeto estricto de accesibilidad con `motion-reduce:transform-none`.
+     - Reubicación de `ScrollToTop` a `bottom-8` y reducción de padding inferior en `page.tsx` a `pb-16`.
+     - Purga de `.glow-crimson` en `globals.css`.
+  5. **Centralización Inteligente de Versión:**
+     - Actualización a `2.6.1` en `package.json` consumida por `APP_VERSION` en `@/lib/version.ts` sin hardcoding.
+  6. **Validación y Release:** Pirámide de testing completa en verde, commit semántico y tag `v2.6.1`.

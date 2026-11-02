@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useId } from "react";
-import { ChevronDown, Check } from "lucide-react";
+import React, { useState, useRef, useEffect, useId, useMemo } from "react";
+import { ChevronDown, Check, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface SelectOption<T = string> {
@@ -47,6 +47,9 @@ export interface CustomSelectProps<T = string> {
   ariaLabel?: string;
   error?: string | boolean;
   menuClassName?: string;
+  searchable?: boolean;
+  searchPlaceholder?: string;
+  active?: boolean;
 }
 
 export function CustomSelect<T = string>({
@@ -63,13 +66,40 @@ export function CustomSelect<T = string>({
   ariaLabel,
   error,
   menuClassName,
+  searchable = false,
+  searchPlaceholder,
+  active,
 }: CustomSelectProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
   const listboxId = useId();
 
-  const normalizedOptions = normalizeSelectOptions(options);
-  const selectedOption = normalizedOptions.find((opt) => opt.value === value);
+  const normalizedOptions = useMemo(() => normalizeSelectOptions(options), [options]);
+  const selectedOption = useMemo(
+    () => normalizedOptions.find((opt) => opt.value === value),
+    [normalizedOptions, value]
+  );
+
+  const filteredOptions = useMemo(() => {
+    if (!searchable || !searchQuery.trim()) return normalizedOptions;
+    const q = searchQuery.toLowerCase().trim();
+    return normalizedOptions.filter(
+      (opt) =>
+        opt.label.toLowerCase().includes(q) ||
+        String(opt.value).toLowerCase().includes(q) ||
+        (opt.description && opt.description.toLowerCase().includes(q))
+    );
+  }, [normalizedOptions, searchable, searchQuery]);
+
+  const isEffectivelyActive =
+    active !== undefined
+      ? active
+      : value !== undefined &&
+        value !== null &&
+        value !== "" &&
+        value !== "ALL" &&
+        value !== "all";
 
   useEffect(() => {
     if (!isOpen) return;
@@ -118,7 +148,14 @@ export function CustomSelect<T = string>({
       <button
         type="button"
         disabled={disabled}
-        onClick={() => !disabled && setIsOpen((prev) => !prev)}
+        onClick={() => {
+          if (!disabled) {
+            setIsOpen((prev) => {
+              if (prev) setSearchQuery("");
+              return !prev;
+            });
+          }
+        }}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         aria-label={ariaLabel || (typeof label === "string" ? label : placeholder)}
@@ -129,18 +166,41 @@ export function CustomSelect<T = string>({
             ? "border-red-500 ring-1 ring-red-500/20"
             : isOpen
             ? "border-rose-500 ring-2 ring-rose-500/20"
+            : isEffectivelyActive
+            ? "border-rose-500/50 bg-rose-500/5 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 font-semibold ring-1 ring-rose-500/20"
             : "border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700",
           disabled && "opacity-50 cursor-not-allowed bg-zinc-100 dark:bg-zinc-900"
         )}
       >
         <div className="flex items-center gap-2 truncate min-w-0">
-          {LeadingIcon && <LeadingIcon className={cn(iconSizes, "text-zinc-400 shrink-0")} />}
+          {LeadingIcon && (
+            <LeadingIcon
+              className={cn(
+                iconSizes,
+                isEffectivelyActive ? "text-rose-500" : "text-zinc-400",
+                "shrink-0"
+              )}
+            />
+          )}
           {selectedOption?.icon && <span className="shrink-0">{selectedOption.icon}</span>}
-          <span className={cn("truncate", !selectedOption && "text-zinc-400 dark:text-zinc-500 font-normal")}>
+          <span
+            className={cn(
+              "truncate",
+              !selectedOption && "text-zinc-400 dark:text-zinc-500 font-normal",
+              isEffectivelyActive && "font-semibold text-rose-600 dark:text-rose-400"
+            )}
+          >
             {selectedOption ? selectedOption.label : placeholder}
           </span>
           {selectedOption?.badge && (
-            <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 shrink-0">
+            <span
+              className={cn(
+                "px-1.5 py-0.5 rounded-full text-[9px] font-bold shrink-0",
+                isEffectivelyActive
+                  ? "bg-rose-500/20 text-rose-600 dark:text-rose-300"
+                  : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
+              )}
+            >
               {selectedOption.badge}
             </span>
           )}
@@ -150,7 +210,8 @@ export function CustomSelect<T = string>({
           className={cn(
             iconSizes,
             "text-zinc-400 transition-transform duration-200 shrink-0 ml-1.5",
-            isOpen && "rotate-180 text-rose-500"
+            isOpen && "rotate-180 text-rose-500",
+            !isOpen && isEffectivelyActive && "text-rose-500/80"
           )}
         />
       </button>
@@ -166,12 +227,39 @@ export function CustomSelect<T = string>({
             menuClassName
           )}
         >
-          {normalizedOptions.length === 0 ? (
+          {searchable && (
+            <div className="p-1 pb-1.5 border-b border-zinc-200/80 dark:border-zinc-800/80 sticky top-0 bg-white dark:bg-zinc-900 z-10 mb-1">
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 absolute left-2 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={searchPlaceholder || "Filtrar opciones..."}
+                  className="w-full pl-7 pr-2 py-1 text-xs bg-zinc-100 dark:bg-zinc-800 rounded-lg border border-transparent focus:border-rose-500/50 focus:outline-hidden text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400"
+                  onClick={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setIsOpen(false);
+                      setSearchQuery("");
+                      return;
+                    }
+                    e.stopPropagation();
+                  }}
+                  autoFocus
+                />
+              </div>
+            </div>
+          )}
+
+          {filteredOptions.length === 0 ? (
             <div className="px-3 py-2 text-xs text-zinc-500 text-center italic">
               No hay opciones disponibles
             </div>
           ) : (
-            normalizedOptions.map((opt, idx) => {
+            filteredOptions.map((opt, idx) => {
               const isSelected = opt.value === value;
               return (
                 <div
@@ -183,21 +271,34 @@ export function CustomSelect<T = string>({
                     if (opt.disabled) return;
                     onChange?.(opt.value);
                     setIsOpen(false);
+                    setSearchQuery("");
                   }}
                   className={cn(
                     "w-full text-left px-2.5 py-2 rounded-xl text-xs font-medium flex items-center justify-between gap-2 transition-colors cursor-pointer",
-                    opt.disabled ? "opacity-40 cursor-not-allowed" : isSelected ? "bg-rose-500/10 dark:bg-rose-600/20 text-rose-600 dark:text-rose-400 font-semibold" : "text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100/80 dark:hover:bg-zinc-800/60"
+                    opt.disabled
+                      ? "opacity-40 cursor-not-allowed"
+                      : isSelected
+                      ? "bg-rose-500/10 dark:bg-rose-600/20 text-rose-600 dark:text-rose-400 font-semibold"
+                      : "text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100/80 dark:hover:bg-zinc-800/60"
                   )}
                 >
                   <div className="flex items-center gap-2 truncate min-w-0">
                     {opt.icon && <span className="shrink-0">{opt.icon}</span>}
                     <div className="truncate">
                       <span className="block truncate">{opt.label}</span>
-                      {opt.description && <span className="block text-[10px] text-zinc-500 dark:text-zinc-400 truncate">{opt.description}</span>}
+                      {opt.description && (
+                        <span className="block text-[10px] text-zinc-500 dark:text-zinc-400 truncate">
+                          {opt.description}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                    {opt.badge && <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300">{opt.badge}</span>}
+                    {opt.badge && (
+                      <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300">
+                        {opt.badge}
+                      </span>
+                    )}
                     {isSelected && <Check className="w-3.5 h-3.5 text-rose-500 font-bold shrink-0" />}
                   </div>
                 </div>

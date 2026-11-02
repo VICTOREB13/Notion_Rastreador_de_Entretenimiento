@@ -93,6 +93,16 @@ tags: [tareas, refactorizacion, brand-components, telemetry, dark-mode, light-mo
 - [x] `TASK-353`: Reorganizar la navegación integrando acceso a Analíticas en `BrandHeader.tsx` y retirando el dock flotante inferior (`FloatingIslandNavDock.tsx`).
 - [x] `TASK-354`: Validación integral (`bun test`, `bun run typecheck`, `bun run validate`, `bun run web:build`), bump a v2.6.0, commit semántico y tag release.
 
+### Fase 14: Barra Unificada de Filtros, Selector de Géneros, Filtro de Fechas, Poda Masiva (-2,000+ LoC) y Microinteracciones Táctiles (v2.6.1)
+- [x] `TASK-355`: Reestructurar `CatalogHeader.tsx` en dos filas simétricas estilo Linear/Raycast (Fila 1: SegmentedControl de categorías + búsqueda y sort; Fila 2: SegmentedControl de Estado indivisible + selector desplegable de géneros con búsqueda y contadores + selector de rango de fechas/años + botón "Limpiar filtros").
+- [x] `TASK-356`: Desarrollar funciones puras de filtrado de años y fechas (`getItemYears`, `isYearInDateRange`, `matchesDateRange`, `DATE_RANGE_OPTIONS`) e integrarlas en `BentoCatalogGrid.tsx` y `page.tsx`.
+- [x] `TASK-357`: Poda masiva de scripts huérfanos (-1,280 LoC en `scripts/worktree_core.ts`, `worktree_helpers.ts`, `pack_task_helpers.ts`, `verify_recursive_loop_heuristics.ts`, `verify_recursive_loop_types.ts`).
+- [x] `TASK-358`: Poda de componente huérfano retirado `FloatingIslandNavDock.tsx` (-152 LoC) y limpieza de aserciones estáticas de CSS en `apps/web/tests/web.test.ts` (-650 LoC).
+- [x] `TASK-359`: Añadir microinteracciones táctiles refinadas (anti-slop): feedback elástico `active:scale-[0.985]` en `GameCard.tsx` y `MovieCard.tsx`, shimmer progresivo en imágenes, motion-reduce WCAG, reposicionamiento de `ScrollToTop` a `bottom-8`, y ajuste de padding inferior en `page.tsx`.
+- [x] `TASK-360`: Limpieza de estilos huérfanos en `globals.css` (eliminación de `.glow-crimson` y `--glow-crimson`).
+- [x] `TASK-361`: Centralización dinámica de versión `2.6.1` en `package.json` y `@repo/web` vinculada a `apps/web/src/lib/version.ts` sin hardcoding.
+- [x] `TASK-362`: Validación integral de la pirámide de testing (`bun test`, `bun run lint:contracts`, `bun run typecheck`, `bun run validate`, `bun run web:build`), bump `v2.6.1`, commit semántico y tag en GitHub.
+
 ---
 
 ## Referencias

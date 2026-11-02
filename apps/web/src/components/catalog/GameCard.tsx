@@ -24,12 +24,13 @@ export function GameCard({ game, onClick, className }: GameCardProps) {
   const firstVibe = aiData?.vibeTags?.[0];
 
   const [imageError, setImageError] = React.useState(false);
+  const [imageLoaded, setImageLoaded] = React.useState(false);
 
   return (
     <SpotlightCard
       onClick={onClick}
       className={cn(
-        "group flex flex-col justify-between cursor-pointer transition-all duration-300 hover:-translate-y-1.5 hover:border-rose-500/40 dark:hover:border-rose-500/30 hover:shadow-xl hover:shadow-rose-500/5 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-rose-500",
+        "group flex flex-col justify-between cursor-pointer transition-all duration-300 hover:-translate-y-1.5 active:scale-[0.985] motion-reduce:transform-none hover:border-rose-500/40 dark:hover:border-rose-500/30 hover:shadow-xl hover:shadow-rose-500/5 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-rose-500",
         className
       )}
     >
@@ -41,8 +42,15 @@ export function GameCard({ game, onClick, className }: GameCardProps) {
               src={game.coverUrl}
               alt={game.title}
               loading="lazy"
+              ref={(img) => {
+                if (img?.complete) setImageLoaded(true);
+              }}
+              onLoad={() => setImageLoaded(true)}
               onError={() => setImageError(true)}
-              className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-106"
+              className={cn(
+                "w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-106 motion-reduce:transform-none transition-opacity duration-300",
+                imageLoaded ? "opacity-100" : "opacity-0"
+              )}
             />
           ) : (
             <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-100 dark:bg-zinc-900 text-zinc-400 dark:text-zinc-600">

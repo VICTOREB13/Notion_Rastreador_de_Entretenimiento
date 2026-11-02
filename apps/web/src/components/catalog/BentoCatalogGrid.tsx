@@ -6,7 +6,8 @@ import { GameCard } from "./GameCard";
 import { MovieCard } from "./MovieCard";
 import { cn } from "@/lib/utils";
 import type { GameItem, MovieItem } from "@/lib/types";
-import type { CategoryFilter, StatusFilter, SortOption } from "./CatalogHeader";
+import type { CategoryFilter, StatusFilter, SortOption, DateRangeFilter } from "./CatalogHeader";
+import { matchesDateRange } from "./CatalogHeader";
 
 export interface BentoCatalogGridProps {
   category: CategoryFilter;
@@ -14,6 +15,7 @@ export interface BentoCatalogGridProps {
   search: string;
   sortBy?: SortOption;
   selectedGenre?: string | null;
+  dateRange?: DateRangeFilter;
   games: GameItem[];
   movies: MovieItem[];
   isLoading?: boolean;
@@ -21,6 +23,8 @@ export interface BentoCatalogGridProps {
   onSelectMovie: (movie: MovieItem) => void;
   onClearSearch?: () => void;
   onClearGenre?: () => void;
+  onClearDateRange?: () => void;
+  onResetFilters?: () => void;
   className?: string;
 }
 
@@ -78,6 +82,7 @@ export function BentoCatalogGrid({
   search,
   sortBy = "recent",
   selectedGenre = null,
+  dateRange = "ALL",
   games,
   movies,
   isLoading = false,
@@ -85,6 +90,8 @@ export function BentoCatalogGrid({
   onSelectMovie,
   onClearSearch,
   onClearGenre,
+  onClearDateRange,
+  onResetFilters,
   className,
 }: BentoCatalogGridProps) {
   const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
@@ -92,7 +99,7 @@ export function BentoCatalogGrid({
   // Resetear paginación al cambiar filtros o búsqueda para proteger presupuesto de DOM (< 800 nodos)
   React.useEffect(() => {
     setVisibleCount(ITEMS_PER_PAGE);
-  }, [category, status, search, sortBy, selectedGenre]);
+  }, [category, status, search, sortBy, selectedGenre, dateRange]);
 
   // Filtro de búsqueda enriquecido multi-campo (título, plataforma, géneros, vibe)
   const query = search.trim().toLowerCase();
@@ -110,9 +117,12 @@ export function BentoCatalogGrid({
       const matchGenre = g.genres?.some((genre) => genre.toLowerCase() === genreQuery);
       if (!matchGenre) return false;
     }
-    if (status === "PLAYING" && g.status !== "Jugando") return false;
-    if (status === "TODO" && g.status !== "Por Jugar") return false;
-    if (status === "COMPLETED" && g.status !== "Jugado") return false;
+    if (dateRange && dateRange !== "ALL") {
+      if (!matchesDateRange(g, dateRange)) return false;
+    }
+    if (status === "PLAYING" && g.status !== "Jugando" && g.status !== "En Progreso") return false;
+    if (status === "TODO" && g.status !== "Por Jugar" && g.status !== "Pendiente") return false;
+    if (status === "COMPLETED" && g.status !== "Jugado" && g.status !== "Completado") return false;
     return true;
   });
 
@@ -129,9 +139,19 @@ export function BentoCatalogGrid({
       const matchGenre = m.genres?.some((genre) => genre.toLowerCase() === genreQuery);
       if (!matchGenre) return false;
     }
-    if (status === "PLAYING" && m.status !== "Viendo") return false;
-    if (status === "TODO" && m.status !== "Por Ver") return false;
-    if (status === "COMPLETED" && m.status !== "Vista") return false;
+    if (dateRange && dateRange !== "ALL") {
+      if (!matchesDateRange(m, dateRange)) return false;
+    }
+    if (status === "PLAYING" && m.status !== "Viendo" && m.status !== "En Progreso") return false;
+    if (status === "TODO" && m.status !== "Por Ver" && m.status !== "Pendiente") return false;
+    if (
+      status === "COMPLETED" &&
+      m.status !== "Vista" &&
+      m.status !== "Visto" &&
+      m.status !== "Completada" &&
+      m.status !== "Completado"
+    )
+      return false;
     return true;
   });
 
@@ -212,34 +232,68 @@ export function BentoCatalogGrid({
   if (combinedItems.length === 0) {
     return (
       <div className="py-16 text-center rounded-2xl border border-zinc-200 dark:border-white/5 bg-zinc-100/80 dark:bg-[#111113]/50 text-zinc-600 dark:text-zinc-300 animate-in fade-in zoom-in-[0.98] duration-200">
-        <Gamepad2 className="w-10 h-10 text-zinc-400 dark:text-zinc-600 mx-auto mb-2" />
+        {category === "MOVIES" ? (
+          <Film className="w-10 h-10 text-zinc-400 dark:text-zinc-600 mx-auto mb-2" />
+        ) : category === "GAMES" ? (
+          <Gamepad2 className="w-10 h-10 text-zinc-400 dark:text-zinc-600 mx-auto mb-2" />
+        ) : (
+          <div className="flex items-center justify-center gap-2 mx-auto mb-2">
+            <Gamepad2 className="w-7 h-7 text-zinc-400 dark:text-zinc-600" />
+            <Film className="w-7 h-7 text-zinc-400 dark:text-zinc-600" />
+          </div>
+        )}
         <h4 className="text-sm font-semibold text-zinc-800 dark:text-zinc-300">No se encontraron títulos</h4>
         <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 max-w-sm mx-auto">
           {search
             ? `Ningún resultado coincide con "${search}".`
             : selectedGenre
             ? `No hay títulos para el género "${selectedGenre}".`
+            : dateRange && dateRange !== "ALL"
+            ? `No hay títulos para el año o rango "${dateRange}".`
+            : status !== "ALL"
+            ? "No hay títulos con el estado seleccionado."
             : "No hay elementos en esta vista."}
         </p>
-        {(search || selectedGenre) && (
+        {(search || selectedGenre || (dateRange && dateRange !== "ALL") || status !== "ALL") && (
           <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-            {search && onClearSearch && (
+            {onResetFilters ? (
               <button
                 type="button"
-                onClick={onClearSearch}
-                className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 hover:border-rose-500/40 text-zinc-700 dark:text-zinc-300 hover:text-rose-600 dark:hover:text-rose-400 transition-all duration-200 hover:-translate-y-0.5 active:scale-95 shadow-xs cursor-pointer"
+                onClick={onResetFilters}
+                className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30 transition-all duration-200 hover:-translate-y-0.5 active:scale-95 shadow-xs cursor-pointer"
               >
-                Limpiar búsqueda
+                Limpiar todos los filtros
               </button>
-            )}
-            {selectedGenre && onClearGenre && (
-              <button
-                type="button"
-                onClick={onClearGenre}
-                className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 hover:border-rose-500/40 text-zinc-700 dark:text-zinc-300 hover:text-rose-600 dark:hover:text-rose-400 transition-all duration-200 hover:-translate-y-0.5 active:scale-95 shadow-xs cursor-pointer"
-              >
-                Limpiar género ({selectedGenre})
-              </button>
+            ) : (
+              <>
+                {search && onClearSearch && (
+                  <button
+                    type="button"
+                    onClick={onClearSearch}
+                    className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 hover:border-rose-500/40 text-zinc-700 dark:text-zinc-300 hover:text-rose-600 dark:hover:text-rose-400 transition-all duration-200 hover:-translate-y-0.5 active:scale-95 shadow-xs cursor-pointer"
+                  >
+                    Limpiar búsqueda
+                  </button>
+                )}
+                {selectedGenre && onClearGenre && (
+                  <button
+                    type="button"
+                    onClick={onClearGenre}
+                    className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 hover:border-rose-500/40 text-zinc-700 dark:text-zinc-300 hover:text-rose-600 dark:hover:text-rose-400 transition-all duration-200 hover:-translate-y-0.5 active:scale-95 shadow-xs cursor-pointer"
+                  >
+                    Limpiar género ({selectedGenre})
+                  </button>
+                )}
+                {dateRange && dateRange !== "ALL" && onClearDateRange && (
+                  <button
+                    type="button"
+                    onClick={onClearDateRange}
+                    className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 hover:border-rose-500/40 text-zinc-700 dark:text-zinc-300 hover:text-rose-600 dark:hover:text-rose-400 transition-all duration-200 hover:-translate-y-0.5 active:scale-95 shadow-xs cursor-pointer"
+                  >
+                    Limpiar año ({dateRange})
+                  </button>
+                )}
+              </>
             )}
           </div>
         )}

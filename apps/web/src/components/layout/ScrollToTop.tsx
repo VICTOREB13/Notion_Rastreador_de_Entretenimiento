@@ -49,7 +49,7 @@ export function ScrollToTop() {
     <button
       onClick={scrollToTop}
       className={clsx(
-        "fixed bottom-22 right-4 sm:bottom-8 sm:right-8 z-30 p-3 rounded-full bg-rose-600 hover:bg-rose-500 text-white shadow-xl shadow-rose-500/25 hover:scale-110 active:scale-95 transition-all duration-300 cursor-pointer border border-rose-400/30",
+        "fixed bottom-8 right-4 sm:right-8 z-30 p-3 rounded-full bg-rose-600 hover:bg-rose-500 text-white shadow-xl shadow-rose-500/25 hover:scale-110 active:scale-95 transition-all duration-300 cursor-pointer border border-rose-400/30",
         isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10 pointer-events-none"
       )}
       aria-label="Volver arriba"
